@@ -136,7 +136,7 @@ sub generate {
 		my $buf;
 		my $result = $Contentment::context->m->comp(
 			{ store => \$buf }, $comp,
-			args => [ $Contentment::context->m->request_args ]
+			$Contentment::context->m->request_args 
 		);
 
 		print $buf;
