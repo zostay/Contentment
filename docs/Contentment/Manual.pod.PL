@@ -6,19 +6,25 @@ use Pod::Find qw/ contains_pod /;
 
 sub pod_wanted {
 	my $array = shift;
+
+	if (/^\.svn$|^CVS$|\.in$/) {
+		$File::Find::prune++;
+		return;
+	}
+
 	push @$array, $File::Find::name if contains_pod($_);
 }
 
 sub perl_api_index {
 	my @files;
 	find(sub { pod_wanted(\@files) }, 'lib');
-	return @files;
+	return sort @files;
 }
 
 sub mason_api_index {
 	my @files;
 	find(sub { pod_wanted(\@files) }, 'html');
-	return @files;
+	return sort @files;
 }
 
 sub title_and_abstract {
