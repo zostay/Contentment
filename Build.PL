@@ -28,6 +28,12 @@ my $build = Contentment::Build->new(
 		'etc/Contentment.conf.PL'			=> 'etc/Contentment.conf',
 		'docs/Contentment/Manual.pod.PL'	=> 'docs/Contentment/Manual.pod',
 	},
+	pod_files          => {
+		'docs/Contentment/Manual.pod'              => 'lib/Contentment/Manual.pod',
+		'docs/Contentment/Manual/Features.pod'     => 'lib/Contentment/Manual/Features.pod',
+		'docs/Contentment/Manual/Install.pod'      => 'lib/Contentment/Manual/Install.pod',
+		'docs/Contentment/Manual/Introduction.pod' => 'lib/Contentment/Manual/Introduction.pod',
+	},
 );
 
 my $confdir   = $build->{args}{confdir}       || '/etc/Contentment';

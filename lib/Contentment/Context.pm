@@ -95,6 +95,8 @@ This is a stack of submissions in case of nested forms. Don't mess with this unl
 
 This is a list of form submission UUIDs that were processed by an immediately preceding C</content/widget/process.mason> run, which redirected to the current request.
 
+=back
+
 =head1 OTHER API
 
 Here is a description of the other available methods.

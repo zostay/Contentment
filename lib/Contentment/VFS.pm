@@ -209,6 +209,9 @@ sub is_directory { 0 }
 sub property {
 	my $self = shift;
 	local $_ = shift;
+
+	defined $_ or
+		die "Missing required 'key' argument.";
 	
 	my @d;
 	SWITCH: {
@@ -238,9 +241,9 @@ sub property {
 	if (my $filetype = $self->lookup_source->filetype) {
 		my $property = $filetype->property($self->lookup_source, $_);
 		if (defined $property) {
-			$log->debug("Found $self property value $_ : $property");
+			$log->debug("Found $self property value '$_' : '$property'");
 		} else {
-			$log->debug("Not found $self property value $_");
+			$log->debug("Not found $self property value '$_'");
 		}		
 		return $property;
 	} else {

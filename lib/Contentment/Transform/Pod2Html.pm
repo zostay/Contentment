@@ -5,7 +5,12 @@ use warnings;
 
 our $VERSION = '0.01';
 
+use Contentment;
+
 use base qw/ Pod::Simple /;
+
+my $conf = Contentment::configuration;
+my $vfs  = Contentment::VFS->new;
 
 =head1 NAME
 
@@ -69,7 +74,19 @@ sub _handle_element_start {
 				# TODO Handle this better.
 				my $link;
 				if (defined $attr->{to}) {
-					$link .= "/$attr->{to}";
+					my $file = $attr->{to};
+					$file =~ s/::/\//g;
+
+					for my $pod_base (@{ $conf->{pod_bases} }) {
+						if ($vfs->lookup_source("$pod_base/$file.html")) {
+							$link = "$pod_base/$file.html";
+							last;
+						}
+					}
+
+					unless (defined $link) {
+						$link = "$conf->{pod_fallback}$attr->{to}";
+					}
 				}
 				if (defined $attr->{section}) {
 					$link .= "#$attr->{section}";
@@ -101,7 +118,7 @@ sub _handle_element_start {
 			last SWITCH;
 		};
 		/^over-text$/ && do {
-			$self->{'contentment_pod2html_over_text_first')++;
+			$self->{'contentment_pod2html_over_text_first'}++;
 			print qq(<dl>\n);
 			last SWITCH;
 		};
@@ -115,6 +132,10 @@ sub _handle_element_start {
 			print qq(<blockquote>);
 			last SWITCH;
 		};
+		DEFAULT: {
+			warn "Unknown Pod::Simple parser event '$_'; time to update ",__PACKAGE__;
+			last SWITCH;
+		}
 	}
 	
 	select $ofh;
@@ -213,9 +234,15 @@ sub _handle_element_end {
 
 sub _handle_text {
 	my $self = shift;
-	my $text = shift;
+	local $_ = shift;
 
-	print {$self->{output_fh}} $text;
+	return if $self->{'contentment_pod2html_skip_x'};
+
+	s/&/&amp;/g;
+	s/</&lt;/g;
+	s/>/&gt;/g;
+
+	print {$self->{output_fh}} $_;
 }
 
 =head1 SEE ALSO

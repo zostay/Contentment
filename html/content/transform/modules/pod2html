@@ -1,9 +1,9 @@
 <%init>
-eval { use Pod::Simple::HTML; };
+eval { use Contentment::Transform::Pod2Html; };
 die "pod2html transformation unavailable, may need to install Pod::Simple: $@"
 	if $@;
 
-my $parser = Pod::Simple::HTML->new;
+my $parser = Contentment::Transform::Pod2Html->new;
 </%init>
 <%perl>
 my $str;
