@@ -18,7 +18,7 @@ sub mimetypes {
 		$mimetypes->addType(
 			MIME::Type->new(
 				type       => 'text/x-pod',
-				extensions => [ '.pod' ],
+				extensions => [ 'pod' ],
 			),
 		)
 	}
