@@ -1,0 +1,115 @@
+=head1 NAME
+
+Contentment::Manual::Install - The installation guide for Contentment
+
+=head1 SYNOPSIS
+
+  perl Build.PL
+  ./Build
+  ./Build test
+  ./Build install
+
+=head1 DESCRIPTION
+
+The synopsis is pretty bare and you will almost certainly need to be a little
+more particular with out F<Build.PL> is run. After installation you will also
+need to edit the configuration file F<Contentment.conf> and may also need to
+create an additional CGI script to help you set things up. You may also need
+to modify your Apache web server configuration or F<.htaccess> files in the
+installation directories.
+
+=head2 Build.PL OPTIONS
+
+You will probably want to use the configuration options to F<Build.PL> to place
+the files of Contentment in better locations. The possible options are:
+
+=over
+
+=item confdir
+
+This is the configuration directory. (Default: F</etc/Contentment>)
+
+=item basedir
+
+This is the Contentment web directory. All the Contentment Mason files will be installed to this directory. This is usually set to the regular HTML documents
+location for the site. (Default: F</var/www/localhost/htdocs>)
+
+=item sampledir
+
+This is the directory for your files to customize Contentment. (Default: F</var/www/localhost/content>)
+
+=item cgidir
+
+This is the directory to store the CGI scripts. (Default: F<$basedir/cgi-bin>)
+
+=item tempdir
+
+This is the temporary directory used by Mason. (Defualt: F</tmp/mason/data>)
+
+=back
+
+=head2 EDIT CONFIGURATION
+
+The configuration is stored in three files, all stored in the C<cgidir> given to the call to F<Build.PL>: F<Contentment.conf>, F<Contentment.defaults.conf>, and F<log4perl.conf>.
+
+The F<Contentment.conf> and F<Contentment.defaults.conf> configuration files are in L<YAML> file format. Please see that documentation for information on the specific of its formatting. For information about the directives themselves, you should read the comments of F<Contentment.defaults.conf>.
+
+The F<log4perl.conf> configuration file is for L<Log::Log4perl>, so you should see that documentation for information on how to configure it. The default configuration simply logs to C<STDERR>, which generally causes the errors to be dumped to the web server's error logs.
+
+=head2 CGI CONFIGURATION
+
+As of this release, Contentment is used via a CGI script only. In the future, there may also be other targets (the most likely target to be added is one for mod_perl). However, the CGI script may not be sufficient for your installation. If you need to modify the include paths of perl, you may want to create a secondary CGI wrapper script.
+
+Here is an example of such a script:
+
+  #!/usr/bin/perl
+  
+  use strict;
+  use warnings;
+  
+  use lib '/usr/local/lib/perl';
+  use lib '/var/www/localhost/lib/perl';
+  use lib '/home/sterling/local/lib/perl';
+  
+  require 'handler.cgi';
+
+This will add the paths F</usr/local/lib/perl> and F</var/www/localhost/lib/perl> and F</home/sterling/local/lib/perl> to help the CGI script find the libraries it may need.
+
+You could also add the necessary lines to the top of F<handler.cgi>, but you'll need to be careful during upgrades to make sure your alterations aren't clobbered.
+
+=head1 WEB SERVER CONFIGURATION
+
+This configuration is specific to Apache web server, the only web server this service has yet been tested upon. Here is an example configuration that should work.
+
+First, an F<.htaccess> file to be placed in C<basedir>:
+
+  Order allow,deny
+  Allow from all
+  
+  Options FollowSymLinks
+  
+  RewriteEngine on
+  RewriteRule "^$" "http://www.contentment.org/cgi-bin/handler-path.cgi/index.html" [L]
+  RewriteRule "(.*)$" "http://www.contentment.org/cgi-bin/handler-path.cgi/$1" [L]
+
+In this case, you will need another F<.htaccess> file in C<cgidir>:
+
+  Order allow,deny
+  Allow from all
+  
+  Options ExecCGI
+  SetHandler cgi-script
+  
+  RewriteEngine off
+
+In the future a set of default files will probably be provided with some alternatives given somewhere in the distribution.
+
+=head1 AUTHOR
+
+Andrew Sterling Hanenkamp, E<lt>sterling@users.sourceforge.netE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2005 Andrew Sterling Hanenkamp. All Rights Reserved.
+
+Contentment is distributed under the same terms as Perl itself.

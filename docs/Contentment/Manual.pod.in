@@ -1,19 +1,21 @@
-=head1 Contentment Documentation
+=head1 NAME
 
-This should be a general starting point for Contentment documentation.
+Contentment Documentation - Table of Contents 
 
-=head1 Table of Contents
+=head1 TABLE OF CONTENTS
 
-=head2 Contentment Manual
+=head2 MANUAL
 
 L<Contentment::Manual::Introduction> - Introduction to Contentment
 
-=head2 Contentment Perl API
+=head2 PERL API
 
 @@PERL_API_INDEX@@
 
-=head2 Contentment Mason API
+=head2 MASON API
 
 @@MASON_API_INDEX@@
+
+=head1 COPYRIGHT
 
 Copyright 2005 Andrew Sterling Hanenkamp. All Rights Reserved.

@@ -17,7 +17,7 @@ BEGIN {
 
 sub dc { "(".shift(@_).") (".shift(@_).":".shift(@_).") " }
 $SIG{__WARN__} = sub { Log::Log4perl::get_logger->warn(dc(caller),@_)  };
-$SIG{__DIE__}  = sub { Log::Log4perl::get_logger->fatal(dc(caller),@_); confess @_; };
+$SIG{__DIE__}  = sub { eval { Log::Log4perl::get_logger->fatal(dc(caller),@_) }; confess @_; };
 
 my %configuration;
 sub configuration {

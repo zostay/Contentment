@@ -1,4 +1,8 @@
-=head1 Introduction
+=head1 NAME
+
+Contentment::Manual::Introduction - Introduction to the Contentment content management system.
+
+=head1 DESCRIPTION
 
 This documentation is still being established, so it is primarily geared towards developers. Administrators and other users may also find nuggets of useful information.
 
@@ -14,11 +18,11 @@ Nothing else I tried worked the way I wanted. I'm picky. So, I reinvented a "bet
 
 If you have a technical staff site that needs to store documents that are accessible and indexed from the web, I'd say Contentment is very nice. If you need to run a dynamic site for end-users who aren't very knowledgable, it's probably not very nice. I'm hoping to add enough functionality to make the latter case better, but Contentment is still a bit rough so far.
 
-=head2 Author
+=head1 AUTHOR
 
 As of this writing Andrew Sterling Hanenkamp is the only author for this project.
 
-=head2 Copyright and License
+=head1 COPYRIGHT AND LICENSE
 
 This software and it's documentation is the copyright of myself, Andrew Sterling Hanenkamp. I am publishing this software under the Artistic License, which is the license Perl is released under. Please read L<LICENSE.txt> for more details.
 

@@ -223,7 +223,7 @@ sub property {
 		/^depth$/   && do { return scalar(@d = ($self->path =~ m#/#g)) };
 	}
 
-	if (my $filetype = $self->filetype) {
+	if (my $filetype = $self->lookup_source->filetype) {
 		my $property = $filetype->property($self, $_);
 		if (defined $property) {
 			$log->debug("Found $self property value $_ : $property");
@@ -348,6 +348,12 @@ sub lookup_source {
 }
 
 sub filetype { }
+
+sub lines {
+	my $self = shift;
+
+	die "Cannot grab the lines of the directory ",$self->path;
+}
 
 package Contentment::VFS::FakeFile;
 

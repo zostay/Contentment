@@ -11,10 +11,10 @@ my $build = Contentment::Build->new(
 	license            => 'perl',
 	requires           => {
 		'HTML::Mason'		=> '1.20',
+		'Log::Log4perl'		=> '0.47',
 		'MIME::Types'       => '1.13',
 		'perl'				=> '5.8.1',
 		'SPOPS'				=> '0.87', 
-		'SPOPSx::Ginsu'     => '0.58', 
 		'SQL::Translator'   => '0.06', 
 		'YAML'				=> '0.35', 
 	},
@@ -29,8 +29,8 @@ my $build = Contentment::Build->new(
 );
 
 my $confdir   = $build->{args}{confdir}       || '/etc/Contentment';
-my $basedir   = $build->{args}{basedir}       || '/usr/share/Contentment';
-my $sampledir = $build->{args}{sampledir}     || '/usr/local/share/Contentment';
+my $basedir   = $build->{args}{basedir}       || '/var/www/localhost/htdocs';
+my $sampledir = $build->{args}{sampledir}     || '/var/www/localhost/content';
 my $cgidir    = $build->{args}{cgidir}        || "/$basedir/cgi-bin";
 my $tempdir   = $build->{args}{tempdir}       || '/tmp/mason/data';
 

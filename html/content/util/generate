@@ -17,7 +17,7 @@ if ($file) {
 	$log->debug("generate found a file: $file");
 	if (defined $to) {
 </%perl>
-<&| /content/transform/apply_transformation, to => $to, from => $file->kind &>
+<&| /content/transform/apply_transformation, to => $to, from => $file->generated_kind &>
 % $file->generate($top);
 </&>
 <%perl>
