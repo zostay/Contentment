@@ -23,8 +23,9 @@ my $build = Contentment::Build->new(
 		'Text::Balanced'	=> '1.95',
 	},
 	PL_files           => {
-		'lib/Contentment.pm.PL' 	=> 'lib/Contentment.pm',
-		'etc/Contentment.conf.PL'	=> 'etc/Contentment.conf',
+		'lib/Contentment.pm.PL' 			=> 'lib/Contentment.pm',
+		'etc/Contentment.conf.PL'			=> 'etc/Contentment.conf',
+		'docs/Contentment/Manual.pod.PL'	=> 'docs/Contentment/Manual.pod',
 	},
 );
 

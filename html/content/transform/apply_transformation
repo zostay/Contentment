@@ -1,4 +1,10 @@
 <%doc>
+=head1 NAME
+
+/content/transform/apply_transformation - Applies file content transformations
+
+=head1 DESCRIPTION
+
 This module performs several tasks. The primary purpose of this module is to
 take generated content in some format A and find a way to transform that data
 into format A'. 
@@ -20,6 +26,18 @@ respectively. Each transformer must also define a $cost attribute, which
 associates a numeric cost to the transformation---the higher the value the more
 "costly" the transformation. This module will attempt to use the cheapest
 transformation available, but may use any found.
+
+=head1 AUTHOR
+
+Andrew Sterling Hanenkamp, E<lt>hanenkamp@users.sourceforge.netE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2005 Andrew Sterling Hanenkamp. All Rights Reserved.
+
+Contentment is distributed under the same license and terms as Perl itself.
+
+=cut
 </%doc>
 <%args>
 $from => undef
