@@ -186,6 +186,13 @@ sub new {
 sub root      { return shift->{root} }
 sub path      { return shift->{path} }
 sub canonpath { return shift->{canonpath} }
+sub parent {
+	my $self = shift;
+
+	my @path = File::Spec->splitpath($self->{path});
+	pop @path;
+	return Contentment::VFS->new->lookup(File::Spec->catdir(@path));
+}
 
 sub stat {
 	my $self = shift;

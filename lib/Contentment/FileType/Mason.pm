@@ -80,15 +80,13 @@ sub generate {
 	if (my $comp = $class->comp($file)) {
 		$log->debug("Compiling/Running component $file");
 
-		my $subreq = $Contentment::context->m->make_subrequest(
-			comp => $comp, args => [ $Contentment::context->m->request_args ]
+		my $buf;
+		my $result = $Contentment::context->m->comp(
+			{ store => \$buf }, $comp,
+			args => [ $Contentment::context->m->request_args ]
 		);
-		my $result = $subreq->exec;
 
-		my %notes = %{ $subreq->notes };
-		while (my ($k, $v) = each %notes) {
-			$Contentment::context->m->notes($k => $v);
-		}
+		print $buf;
 
 		return $result;
 	} else {
