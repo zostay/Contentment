@@ -3,10 +3,36 @@ package SPOPSx::Tool::DateTime;
 use strict;
 use warnings;
 
-use Log::Log4perl qw/ get_logger /;
-my $log = get_logger();
+use Log::Log4perl;
+my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
 our $VERSION = '0.01';
+
+=head1 NAME
+
+SPOPSx::Tool::DateTime - A SPOPS extension allowing DateTime fields to be stored
+
+=head1 SYNOPSIS
+
+  %conf = (
+      table_alias => {
+          # ...
+          datetime_format => {
+              atime => 'DateTime::Format::MySQL',
+              mtime => 'DateTime::Format::Baby',
+              ctime => DateTime::Format::Strptime->new(pattern => '%D %T'),
+          },
+          # ...
+      }
+  );
+
+=head1 DESCRIPTION
+
+B<NOTE:> This module is currently distributed with Contentment, but will probably be forked into its own module eventually.
+
+This module allows for L<DateTime> objects to be stored to and loaded from a database field.
+
+=cut
 
 sub ruleset_factory {
 	my ($class, $rstab) = @_;
@@ -68,4 +94,21 @@ sub convert_to_string {
 
 	return __PACKAGE__;
 }
+
+=head1 SEE ALSO
+
+L<SPOPS>, L<DateTime>, http://datetime.perl.org/
+
+=head1 AUTHOR
+
+Andrew Sterling Hanenkamp, E<lt>hanenkamp@users.sourceforge.netE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2005 Andrew Sterling Hanenkamp. All Rights Reserved.
+
+Contentment is distributed and licensed under the same terms as Perl itself.
+
+=cut
+
 1

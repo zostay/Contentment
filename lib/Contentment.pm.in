@@ -19,6 +19,22 @@ sub dc { "(".shift(@_).") (".shift(@_).":".shift(@_).") " }
 $SIG{__WARN__} = sub { Log::Log4perl::get_logger->warn(dc(caller),@_)  };
 $SIG{__DIE__}  = sub { eval { Log::Log4perl::get_logger->fatal(dc(caller),@_) }; confess @_; };
 
+=head1 NAME
+
+Contentment - This is the main module of Contentment
+
+=head1 DESCRIPTION
+
+General configuration information and some general-purpose methods can be found in this module.
+
+=over
+
+=item $conf = Contentment->configuration
+
+Reads the configuration files F<ETC_DIR/Contentment.defaults.conf> and F<ETC_DIR/Contentment.conf>.
+
+=cut
+
 my %configuration;
 sub configuration {
 	unless (%configuration) {
@@ -47,6 +63,12 @@ sub configuration {
 	return \%configuration;
 }
 
+=item my $result = Contentment->run_plugin($plugin, @args)
+
+This method loads the given plugin C<$plugin> and runs it with the given C<@args> and returns the result C<$result>. The C<$plugin> variable is a complete package and method name. The method name is stripped and the package name is "used". Then, the method is called.
+
+=cut
+
 sub run_plugin {
 	my $class = shift;
 	my $plugin = shift;
@@ -60,5 +82,19 @@ sub run_plugin {
 	no strict 'refs';
 	return $plugin->(@_);
 }
+
+=back
+
+=head1 AUTHOR
+
+Andrew Sterling Hanenkamp E<lt>hanenkamp@users.sourceforge.netE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2005 Andrew Sterling Hanenkamp. All Rights Reserved.
+
+Contentment is distributed and licensed under the same terms as Perl itself.
+
+=cut
 
 1
