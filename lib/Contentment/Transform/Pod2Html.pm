@@ -71,8 +71,9 @@ sub _handle_element_start {
 				$self->{'contentment_pod2html_link_man'} = $attr->{to};
 				$self->{'contentment_pod2html_link_man_section'} = $attr->{section};
 			} elsif ($attr->{type} eq 'pod') {
-				# TODO Handle this better.
 				my $link;
+				my $target;
+
 				if (defined $attr->{to}) {
 					my $file = $attr->{to};
 					$file =~ s/::/\//g;
@@ -85,13 +86,17 @@ sub _handle_element_start {
 					}
 
 					unless (defined $link) {
-						$link = "$conf->{pod_fallback}$attr->{to}";
+						$target = "_blank";
+						$link   = "$conf->{pod_fallback}$attr->{to}";
 					}
 				}
 				if (defined $attr->{section}) {
 					$link .= "#$attr->{section}";
 				}
-				print qq(<a href="$link">);
+
+				print qq(<a ).
+					(defined $target?qq(target="$target" ):'').
+					qq(href="$link">);
 			} else {
 				warn "Unknown link type $attr->{to} given; time to update ",__PACKAGE__;
 			}

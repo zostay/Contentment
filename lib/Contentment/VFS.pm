@@ -177,9 +177,9 @@ sub new {
 		or die "VFS Things only wrap real files: $canonpath";
 
 	return bless { 
-		root      => $root, 
-		path      => $path, 
-		canonpath => $canonpath,
+		root      => File::Spec->canonpath($root), 
+		path      => File::Spec->canonpath($path), 
+		canonpath => File::Spec->canonpath($canonpath),
 	}, $class;
 }
 

@@ -64,7 +64,7 @@ sub decode_property {
 	my $key   = shift;
 	my $value = shift;
 
-	my $quote = extract_quotelike $value;
+	my $quote = (extract_quotelike $value)[5];
 
 	if ($quote) {
 		return ($key => $quote);
