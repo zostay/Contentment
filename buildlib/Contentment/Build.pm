@@ -21,26 +21,6 @@ sub ACTION_install {
 
 sub my_destdir { my $self = shift; $$self{properties}{destdir} || '/' }
 
-sub copy {
-	my $self = shift;
-	my $from = shift;
-	my $to   = shift;
-
-	open IN, $from or die "cannot read $from: $!";
-	open OUT, ">$to" or die "cannot write $to: $!";
-
-	binmode IN;
-	binmode OUT;
-
-	my $buf;
-	while (read IN, $buf, 1024) {
-		print OUT $buf;
-	}
-
-	close OUT;
-	close IN;
-}
-
 sub safe_install {
 	my $self     = shift;
 	my $from_dir = shift;
@@ -48,6 +28,7 @@ sub safe_install {
 
 	my $safe_dir = File::Spec->catfile('blib', 'safe', $from_dir);
 	mkpath($safe_dir);
+	mkpath($to_dir);
 
 	my @install;
 	while (my $file = shift) {
@@ -56,10 +37,10 @@ sub safe_install {
 		my $to_file   = File::Spec->catfile($self->my_destdir, $to_dir, $file);
 
 		unless ($safe && -e $to_file) {
-			$self->copy($from_file, $to_file);
+			File::Copy::copy($from_file, $to_file);
 		} else {
 			warn "Preserving $to_file, installing to $to_file.new instead\n";
-			$self->copy($from_file, "$to_file.new");
+			File::Copy::copy($from_file, "$to_file.new");
 		}
 	}
 
