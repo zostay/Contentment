@@ -14,6 +14,34 @@ use SPOPS::Initialize;
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
+=head1 NAME
+
+Contentment::Form - Defines forms, widgets, and submissions API
+
+=head1 DESCRIPTION
+
+The forms API is divided into three primary and persistently stored types: C<Contentment::Form>, C<Contentment::Form::Widget>, and C<Contentment::Form::Submission>. This module currently contains the definition of all three. It is likely that the widget and submission API will be moved into their own modules at some future point. However, L<Contentment::Form> will likely remain the only module you need to load to get access to those classes.
+
+The basic overview is that a "form" is the structure a particular web form takes, i.e., a collection "widgets." The "widgets" are the controls added to a form and provide processing to convert raw variables submitted over HTTP into processed values. The "submission" represents either a prepared form (a particular instance sent to the client) or a submitted form containing raw variables for processing. The submission asks each widget in the form to process the raw variables into processed values. Then, the form's action is asked to do whatever it does on those processed values.
+
+=over
+
+=item Contentment::Form
+
+This class currently only contains two fields per record: C<form_name> and C<action>. The key, C<form_name>, should be a name unique to that form throughout the entire Contentment web site. This is used to group widgets and submissions together with that particular form. The C<action> is the name of the plugin (see L<Contentment/run_plugin>), which is responsible for processing a form submission from this form.
+
+=item Contentment::Form::Widget
+
+This class defines a C<form_name> and C<widget_name> that are able to uniquely identify each widget---though, in the database, the primary key is the C<widget_id>. The widget then has a C<class> field, in which is stored the name of a class used for processing the widget. That class must define a single C<process> method, which is called with the widget and submission as arguments. Finally, the C<args> field defines the characteristics of the widget as a hash reference.
+
+=item Contentment::Form::Submission
+
+Submissions form the capstone of the API. Each submission has a C<uuid>, C<form_name>, C<session_id>, C<ctime>, C<ptime>, C<ftime>, C<map>, C<vars>, and C<results>. The C<uuid> is an automatically generated (see L<Data::UUID>) identifier for the submission, which is used to creating forms and for determining which submission is responsible for handling a form submission. The C<form_name> tells the submission which form object it belongs to and, consequently, which widgets apply to it. The C<session_id> is a security feature, which prevents a non-superuser from trying to steal information out of another session's submission. The C<ctime> is a L<DateTime> object containing the submission's creation timestamp. The C<ptime> is a L<DateTime> object contain the timestamp from the last time it was processed (i.e., the last time a submission was made to modify the C<vars>). The C<ftime> is a L<DateTime> object containing the timestamp from when the submission was last processed and the action executed reported a "finished" state. The C<map> names the plugin used to determine which URL to load based upon the state of the submission. The C<vars> is a hash reference containing the processed form values. The C<results> is used to store the output from the last executed C<action>.
+
+=back
+
+=cut
+
 my %spops = (
 	form => {
 		class				=> 'Contentment::Form',
@@ -107,6 +135,14 @@ Contentment::Form::Submission->_create_table('MySQL', 'form_submission', q(
 		PRIMARY KEY (uuid));
 ));
 
+=head1 EXTRA METHODS
+
+=item @submissions = Contentment::Form::Submission-E<gt>create_from_args(%args)
+
+This method attempts to load submission objects from a submitted form. The submissions will have the transient variable C<alias> set to the alias assigned by the submitter and the C<raw_vars> hash will contain the raw values submitted.
+
+=cut
+
 sub Contentment::Form::Submission::create_from_args {
 	my $class   = shift;
 	my %ARGS    = @_;
@@ -151,6 +187,12 @@ sub Contentment::Form::Submission::create_from_args {
 	return sort { $a->{alias} cmp $b->{alias} } @submissions;
 }
 
+=item $url = $submission->process
+
+This method performs form processing. It runs each form widget against the raw values submitted to the form and then executes the action associated with the form. Finally, it asks the map plugin for a URL and returns the URL.
+
+=cut
+
 sub Contentment::Form::Submission::process {
 	my $self = shift;
 
@@ -174,6 +216,12 @@ sub Contentment::Form::Submission::process {
 
 	return Contentment->run_plugin($self->{map}, $Contentment::context);
 }
+
+=item $widget = Contentment::Form::Widget->build(%args)
+
+This is a shortcut for creating widgets. This method will attempt to load the widget from the C<form_name> and C<widget_name> arguments passed into C<%args> if it can. If not it will create a new widget with those fields set. Then it will set the C<class> and C<args> fields of the widget according to the same values in C<%args>.
+
+=cut
 
 sub Contentment::Form::Widget::build {
 	my $self = shift;
@@ -200,6 +248,12 @@ sub Contentment::Form::Widget::build {
 	return $widget;
 }
 
+=item $widget->process($submission)
+
+Applies the widget's C<class> processor to the given C<$submission>.
+
+=cut
+
 sub Contentment::Form::Widget::process {
 	my $self       = shift;
 	my $submission = shift;
@@ -210,30 +264,11 @@ sub Contentment::Form::Widget::process {
 	$self->{class}->process($self, $submission);
 }
 
-1;
+=back
 
-__END__
+=head1 SEE ALSO
 
-=head1 NAME
-
-Contentment::Form - Form handling API
-
-=head1 DESCRIPTION
-
-This module defines three different classes, C<Contentment::Form>, C<Contentment::Form::Widget>, and C<Contentment::Form::Submission>. Each of these are mainly used for the internal handling of form definitions and form
-processing.
-
-=head2 Contentment::Form
-
-This class defines the structure a form has. This structure is essentially the action that should be performed on submission and the widgets associated with the form to process the incoming submission.
-
-=head2 Contentment::Form::Widget
-
-One widget object is associated with every control in the form. The widget depends on an external class to determine how it is rendered and processed.
-
-=head2 Contentment::Form::Submission
-
-When creating a form, a submission is used to establish a few basic facts about this particular form instance. When the client POSTs the form back to us, this is turned into an activated submission, which is processed by all widgets associated with the submissions form and then passed on to the action for final handling.
+L<Contentment::Form::Widget::Null>, L<Contentment::Form::Widget::Input>, L<Contentment::Form::Widget::Select>
 
 =head1 AUTHOR
 
@@ -246,3 +281,6 @@ Copyright 2005 Andrew Sterling Hanenkamp. All Rights Reserved.
 Contentment is distributed and licensed under the same terms as Perl itself.
 
 =cut
+
+1
+
