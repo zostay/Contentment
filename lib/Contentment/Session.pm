@@ -72,7 +72,7 @@ sub get_security {
 		return { SEC_SCOPE_WORLD() => SEC_LEVEL_WRITE };
 	}
 
-	if ( defined $Contentment::context && $Contentment::context->session_id == $item->id ) {
+	if ( defined $Contentment::context && $Contentment::context->session_id eq $item->id ) {
 		$log->is_debug &&
 			$log->debug("The session matches the context, granting SEC_LEVEL_WRITE to session ", $item->id);
 		return { SEC_SCOPE_WORLD() => SEC_LEVEL_WRITE };
