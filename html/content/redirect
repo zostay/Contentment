@@ -2,11 +2,15 @@
 $to
 </%args>
 
-<%perl>
+<%init>
 delete $ARGS{to};
 my @args;
 while (my ($k, $v) = each %ARGS) {
-	push @args, "$k=$v";
+	if (ref $v eq 'ARRAY') {
+		push @args, "$k=$_" foreach (@$v);
+	} else {
+		push @args, "$k=$v";
+	}
 }
 
 my $url;
@@ -21,5 +25,6 @@ if (@args) {
 	$url .= join '&', @args;
 }
 
+$log->debug("Redirecting to $url");
 $m->redirect($url);
-</%perl>
+</%init>

@@ -47,4 +47,18 @@ sub configuration {
 	return \%configuration;
 }
 
+sub run_plugin {
+	my $class = shift;
+	my $plugin = shift;
+
+	my ($package, $method) = $plugin =~ m/^(.*?)::(\w+)$/
+		or die "Invalid plugin named $plugin";
+
+	eval "use $package";
+	warn "Problem loading plugin $package: $@" if $@;
+
+	no strict 'refs';
+	return $plugin->(@_);
+}
+
 1

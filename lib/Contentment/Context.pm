@@ -5,7 +5,10 @@ use warnings;
 
 use base 'Class::Accessor';
 
+use Contentment::Form;
+use Contentment::Panel;
 use Contentment::Setting;
+use DateTime;
 use Log::Log4perl;
 my $log = Log::Log4perl->get_logger('Contentment::Context');
 
@@ -14,7 +17,7 @@ our $VERSION = '0.01';
 my @letters = ( 'a' .. 'z', 'A' .. 'Z', '0' .. '9' );
 
 __PACKAGE__->mk_ro_accessors(qw/ url session_id session m r vfs setting /);
-__PACKAGE__->mk_accessors(qw/ original_kind panel panels submision submissions /);
+__PACKAGE__->mk_accessors(qw/ original_kind panel panels submission submissions last_processed /);
 
 =head1 NAME
 
@@ -88,7 +91,9 @@ This is the top-level submission object defined by the response. Don't mess with
 
 This is a stack of submissions in case of nested forms. Don't mess with this unless you I<really> know what you're doing.
 
-=back 
+=item $context-E<gt>last_processed
+
+This is a list of form submission UUIDs that were processed by an immediately preceding C</content/widget/process.mason> run, which redirected to the current request.
 
 =head1 OTHER API
 
@@ -102,34 +107,45 @@ Don't use this unless your're defining a new front-end to Contentment. This is u
 
 =cut
 
+sub error_map {
+	my $result = shift;
+	die "No map defined.";
+}
+
 # Create a new context
 sub new {
-	my ($class, $url, $session_id, $session, $m, $r) = @_;
+	my ($class, $args) = @_;
+	my $url        = $args->{url};
+	my $session_id = $args->{session_id};
+	my $session    = $args->{session};
+	my $m          = $args->{m};
+	my $r          = $args->{r};
 
 	my $setting = Contentment::Setting->fetch(__PACKAGE__);
-	unless (Defiend $setting) {
+	unless (defined $setting) {
 		$setting = Contentment::Setting->new;
 		$setting->{namespace} = __PACKAGE__;
 		$setting->{data} = {};
 	}
 
-	$class->SUPER::new(
-		url           => $url,
-		session_id    => $session_id,
-		session       => $session,
-		m             => $m,
-		r             => $r,
-		original_kind => 'unknown',
-		vfs           => Contentment::VFS->new,
-		panel         => Contentment::Panel->new(
+	$class->SUPER::new({
+		url            => $url,
+		session_id     => $session_id,
+		session        => $session,
+		m              => $m,
+		r              => $r,
+		original_kind  => 'unknown',
+		vfs            => Contentment::VFS->new,
+		panel          => Contentment::Panel->new(
 			$url,
 			'__DEFAULT__',
-			Contentment::Map->error_map,
+			'Contentment::Context::error_map',
 		),
-		panels        => [],
-		setting	      => $setting,
-		submissions   => [],
-	);
+		panels         => [],
+		setting	       => $setting,
+		submissions    => [],
+		last_processed => $args->{last_processed} || [],
+	});
 }
 
 =item $context-E<gt>current_user
@@ -140,6 +156,25 @@ Fetches the user object associated with the user's current session. This is just
 
 sub current_user {
 	return shift->session->{current_user};
+}
+
+=item $context-E<gt>last_processed_for_form($form_name)
+
+Returns all the Form Submission objects in an array reference matching UUIDs in C<last_processed> that belong to the named form.
+
+=cut
+
+sub last_processed_for_form {
+	my $self      = shift;
+	my $form_name = shift or die "Missing required 'form_name' argument.";
+
+	my @results;
+	for my $uuid (@{ $self->last_processed }) {
+		my $submission = Contentment::Form::Submission->fetch($uuid);
+		push @results, $submission if $submission->{form_name} eq $form_name;
+	}
+
+	return \@results;
 }
 
 =item $context-E<gt>action_result($state, %args)
@@ -194,14 +229,49 @@ sub end_panel {
 	$self->panel(pop @{ $self->panels });
 }
 
-=item $context-E<gt>start_form($name, $action, $default_map)
+# =item $context-E<gt>form_submission($form, $submission)
+# 
+# Given a form or form name (C<$form>) and a submission or submission UUID (C<$submission>), this notifies the system that the next time this user's session encounters the given form, the given submission should be reused. If no such submission can be found or the submission's characteristics do not match the form, then a new submission will be created anyway.
+# 
+# =cut
+# 
+# sub form_submission {
+# 	my $self       = shift;
+# 	my $form       = shift;
+# 	my $submission = shift;
+# 
+# 	$form       = $form->{form_name}  if ref $form;
+# 	$submission = $submission->{uuid} if ref $submission;
+# 
+# 	$self->session->{forms}{$form}{use_submission} = $submission;
+# }
 
-Pushes a new form submission onto the submissions stack. The form is either loaded from the database or a new one named C<$name> is created. The C<$action> is used to set the action for the form. A new submission is created and pushed onto the submissions stack. This submission will have the the panel's map associated with it if a panel has been defined, otherwise it will fallback to the C<$default_map>.
+=item $test = $context-E<gt>is_top_submission
+
+Returns true when we are inside of exactly one submission (i.e., not in a submission nested within another).
+
+=cut
+
+sub is_top_submission {
+	my $self = shift;
+
+	return $self->submission && !@{ $self->submissions };
+}
+
+=item $context-E<gt>start_form(name => $name, action => $action, default_map => $default_map, resume => $resume)
+
+Attempts to load an existing submission if C<$resume> is not false or pushes a new form submission onto the submissions stack. The form is either loaded from the database or a new one named C<$name> is created. The C<$action> is used to set the action for the form. A new submission is created and pushed onto the submissions stack. This submission will have the the panel's map associated with it if a panel has been defined, otherwise it will fallback to the C<$default_map>.
 
 =cut
 
 sub start_form {
-	my ($self, $name, $action, $map) = @_;
+	my $self = shift;
+	my %args = @_;
+
+	my $name   = $args{name}   or die "Missing required argument name.";
+	my $action = $args{action} or die "Missing required argument action.";
+	my $map    = $args{default_map} or die "Missing required argument default_map.";
+	my $resume = $args{resume} || 1;
 
 	my $form;
 	
@@ -222,12 +292,32 @@ sub start_form {
 	$self->submission
 		&& push @{ $self->submissions }, $self->submission;
 
-	my $submission = Contentment::Form::Submission->new;
-	$submission->{form_name} = $name;
-	$submission->{alias}     = $self->form_alias;
-	$submission->{map}       = $map;
-	$submission->save;
+	# Load an existing submission if this form is resumeable.
+	my $submission;
+	if ($resume) {
+		for my $uuid (@{ $self->last_processed }) {
+			$submission = Contentment::Form::Submission->fetch($uuid);
+			$submission->{form_name} eq $name              or undef $submission;
+			$submission->{session_id} eq $self->session_id or undef $submission;
+			!defined $submission->{ftime}                  or undef $submission;
+			$submission->{map} eq $map                     or undef $submission;
+		}
+	}
 
+	# Otherwise, create a new submission.
+	unless (defined $submission) {
+		$submission = Contentment::Form::Submission->new;
+		$submission->{form_name}  = $name;
+		$submission->{session_id} = $self->session_id;
+		$submission->{map}        = $map;
+		$submission->{ctime}      = DateTime->now;
+		$submission->save;
+	}
+
+	# Make sure the transient "alias" variable is always appropriately set.
+	$submission->{alias}     = $self->form_alias;
+
+	# Make the loaded/new submission The Submission.
 	$self->submission($submission);
 }
 

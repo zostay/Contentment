@@ -51,6 +51,7 @@ sub comp {
 
 	return $file->{ft_comp} if defined $file->{ft_comp};
 
+	$log->debug("Loading component for file $file.");
 	$file->{ft_comp} = $Contentment::context->m->fetch_comp($file->path);
 
 	warn "Failed to fetch Mason component for $file"

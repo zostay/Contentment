@@ -1,13 +1,18 @@
-<input type="submit" name="<% $name %>" value="<% $label %>"/>
-
-<%init>
-$context->add_widget(
-	processor => 'process_input',
-	name      => $name);
-$name = $context->form_id.".$name";
-</%init>
-
+<& /content/widget/input,
+	name     => $name,
+	default  => $label,
+	override => 1,
+	onblur   => $onblur,
+	onfocus  => $onfocus,
+	onselect => $onselect,
+	onchange => $onchange,
+	args     => { type => 'submit' },
+&>
 <%args>
-$name => 'activate'
-$label => 'Submit'
+$name     => '__activate__'
+$label    => 'Submit'
+$onblur   => undef
+$onfocus  => undef
+$onselect => undef
+$onchange => undef
 </%args>
