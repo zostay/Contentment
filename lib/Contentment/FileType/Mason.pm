@@ -147,6 +147,8 @@ sub generate {
 	}
 }
 
+=back
+
 =head1 SEE ALSO
 
 L<HTML::Mason>
