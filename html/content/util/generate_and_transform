@@ -1,0 +1,11 @@
+% my $original_original_kind = $context->original_kind;
+% my $result;
+<&| /content/transform/apply_transformation, to => $to &>
+<& /content/util/generate, relname => $relname &>
+</&>
+% $context->original_kind($original_original_kind);
+
+<%args>
+$relname
+$to
+</%args>

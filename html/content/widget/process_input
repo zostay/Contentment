@@ -1,0 +1,9 @@
+<%args>
+$form_id
+$name
+</%args>
+
+<%perl>
+my $value = $m->request_args->{"$form_id.$name"};
+$context->add_form_value($form_id, $name, $value);
+</%perl>

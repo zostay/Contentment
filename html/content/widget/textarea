@@ -1,0 +1,19 @@
+<textarea name="<% $name %>" cols="<% $cols %>" rows="<% $rows %>"><% $default %></textarea>
+
+<%init>
+$context->add_widget(
+	processor => 'process_input',
+	name      => $name);
+
+my $value = !$override && defined $ARGS{$name} ? $ARGS{name} : $default;
+
+$name = $context->form_id.".$name";
+</%init>
+
+<%args>
+$name
+$cols => 50
+$rows => 10
+$default => undef
+$override => 0
+</%args>

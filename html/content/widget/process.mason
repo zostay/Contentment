@@ -1,0 +1,23 @@
+<%perl>
+for my $form ($context->forms) {
+	if ($ARGS{"$form.activate"}) {
+		for my $widget ($context->widgets($form)) {
+			$m->comp($widget->{processor}, %$widget);
+		}
+
+		my $action = $context->get_action($form);
+		my $result = $m->comp($$action{action}, $context->form_values($form));
+		$$result{action} = $$action{action};
+		$context->set_action_result(
+			$$action{uri}, $$action{panel}, $$action{map}, $result
+		);
+
+		return $m->comp($$action{map}, 
+			src_uri => $$action{uri},
+			panel   => $$action{panel},
+			action  => $$action{action},
+			state   => $$result{state},
+			%{ $$result{args} });
+	}
+}
+</%perl>

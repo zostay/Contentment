@@ -1,0 +1,50 @@
+package Contentment;
+
+use strict;
+use warnings;
+
+use Carp;
+use Log::Log4perl ':easy';
+use YAML 'LoadFile';
+
+our $VERSION = '0.01';
+
+use constant ETC_DIR => '@@CONFDIR@@';
+
+BEGIN {
+	Log::Log4perl::easy_init($DEBUG);
+}
+
+sub dc { "(".shift(@_).") (".shift(@_).":".shift(@_).") " }
+$SIG{__WARN__} = sub { Log::Log4perl::get_logger->warn(dc(caller),@_)  };
+$SIG{__DIE__}  = sub { Log::Log4perl::get_logger->fatal(dc(caller),@_); confess @_; };
+
+my %configuration;
+sub configuration {
+	unless (%configuration) {
+		my $defaults_file = ETC_DIR.'/Contentment.defaults.conf';
+		my $locals_file   = ETC_DIR.'/Contentment.conf';
+
+		my ($defaults, $locals);
+		eval {
+			$defaults = LoadFile($defaults_file);
+			$locals   = LoadFile($locals_file);
+		};
+
+		if ($@) { die "Error loading configuration: $@" }
+
+		%configuration = (%$defaults, %$locals);
+
+		# Initialize Log4perl
+		if (my $log4perl_conf = $configuration{log4perl_conf}) {
+			Log::Log4perl::init($log4perl_conf);
+		} else {
+			Log::Log4perl::easy_init($DEBUG);
+			warn 'No log4perl.conf specified. Sending DEBUG and above to STDERR.';
+		}
+	}
+	
+	return \%configuration;
+}
+
+1

@@ -1,0 +1,8 @@
+<%init>
+my $file = $vfs->lookup($filename);
+return $file->kind;
+</%init>
+
+<%args>
+$filename
+</%args>

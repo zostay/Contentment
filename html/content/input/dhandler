@@ -1,0 +1,19 @@
+<%perl>
+my $relname = $m->dhandler_arg;
+$log->info("input dhandler preparing to generate $relname");
+
+$root_file = $vfs->lookup_source($relname);
+
+my $result = eval { $m->comp("/content/util/generate", rootname => $relname, top => 1) };
+
+unless ($@) {
+	return $result;
+} else {
+	$log->error("404 Error: input dhandler found no match to $relname: $@");
+	$m->clear_buffer;
+</%perl>
+File not found.
+<%perl>
+	$m->abort(404);
+}
+</%perl>

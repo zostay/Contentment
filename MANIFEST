@@ -1,0 +1,25 @@
+Build.PL
+buildlib/Contentment/Build.pm
+cgi-bin/handler.cgi
+etc/Contentment.conf.PL
+etc/Contentment.defaults.conf
+html/autohandler
+html/content/generator/mason
+html/content/generator/unknown
+html/content/input/dhandler
+html/content/kind/final/kind
+html/content/kind/input/kind
+html/content/kind/input/modules/00-mason
+html/content/transform/apply_transformation
+lib/Contentment.pm.in
+lib/Contentment.pm.PL
+lib/Contentment/Context.pm
+lib/Contentment/Session.pm
+lib/Contentment/SPOPS.pm
+lib/Contentment/Util/Transformation.pm
+lib/SPOPSx/Tool/HashField.pm
+MANIFEST			This list of files
+sample/content/kind/final/modules/00-themed-html
+sample/content/theme/main
+sample/content/transform/modules/html2themed-html
+sample/index.mhtml

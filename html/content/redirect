@@ -1,0 +1,25 @@
+<%args>
+$to
+</%args>
+
+<%perl>
+delete $ARGS{to};
+my @args;
+while (my ($k, $v) = each %ARGS) {
+	push @args, "$k=$v";
+}
+
+my $url;
+if ($to =~ /^http:/) {
+	$url = $to;
+} else {
+	$url = "$full_base$to";
+}
+
+if (@args) {
+	$url .= '?';
+	$url .= join '&', @args;
+}
+
+$m->redirect($url);
+</%perl>

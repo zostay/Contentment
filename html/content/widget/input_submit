@@ -1,0 +1,13 @@
+<input type="submit" name="<% $name %>" value="<% $label %>"/>
+
+<%init>
+$context->add_widget(
+	processor => 'process_input',
+	name      => $name);
+$name = $context->form_id.".$name";
+</%init>
+
+<%args>
+$name => 'activate'
+$label => 'Submit'
+</%args>

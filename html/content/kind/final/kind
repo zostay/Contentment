@@ -1,0 +1,12 @@
+<%init>
+my $kind = undef;
+for my $file ($vfs->glob('/content/kind/final/modules/*')) {
+	$kind = $m->comp($file);
+	defined $kind and last;
+}
+
+$kind ||= $context->original_kind || 'unknown';
+$log->info("Final kind for request has determined to be $kind");
+
+return $kind;
+</%init>

@@ -1,0 +1,29 @@
+<%init>
+unless ($relname || $rootname || $localname) {
+	die "No file given to generate.";
+}
+
+if ($relname) {
+	warn 'DEPRECATION: The relname argument to generate is deprecated. Use rootname instead.';
+	$rootname = $relname;
+} elsif ($localname) {
+	my $dir = $m->caller->dir_path;
+	$rootname = "$dir/$localname";
+}
+
+my $file = $vfs->lookup_source($rootname);
+
+if ($file) {
+	$log->debug("generate found a file: $file");
+	return $file->generate($top);
+} else {
+	return undef;
+}
+</%init>
+
+<%args>
+$relname => undef
+$rootname => undef
+$localname => undef
+$top => 0
+</%args>

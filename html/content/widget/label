@@ -1,0 +1,9 @@
+<label for="<%$name%>"><%$m->content%></label>
+
+<%init>
+$name = $context->form_id.".$name";
+</%init>
+
+<%args>
+$name
+</%args>
