@@ -1,5 +1,5 @@
 <%args>
-$dir
+$dir              => '.'
 $offset           => 0
 $limit            => 0
 $order_by         => 'path'
@@ -12,6 +12,12 @@ $exclude_root     => 0
 @excludes         => ()
 @exclude_children => ()
 </%args>
+
+<%init>
+if ($dir !~ /^\//) {
+	$dir = $m->caller->dir_path."/$dir";
+}
+</%init>
 
 <%perl>
 use Scalar::Util qw/looks_like_number/;
@@ -77,6 +83,8 @@ if ($offset || $limit) {
 	my $end   = $limit ? $start + $limit : $#files;
 	$end = $end > $#files ? $#files : $end;
 }
+
+$log->debug("Index returning these files: ",join(' ', @files));
 
 my $final_kind = $kind || $m->comp('/content/kind/final/kind');
 </%perl>
