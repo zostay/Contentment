@@ -63,7 +63,20 @@ sub generate {
 		$log->debug("Compiling/Running component $source_file");
 	
 		if ($top) {
-			my $original_kind = $class->property($source_file, 'kind') || 'unknown';
+			my $original_kind;
+			unless ($original_kind = $class->property($source_file, 'kind')) {
+				if ($file->path =~ /\.m?html$/) {
+					$original_kind = 'text/html';
+				} elsif ($file->path =~ /\.mason$/) {
+					my $path = $file->path;
+					s/\.mason$// =~ $path;
+
+					my $mime = MIME::Types->new;
+					$original_kind = $mime->mimeTypeOf($path);
+				} else {
+					$original_kind = 'unknown';
+				}
+			}
 
 			$log->debug("Mason file generates original kind of $original_kind");
 			$Contentment::context->original_kind($original_kind);

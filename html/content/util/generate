@@ -1,4 +1,4 @@
-<%init>
+<%perl>
 unless ($relname || $rootname || $localname) {
 	die "No file given to generate.";
 }
@@ -15,15 +15,23 @@ my $file = $vfs->lookup_source($rootname);
 
 if ($file) {
 	$log->debug("generate found a file: $file");
-	return $file->generate($top);
+	if (defined $to) {
+</%perl>
+<&| /content/transform/apply_transformation, to => $to, from => $file->kind &>
+% $file->generate($top);
+</&>
+<%perl>
+	} else {
+		return $file->generate($top);
+	}
 } else {
 	return undef;
 }
-</%init>
-
+</%perl>
 <%args>
 $relname => undef
 $rootname => undef
 $localname => undef
 $top => 0
+$to => undef
 </%args>
