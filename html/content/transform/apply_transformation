@@ -29,6 +29,10 @@ $to   => undef
 
 # Step 0: Force content to be executed first.
 my $input = $m->content;
+unless (defined $input) {
+	warn "No input to transform, not bothing; possible bug in generator.";
+	return;
+}
 
 # Step 1: Determine the original kind.
 my $original_kind = $from || $context->original_kind;
@@ -57,7 +61,7 @@ my @dirs = map $$_[1], @comp_dirs;
 use Contentment::Util::Transformation;
 my $transform = Contentment::Util::Transformation->new;
 
-my %found;
+my $found = 0;
 my @files = $vfs->glob('/content/transform/modules/*');
 for my $filename (@files) {
 	my $file = $vfs->lookup($filename);
@@ -72,9 +76,11 @@ for my $filename (@files) {
 	$transform->add_transformation(
 		$comp, \@input_kinds, $output_kind, $cost
 	);
+
+	$found++;
 }
 
-$log->debug("Transformation #4: discovered ",scalar(keys %found)," transformations");
+$log->debug("Transformation #4: discovered $found transformations");
 
 # Step 5: Attempt to find the cheapest transformation available.
 my $transforms = $transform->shortest_path($original_kind, $final_kind);
@@ -82,7 +88,7 @@ my $transforms = $transform->shortest_path($original_kind, $final_kind);
 (defined $transforms and @$transforms > 0)
 	or die "Oops! No way to get from $original_kind kind to $final_kind kind.";
 
-$log->debug("Transformation #5: transformation from original to final in @$transforms moves");
+$log->debug("Transformation #5: transformation from original to final in ",scalar(@$transforms)," moves");
 
 # Step 6: Use the transforms to get us there. We can let Mason do all the nasty
 # work of feeding the data around, we just loop through our transformations and

@@ -3,6 +3,8 @@ package Contentment::FileType::Mason;
 use strict;
 use warnings;
 
+use base 'Contentment::FileType::Other';
+
 use Log::Log4perl;
 
 our $VERSION = '0.01';
@@ -22,7 +24,26 @@ sub filetype_match {
 	}
 }
 
-sub kind { "mason" }
+sub real_kind { "text/x-mason" }
+
+sub generated_kind {
+	my $class = shift;
+	my $file  = shift;
+	
+	my $generated_kind;
+	unless ($generated_kind = $class->property($file, 'kind')) {
+		if ($file->path =~ /\.m?html$/) {
+			$generated_kind = 'text/html';
+		} elsif ($file->path =~ /\.mason$/) {
+			my $path = $file->path;
+			s/\.mason$// =~ $path;
+
+			$generated_kind = $class->mimetypes->mimeTypeOf($path);
+		}
+	}
+
+	return $generated_kind;
+}
 
 sub comp {
 	my $class = shift;
@@ -55,33 +76,8 @@ sub generate {
 	my $file  = shift;
 	my $top   = shift;
 
-	my $source_file = $file->lookup_source;
-
-	die "Failed to find a proper source for file $file" unless $source_file;
-
-	if (my $comp = $class->comp($source_file)) {
-		$log->debug("Compiling/Running component $source_file");
-	
-		if ($top) {
-			my $original_kind;
-			unless ($original_kind = $class->property($source_file, 'kind')) {
-				if ($file->path =~ /\.m?html$/) {
-					$original_kind = 'text/html';
-				} elsif ($file->path =~ /\.mason$/) {
-					my $path = $file->path;
-					s/\.mason$// =~ $path;
-
-					my $mime = MIME::Types->new;
-					$original_kind = $mime->mimeTypeOf($path);
-				} else {
-					$original_kind = 'unknown';
-				}
-			}
-
-			$log->debug("Mason file generates original kind of $original_kind");
-			$Contentment::context->original_kind($original_kind);
-			$log->debug("Context is $Contentment::context");
-		}
+	if (my $comp = $class->comp($file)) {
+		$log->debug("Compiling/Running component $file");
 
 		my $subreq = $Contentment::context->m->make_subrequest(
 			comp => $comp, args => [ $Contentment::context->m->request_args ]
@@ -95,7 +91,7 @@ sub generate {
 
 		return $result;
 	} else {
-		die "Failed to compile component $source_file: $@";
+		die "Failed to compile component $file: $@";
 	}
 }
 

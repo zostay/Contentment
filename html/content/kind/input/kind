@@ -1,6 +1,6 @@
 <%init>
 my $file = $vfs->lookup($filename);
-return $file->kind;
+return $file->real_kind;
 </%init>
 
 <%args>

@@ -14,24 +14,26 @@ my $mimetypes;
 sub mimetypes {
 	unless (defined $mimetypes) {
 		$mimetypes = MIME::Types->new;
-
-		$mimetypes->addType(
-			MIME::Type->new(
-				type       => 'text/x-pod',
-				extensions => [ 'pod' ],
-			),
-		)
 	}
+
+	return $mimetypes;
 }
 
 
 sub filetype_match { 1 }
 
-sub kind { 
+sub real_kind { 
 	my $class = shift;
 	my $file  = shift;
 	
 	return $class->mimetypes->mimeTypeOf($file);
+}
+
+sub generated_kind {
+	my $class = shift;
+	my $file  = shift;
+
+	return $class->real_kind($file);
 }
 
 sub property { }
@@ -39,13 +41,6 @@ sub property { }
 sub generate {
 	my $class = shift;
 	my $file  = shift;
-	my $top   = shift;
-
-	if ($top) {
-		my $original_kind = $class->kind($file) || 'unknown';
-		$log->debug("Regular file generates original kind of $original_kind");
-		$Contentment::context->original_kind($original_kind);
-	}
 
 	my $fh = $file->open("r");
 	binmode $fh;

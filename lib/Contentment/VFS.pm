@@ -241,7 +241,13 @@ sub generate {
 	my $top  = shift;
 
 	if (my $filetype = $self->filetype) {
-		return $filetype->generate($self, $top);
+		if ($top) {
+			my $original_kind = $self->generated_kind;
+			$Contentment::context->original_kind($original_kind);
+			$log->debug("File type $filetype says $self->{path} generates original kind of $original_kind");
+		}
+
+		return $filetype->generate($self);
 	} else {
 		return;
 	}
@@ -270,11 +276,21 @@ sub lines {
 
 sub is_file { 1 }
 
-sub kind {
+sub real_kind {
 	my $self = shift;
 
 	if (my $filetype = $self->filetype) {
-		return $filetype->kind($self->path);
+		return $filetype->real_kind($self);
+	} else {
+		return 'unknown';
+	}
+}
+
+sub generated_kind {
+	my $self = shift;
+
+	if (my $filetype = $self->filetype) {
+		return $filetype->generated_kind($self);
 	} else {
 		return 'unknown';
 	}

@@ -18,6 +18,10 @@ my $build = Contentment::Build->new(
 		'SQL::Translator'   => '0.06', 
 		'YAML'				=> '0.35', 
 	},
+	recommends         => {
+		'Pod::Simple'       => '3.02',
+		'Text::Balanced'	=> '1.95',
+	},
 	PL_files           => {
 		'lib/Contentment.pm.PL' 	=> 'lib/Contentment.pm',
 		'etc/Contentment.conf.PL'	=> 'etc/Contentment.conf',
