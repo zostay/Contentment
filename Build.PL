@@ -1,7 +1,7 @@
 use strict;
 use lib 'buildlib';
 
-use Module::Build 0.20;
+use Module::Build 0.21;
 use Contentment::Build;
 
 my $build = Contentment::Build->new(
@@ -12,9 +12,8 @@ my $build = Contentment::Build->new(
 	requires           => {
 		'HTML::Mason'		=> '1.20',
 		'MIME::Types'       => '1.13',
-		'perl'				=> '5.8.1',
+		'perl'				=> '5.6.1',
 		'SPOPS'				=> '0.87', 
-		'SPOPSx::Ginsu'     => '0.58', 
 		'SQL::Translator'   => '0.06', 
 		'YAML'				=> '0.35', 
 	},
