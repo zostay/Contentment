@@ -63,8 +63,7 @@ File not found.
 }
 </%perl>
 <%filter>
-s{^\s+}{};
-s{\s+$}{};
+s{^\s+}{}; s{\s+$}{};
 </%filter>
 <%flags>
 inherit => undef

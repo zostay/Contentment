@@ -241,12 +241,6 @@ sub generate {
 	my $top  = shift;
 
 	if (my $filetype = $self->filetype) {
-		if ($top) {
-			my $original_kind = $self->generated_kind;
-			$Contentment::context->original_kind($original_kind);
-			$log->debug("File type $filetype says $self->{path} generates original kind of $original_kind");
-		}
-
 		return $filetype->generate($self);
 	} else {
 		return;

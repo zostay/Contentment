@@ -15,8 +15,16 @@ my $file = $vfs->lookup_source($rootname);
 
 if ($file) {
 	$log->debug("generate found a file: $file");
-	if (defined $to) {
+
+	if ($top) {
+		my $original_kind = $file->generated_kind;
+		$context->original_kind($original_kind);
+		$log->debug("File type ",$file->filetype," says $file->{path} generates original kind of $original_kind");
+	}
+
 </%perl>
+<&| /content/util/cache, file => $file, top => $top &>
+%	if (defined $to) {
 <&| /content/transform/apply_transformation, to => $to, from => $file->generated_kind &>
 % $file->generate($top);
 </&>
@@ -24,6 +32,9 @@ if ($file) {
 	} else {
 		return $file->generate($top);
 	}
+</%perl>
+</&>
+<%perl>
 } else {
 	return undef;
 }
