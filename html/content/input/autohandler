@@ -41,7 +41,7 @@ my $cookie = $q->cookie(
 	-expires => '+1h');
 $r->header_out('Cookie', $cookie);
 
-$Contentment::context = $context = Contentment::Context->new($id, \%session, $m, $r);
+$Contentment::context = $context = Contentment::Context->new($url, $id, \%session, $m, $r);
 $url = $q->url;
 $full_base = $q->url(-base => 1) . $base;
 </%init>

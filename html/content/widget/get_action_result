@@ -1,6 +1,6 @@
 <%args>
 $this_url => $url
-$panel => $context->panel_name
+$panel => $context->panel->name
 </%args>
 
 <%perl>
