@@ -10,7 +10,7 @@ $parser->parse_string_document($m->content);
 $parser->output_fh( *STDOUT );
 </%init>
 <%attr>
-input_kinds => [ 'pod' ]
+input_kinds => [ 'text/x-pod' ]
 output_kind => 'text/html'
 cost => 1
 </%attr>

@@ -10,13 +10,28 @@ my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
 our $VERSION = '0.01';
 
+my $mimetypes;
+sub mimetypes {
+	unless (defined $mimetypes) {
+		$mimetypes = MIME::Types->new;
+
+		$mimetypes->addType(
+			MIME::Type->new(
+				type       => 'text/x-pod',
+				extensions => [ '.pod' ],
+			),
+		)
+	}
+}
+
+
 sub filetype_match { 1 }
 
 sub kind { 
 	my $class = shift;
 	my $file  = shift;
 	
-	return MIME::Types->new->mimeTypeOf($file);
+	return $class->mimetypes->mimeTypeOf($file);
 }
 
 sub property { }
