@@ -1,0 +1,19 @@
+=head1 Contentment Documentation
+
+This should be a general starting point for Contentment documentation.
+
+=head1 Table of Contents
+
+=head2 Contentment Manual
+
+L<Contentment::Manual::Introduction> : Introduction to Contentment
+
+=head2 Contentment Perl API
+
+@@PERL_API_INDEX@@
+
+=head2 Contentment Mason API
+
+@@MASON_API_INDEX@@
+
+Copyright 2005 Andrew Sterling Hanenkamp. All Rights Reserved.

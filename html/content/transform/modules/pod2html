@@ -1,0 +1,16 @@
+<%init>
+eval { use Pod::Simple::HTML; };
+if ($@) { 
+	print "pod2html transformation unavailable, may need to install Pod::Simple: $@";
+	die $@;
+}
+
+my $parser = Pod::Simple::HTML->new;
+$parser->parse_string_document($m->content);
+$parser->output_fh( *STDOUT );
+</%init>
+<%attr>
+input_kinds => [ 'pod' ]
+output_kind => 'text/html'
+cost => 1
+</%attr>
