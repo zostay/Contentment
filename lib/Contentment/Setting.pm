@@ -10,6 +10,16 @@ use SPOPS::Initialize;
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
+=head1 NAME
+
+Contentment::Setting - A basic module for storing database settings
+
+=head1 DESCRIPTION
+
+Not sure if this module is sticking around yet. I thought I was going to use it for a couple things, but then didn't. So, no docs until I'm sure it sticks...
+
+=cut
+
 my %spops = (
 	setting => {
 		class             => 'Contentment::Setting',
@@ -32,6 +42,18 @@ __PACKAGE__->_create_table('MySQL', 'setting', q(
 		data          TEXT,
 		PRIMARY KEY (namespace));
 ));
+
+=head1 AUTHOR
+
+Andrew Sterling Hanenkamp, E<lt>hanenkamp@users.sourceforge.netE<gt>
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright 2005 Andrew Sterling Hanenkamp. All Rights Reserved.
+
+Contentment is distributed and licensed under the same terms as Perl itself.
+
+=cut
 
 1
 

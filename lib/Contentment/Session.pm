@@ -11,6 +11,16 @@ use SPOPS::Secure qw/ :scope :level /;
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
+=head1 NAME
+
+Contentment::Session - Session management for Contentment
+
+=head1 DESCRIPTION
+
+This is a session management module specifically designed for Contentment. Don't use this module directly. Instead, use the C<session> method of L<Contentment::Context> to read and manipulate the returned hash, which will use this module implicitly.
+
+=cut
+
 my %spops = (
 	session => {
 		class             => 'Contentment::Session',
@@ -80,6 +90,22 @@ sub get_security {
 
 	return { SEC_SCOPE_WORLD() => SEC_LEVEL_NONE };
 }
+
+=head1 SEE ALSO
+
+L<Contentment::Context>
+
+=head1 AUTHOR
+
+Andrew Sterling Hanenkamp, E<lt>hanenkamp@users.sourceforge.netE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2005 Andrew Sterling Hanenkamp. All Rights Reserved.
+
+Contentment is distributed and licensed under the same terms as Perl itself.
+
+=cut
 
 1
 

@@ -13,7 +13,7 @@ my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
 =head1 NAME
 
-Contentment::VFS - Provides a customized virtual file system
+Contentment::VFS - Provides a virtual file system for Contentment
 
 =head1 DESCRIPTION
 
@@ -31,6 +31,26 @@ provide such access. However, as of this writing, it does none of these things.
 
 This class merely provides a direct window into the real file system.
 
+=head1 STATUS
+
+As of this writing, this really isn't much of a "VFS" at all. It is merely a wrapper for the regular file system. This should change in the future.
+
+=head1 VFS API
+
+The main class of the VFS is C<Contentment::VFS>. This is a singleton object that can be referenced by doing:
+
+  $vfs = Contentment::VFS->new;
+
+Once you have a C<$vfs> object, you can use it to lookup files and directories. See the documentation on C<Contentment::VFS::Thing>, C<Contentment::VFS::File>, and C<Contentment::VFS::Directory> below.
+
+=head2 Contentment::VFS
+
+=over
+
+=item $vfs = Contentment::VFS-E<gt>new
+
+Returns a reference to the VFS singleton object.
+
 =cut
 
 my $vfs;
@@ -45,6 +65,12 @@ sub new {
 		bases => [ map $_->[1], @{ $conf->{comp_dirs} } ]
 	}, $class;
 }
+
+=item $thing = $vfs-E<gt>lookup($path)
+
+Given a path relative to the VFS root, this returns a reference to the matching C<Contentment::VFS::Thing> or returns C<undef>
+
+=cut
 
 sub lookup {
 	my $self = shift;
@@ -78,6 +104,20 @@ sub lookup {
 	$log->debug("VFS Lookup failed: $path");
 	return;
 }
+
+=item $thing = $vfs-E<gt>lookup_source($path)
+
+This is like C<lookup>, except that instead of looking for an exact filename match, this will attempt to find the first file that could be used as a source to generate output for the given path.
+
+If the C<$path> matches a file (not a directory) exactly, then the C<Contentment::VFS::Thing> representing that file is returned.
+
+If the C<$path> matches a directory exactly, then this method checks to see if that directory contains an index. The index is any file starting with F<index> with any file extension. If the directory doesn't contain an index file, then C<undef> is returned.
+
+Finally, this method searches for a file matching C<$path> without regard to file extensions. If a match is found, it is returned.
+
+In the case of multiple matches at any point, the choice of match is undefined.
+
+=cut
 
 sub lookup_source {
 	my $self    = shift;
@@ -116,6 +156,12 @@ sub lookup_source {
 	return $result;
 }
 
+=item @files = $vfs-E<gt>glob(@globs)
+
+Each glob in C<@globs> should be a Unix-style file glob pattern relative to the VFS root. Each of these patterns is applied to the VFS to return any matching filename. The C<@files> returned are merely full paths (within the VFS root) and I<not> C<Contentment::VFS::Thing> objects. The C<@files> are returned in sorted order.
+
+=cut
+
 sub glob {
 	my $self = shift;
 
@@ -139,6 +185,14 @@ sub glob {
 
 	return @files;
 }
+
+=item @files = $vfs-E<gt>find($want, @dirs)
+
+This method searches for all files within the given directories C<@dirs> that match the criteria given by the subroutine reference C<$want>. For each file found in each of the directories given, the C<Contentment::VFS::Thing> object for that file is passwd to the C<$want> subroutine. If the subroutine returns true, then the file is included in the resultant list of files C<@files>.
+
+In addition, the C<$want> method can determine whether or not a subdirectory is descended. By default, all subdirectories are searched. However, this can be turned off directory-by-directory by setting the value of C<prune> to true on that directory.
+
+=cut
 
 sub find {
 	my $self = shift;
@@ -167,6 +221,16 @@ use File::Basename ();
 use overload 
 	'""' => sub { shift->path };
 
+=back
+
+=head2 Contentment::VFS::Thing
+
+This is the base class for all "things" stored in the VFS. Generally, all VFS plugins will provide at least a file thing. If a VFS may contain subdirectories, it should also provide a directory thing. Depending on the needs and capabilities, a VFS may also provide other kinds of things.
+
+=over
+
+=cut
+
 sub new {
 	my $class = shift;
 	my $root  = shift;
@@ -183,9 +247,36 @@ sub new {
 	}, $class;
 }
 
+=item $path = $thing-E<gt>root
+
+I'm not sure of the value of this method generally, but it is very useful for the general file system plugin. It lets us know which Mason root contains this file.
+
+=cut
+
 sub root      { return shift->{root} }
+
+=item $path = $thing-E<gt>path
+
+This names the VFS path to the thing.
+
+=cut
+
 sub path      { return shift->{path} }
+
+=item $path = $thing-E<gt>canonpath
+
+I'm not sure of the value of this method generally, but it is very useful for the general file sysetm plugin. It gives us the full "real" path to the file in the file system.
+
+=cut
+
 sub canonpath { return shift->{canonpath} }
+
+=item $parent_thing = $thing-E<gt>parent
+
+Tries to find the thing that is the parent of this C<$thing>. Either returns the C<Contentment::VFS::Thing> found or C<undef>.
+
+=cut
+
 sub parent {
 	my $self = shift;
 
@@ -193,6 +284,12 @@ sub parent {
 	pop @path;
 	return Contentment::VFS->new->lookup(File::Spec->catdir(@path));
 }
+
+=item $stat = $thing-E<gt>stat
+
+This performs a filesystem C<stat> on the thing. This is only useful for the file system plugin.
+
+=cut
 
 sub stat {
 	my $self = shift;
@@ -203,8 +300,27 @@ sub stat {
 	return $self->{stat} = \@stat;
 }
 
+=item $test = $thing-E<gt>is_file
+
+Returns true if this thing is a plain file.
+
+=cut
+
 sub is_file { 0 }
+
+=item $test = $thing-E<gt>is_directory
+
+Returns true if this thing is a directory.
+
+=cut
+
 sub is_directory { 0 }
+
+=item $value = $thing-E<gt>property($key)
+
+Checks the thing to see if it has the named property. It either returns that property's value or C<undef>.
+
+=cut
 
 sub property {
 	my $self = shift;
@@ -251,9 +367,14 @@ sub property {
 	}
 }
 
+=item $result = $thing-E<gt>generate
+
+This causes the output of the thing to be generated and printed to the currently selected file handle. The result of this generation is also returned.
+
+=cut
+
 sub generate {
 	my $self = shift;
-	my $top  = shift;
 
 	if (my $filetype = $self->filetype) {
 		return $filetype->generate($self);
@@ -268,10 +389,28 @@ use FileHandle;
 
 our @ISA = qw/ Contentment::VFS::Thing /;
 
+=back
+
+=head2 Contentment::VFS::File
+
+This class will most certainly be moved when the VFS implementation is completed. This code is specific to real file system access only.
+
+=item $fh = $file_thing-E<gt>open($access)
+
+Opens the file associated with the C<$file_thing> and returns a reference to the opened file handle or C<undef> on failure. The C<$access> value determines what access to the file is requested as per L<FileHandle>.
+
+=cut
+
 sub open {
 	my $self = shift;
 	return FileHandle->new($self->canonpath, @_);
 }
+
+=item @lines = $file_thing-E<gt>lines
+
+Returns all of the lines (newline terminated) of the file in a list.
+
+=cut
 
 sub lines {
 	my $self = shift;
@@ -283,7 +422,19 @@ sub lines {
 	return @lines;
 }
 
+=item $test = $file_thing-E<gt>is_file
+
+Always returns true.
+
+=cut
+
 sub is_file { 1 }
+
+=item $kind = $file_thing-E<gt>real_kind
+
+Determines the filetype of the file represented and returns the real kind of the file.
+
+=cut
 
 sub real_kind {
 	my $self = shift;
@@ -295,6 +446,12 @@ sub real_kind {
 	}
 }
 
+=item $kind = $file_thing-E<gt>generated_kind
+
+Determines the filetype of the file represented and returns the generated kind of the file.
+
+=cut
+
 sub generated_kind {
 	my $self = shift;
 
@@ -304,6 +461,12 @@ sub generated_kind {
 		return 'unknown';
 	}
 }
+
+=item $filetype = $file_thing-E<gt>filetype
+
+Returns the filetype plugin which matches the file thing.
+
+=cut
 
 sub filetype {
 	my $self = shift;
@@ -327,13 +490,39 @@ sub filetype {
 	return;
 }
 
+=item $thing = $file_thing-E<gt>lookup_source
+
+Always returns C<$thing = $filething>.
+
+=cut
+
 sub lookup_source { shift }
 
 package Contentment::VFS::Directory;
 
 our @ISA = qw/ Contentment::VFS::Thing /;
 
+=back
+
+=head2 Contentment::VFS::Directory
+
+This is specific to the filesystem plugin which will really be made it's own plugin rather than a built-in of the VFS at some future point.
+
+=over
+
+=item $test = $dir_thing-E<gt>is_directory
+
+Alwayrs returns true.
+
+=cut
+
 sub is_directory { 1 }
+
+=item $test = $dir_thing-E<gt>prune($set_prune)
+
+Used during C<find> operations of C<Contentment::VFS> to determine whether to descend into child directories. Setting it to true will result in files under this directory being skipped. Setting it to false will result in files under this directory to be scanned.
+
+=cut
 
 sub prune {
 	my $self = shift;
@@ -343,6 +532,12 @@ sub prune {
 	$self->{prune} = $prune if defined $prune;
 	return $self->{prune};
 }
+
+=item $thing = $dir_thing-E<gt>lookup_source
+
+This uses L<Contentment::VFS> to attempt to find an index in the directory using C<lookup_source>.
+
+=cut
 
 sub lookup_source { 
 	my $self = shift;
@@ -355,6 +550,12 @@ sub lookup_source {
 
 	return $self->{source};
 }
+
+=item $filetype = $dir_thing-E<gt>filetype
+
+Always returns C<undef>. Directories do not contain any content.
+
+=cut
 
 sub filetype { }
 
@@ -370,5 +571,23 @@ sub new {
 	my $class = shift;
 	return bless {}, $class;
 }
+
+=back
+
+=head1 SEE ALSO
+
+L<Contentment::FileType::Other>, L<Contentment::FileType::Mason>, L<Contentment::FileType::POD>
+
+=head1 AUTHOR
+
+Andrew Sterling Hanenkamp, E<lt>hanenkamp@users.sourceforge.netE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2005 Andrew Sterling Hanenkamp. All Rights Reserved.
+
+Contentment is distributed and licensed under the same terms as Perl itself.
+
+=cut
 
 1
