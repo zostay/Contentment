@@ -10,6 +10,7 @@ my $build = Contentment::Build->new(
 	dist_version_from  => 'lib/Contentment.pm.in',
 	license            => 'perl',
 	requires           => {
+		'Class::Accessor'   => '0.19',
 		'HTML::Mason'		=> '1.20',
 		'Log::Log4perl'		=> '0.47',
 		'MIME::Types'       => '1.13',

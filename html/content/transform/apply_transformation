@@ -68,7 +68,7 @@ if ($final_kind eq 'unknown') {
 # Step 3: Do we need to perform any transformations?
 if ($original_kind eq $final_kind) {
 	$log->debug("Transformation #3: original kind is final kind, no transformation needed");
-	print $m->content;
+	print $input;
 	return;
 }
 $log->debug("Transformation #3: original kind is not final kind, transformation needed");

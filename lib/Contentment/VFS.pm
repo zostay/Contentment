@@ -202,7 +202,7 @@ sub is_directory { 0 }
 sub property {
 	my $self = shift;
 	local $_ = shift;
-
+	
 	my @d;
 	SWITCH: {
 		/^path$/    && do { return $self->path };
@@ -220,11 +220,16 @@ sub property {
 		/^ctime$/   && do { return $self->stat->[10] };
 		/^blksize$/ && do { return $self->stat->[11] };
 		/^blocks$/  && do { return $self->stat->[12] };
-		/^depth$/   && do { return scalar(@d = ($self->path =~ m#/#g)) };
+		/^depth$/   && do { 
+			my $path = $self->path;
+			$path =~ s/\/+$//;
+			$path =~ s/\/\/+/\//g;
+			return scalar(@d = ($path =~ m#/#g)) ;
+		};
 	}
 
 	if (my $filetype = $self->lookup_source->filetype) {
-		my $property = $filetype->property($self, $_);
+		my $property = $filetype->property($self->lookup_source, $_);
 		if (defined $property) {
 			$log->debug("Found $self property value $_ : $property");
 		} else {
@@ -355,7 +360,5 @@ sub new {
 	my $class = shift;
 	return bless {}, $class;
 }
-
-sub property { }
 
 1

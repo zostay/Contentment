@@ -17,7 +17,7 @@
 %		print q(</ul>);
 %		$last_num--;
 %	}
-	
+
 	<li class="toc-item">
 		<a href="<% $url %>"><% $file->property('title') %></a> - <% $file->property('abstract') %>
 	</li>

@@ -65,7 +65,7 @@ my @files = $vfs->find(sub {
 		$file->prune(1) unless $recursive;
 		
 		# Directories without indexes are always pruned
-		$file->prune(1) unless $m->comp('/content/util/find_source', relname => $file->path);
+		$file->prune(1) unless $file->lookup_source;
 
 		return 0 unless $file->lookup_source;
 	
