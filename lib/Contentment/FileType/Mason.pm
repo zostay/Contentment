@@ -120,7 +120,7 @@ sub property {
 	}
 }
 
-=item $result = Contentment::FileType::Mason-E<gt>generate($file)
+=item $result = Contentment::FileType::Mason-E<gt>generate($file, @args)
 
 Runs the Mason component for C<$file>. The output is captured and printed out to the currently C<select>ed file handle. The result of running the component is returned.
 
@@ -136,7 +136,8 @@ sub generate {
 		my $buf;
 		my $result = $Contentment::context->m->comp(
 			{ store => \$buf }, $comp,
-			$Contentment::context->m->request_args 
+			$Contentment::context->m->request_args,
+			@_,
 		);
 
 		print $buf;

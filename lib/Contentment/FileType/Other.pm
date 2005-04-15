@@ -77,7 +77,7 @@ Always returns C<undef>.
 
 sub property { }
 
-=item $result = Contentment::FileType::Other-E<gt>generate($file)
+=item $result = Contentment::FileType::Other-E<gt>generate($file, @args)
 
 Always returns true. Writes the contents of the file to the currently selected file handle.
 

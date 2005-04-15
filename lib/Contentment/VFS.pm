@@ -377,7 +377,7 @@ sub generate {
 	my $self = shift;
 
 	if (my $filetype = $self->filetype) {
-		return $filetype->generate($self);
+		return $filetype->generate($self, @_);
 	} else {
 		return;
 	}
