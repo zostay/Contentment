@@ -4,7 +4,7 @@ $log->info("input dhandler preparing to generate $relname");
 
 $root_file = $vfs->lookup_source($relname);
 
-my $result = eval { $m->comp("/content/util/generate", rootname => $relname, top => 1) };
+my $result = eval { $root_file->generate(1) };
 
 unless ($@) {
 	return $result;
