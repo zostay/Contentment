@@ -57,7 +57,12 @@ my $widget = Contentment::Form::Widget->build(
 	},
 );
 
-my $value = !$override && defined $ARGS{$name} ? $ARGS{$name} : $default;
+my $value;
+if (!$widget->{args}{override} && $submission->{vars}{$widget->{widget_name}}) {
+	$value = $submission->{vars}{$widget->{widget_name}};
+} elsif ($widget->{args}{default}) {
+	$value = $widget->{args}{default};
+}
 </%init>
 <%args>
 $name
