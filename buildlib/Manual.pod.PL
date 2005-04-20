@@ -23,7 +23,7 @@ sub perl_api_index {
 
 sub mason_api_index {
 	my @files;
-	find(sub { pod_wanted(\@files) }, 'html');
+	find(sub { pod_wanted(\@files) }, 'docroots/master');
 	return sort @files;
 }
 

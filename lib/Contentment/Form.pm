@@ -137,6 +137,8 @@ Contentment::Form::Submission->_create_table('MySQL', 'form_submission', q(
 
 =head1 EXTRA METHODS
 
+=over
+
 =item @submissions = Contentment::Form::Submission-E<gt>create_from_args(%args)
 
 This method attempts to load submission objects from a submitted form. The submissions will have the transient variable C<alias> set to the alias assigned by the submitter and the C<raw_vars> hash will contain the raw values submitted.

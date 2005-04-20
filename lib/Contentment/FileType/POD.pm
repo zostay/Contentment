@@ -164,7 +164,7 @@ sub property {
 
 =back
 
-=item SEE ALSO
+=head1 SEE ALSO
 
 L<Contentment::FileType::Other>, L<perlpod>
 

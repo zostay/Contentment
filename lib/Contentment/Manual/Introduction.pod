@@ -24,6 +24,6 @@ As of this writing Andrew Sterling Hanenkamp is the only author for this project
 
 =head1 COPYRIGHT AND LICENSE
 
-This software and it's documentation is the copyright of myself, Andrew Sterling Hanenkamp. I am publishing this software under the Artistic License, which is the license Perl is released under. Please read L<LICENSE.txt> for more details.
+This software and it's documentation is the copyright of myself, Andrew Sterling Hanenkamp. I am publishing this software under the Artistic License, which is the license Perl is released under. Please read L<perlartistic> for more details.
 
 Copyright 2004 Andrew Sterling Hanenkamp. All Rights Reserved.

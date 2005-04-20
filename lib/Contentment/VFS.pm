@@ -395,6 +395,8 @@ our @ISA = qw/ Contentment::VFS::Thing /;
 
 This class will most certainly be moved when the VFS implementation is completed. This code is specific to real file system access only.
 
+=over
+
 =item $fh = $file_thing-E<gt>open($access)
 
 Opens the file associated with the C<$file_thing> and returns a reference to the opened file handle or C<undef> on failure. The C<$access> value determines what access to the file is requested as per L<FileHandle>.

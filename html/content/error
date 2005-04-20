@@ -1,7 +1,0 @@
-% if (defined $message) {
-<pre class="error"><% $message %></pre>
-% }
-
-<%args>
-$message => undef
-</%args>

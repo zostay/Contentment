@@ -1,0 +1,105 @@
+=head1 NAME
+
+Contentment::Manual::Install - The installation guide for Contentment
+
+=head1 SYNOPSIS
+
+  perl Build.PL
+  ./Build
+  ./Build test
+  ./Build install
+
+=head1 DESCRIPTION
+
+The synopsis is pretty bare and you will almost certainly need to be a little more particular with out F<Build.PL> is run. After installation you will also need to create the configuration files and may also need to create an additional CGI script to help you set things up. You may also need to modify your Apache web server configuration or F<.htaccess> files in the installation directories.
+
+=head2 Build.PL OPTIONS
+
+Contentment is not a standard CPAN install. However, it is meant to be relatively easy to install. Obviously, we're not there yet if writing an additional CGI script and F<.htaccess> file are still necessary, but as of version 0.9.0, great strides have been made to improve the install process.
+
+=head3 Install Base
+
+Without any options, Contentment will be installed to F</usr/local/Contentment> which is a reasonable default location, but probably not a good place for most production environments. If you want this to go to a different location, you merely need to specify the C<install_base> option to F<Build.PL>:
+
+  perl Build.PL install_base=/var/www/Contentment
+
+=head3 Relocation
+
+This is probably not enough if you are installing on a hosted environment or a server where the policies can't be altered. Typically, I've found that I need to relocate two specific directories depending upon the policies of the host. For example, if you scripts are going to be running within F<suexec>, you'll need the CGI scripts to be moved under the Apache document root. To make relocations, you use the C<--install_path> option:
+
+  perl Build.PL install_base=/web/support  \
+      --install_path cgi-bin=/var/www/localhost/cgi-bin
+
+If you are installing into a home directory, you might need to be even more particular:
+
+  perl Build.PL install_base=/home/sterling \
+      --install_path docroots/master=/home/sterling/contentment.org \
+      --install_path cgi-bin=/home/sterling/contentment.org/cgi-bin
+
+You should be able to relocate any directory within the Contentment installation this way.
+
+=head2 EDIT CONFIGURATION
+
+The configuration is stored in three files, all stored in F<etc>: F<Contentment.conf>, F<Contentment.defaults.conf>, and F<log4perl.conf>. The F<Contentment.defaults.conf> file is created automatically and shouldn't overwritten. This file is updated and replaced when installing updated versions of Contentment.
+
+The F<Contentment.conf> file specifies local settings and overrides the settings placed in F<Contentment.defaults.conf>. A partial file is generated for you named F<Contentment.conf.sample>. This will contain as much configuration that the build script is able to provide for you. You will still need to file in the details of database access and then save the file as F<Contentment.conf>. Read F<Contentment.defaults.conf> for a description of each of the options.
+
+The F<log4perl.conf> configuration file is for L<Log::Log4perl>, so you should see that documentation for information on how to customize this configuraiton. Two different configurations are provided for you: F<log4perl.conf.screen> and F<log4perl.conf.file>. The F<log4perl.conf.screen> version causes all log information to be dumped to the "STDERR" file handle. Under the Apache web server, this generally means that this will be dumped to the F<error_log>. The F<log4perl.conf.file> configuration is set to dump to the log file F<logs/contentment.log> in the Contentment installation directory. This is my preference because the error_logs are too cluttered with Apache information already. 
+
+=head2 CGI CONFIGURATION
+
+As of this release, Contentment is used via a CGI script only. In the future, there may also be other targets (the most likely target to be added is one for mod_perl). However, the CGI script may not be sufficient for your installation. If you need to modify the include paths of perl, you may want to create a secondary CGI wrapper script. I hope to provide these modifications as part of the build process in the future.
+
+Here is an example of such a script:
+
+  #!/usr/bin/perl
+  
+  use strict;
+  use warnings;
+  
+  use lib '/usr/local/lib/perl';
+  use lib '/var/www/localhost/lib/perl';
+  use lib '/home/sterling/local/lib/perl';
+  
+  require 'handler.cgi';
+
+This will add the paths F</usr/local/lib/perl> and F</var/www/localhost/lib/perl> and F</home/sterling/local/lib/perl> to help the CGI script find the libraries it may need.
+
+You could also add the necessary lines to the top of F<handler.cgi>, but you'll need to be careful during upgrades to make sure your alterations aren't clobbered.
+
+=head1 WEB SERVER CONFIGURATION
+
+This configuration is specific to Apache web server, the only web server this service has yet been tested upon. Here is an example configuration that should work.
+
+First, an F<.htaccess> file to be placed in F<docroots/master>:
+
+  Order allow,deny
+  Allow from all
+  
+  Options FollowSymLinks
+  
+  RewriteEngine on
+  RewriteRule "^$" "http://www.contentment.org/cgi-bin/handler-path.cgi/index.html" [L]
+  RewriteRule "(.*)$" "http://www.contentment.org/cgi-bin/handler-path.cgi/$1" [L]
+
+In this case, you may need another F<.htaccess> file in F<cgi-bin>:
+
+  Order allow,deny
+  Allow from all
+  
+  Options ExecCGI
+  SetHandler cgi-script
+  
+  RewriteEngine off
+
+In the future a set of default files will probably be provided with some alternatives given somewhere in the distribution.
+
+=head1 AUTHOR
+
+Andrew Sterling Hanenkamp, E<lt>sterling@users.sourceforge.netE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2005 Andrew Sterling Hanenkamp. All Rights Reserved.
+
+Contentment is distributed under the same terms as Perl itself.

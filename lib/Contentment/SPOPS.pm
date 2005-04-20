@@ -289,6 +289,8 @@ sub global_current_group {
 	return undef;
 }
 
+=back
+
 =head1 SEE ALSO
 
 L<SPOPS>, L<SPOPS::Manual::Security>, L<Contentment::Security>

@@ -289,6 +289,8 @@ sub fetch_all_groups {
 	return Contentment::Security::DBI::Group->fetch_group;
 }
 
+=back
+
 =head1 SEE ALSO
 
 L<Contentment::Security>

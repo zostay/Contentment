@@ -8,15 +8,75 @@ use ExtUtils::Install;
 use File::Path;
 use File::Spec;
 
-sub ACTION_install {
+#sub ACTION_install {
+#	my $self = shift;
+#
+#	$self->SUPER::ACTION_install;
+#	
+#	$self->ACTION_install_conf;
+#	$self->ACTION_install_sample;
+#	$self->ACTION_install_base;
+#	$self->ACTION_install_cgi;
+#}
+
+sub ACTION_build {
 	my $self = shift;
 
-	$self->SUPER::ACTION_install;
-	
-	$self->ACTION_install_conf;
-	$self->ACTION_install_sample;
-	$self->ACTION_install_base;
-	$self->ACTION_install_cgi;
+	$self->SUPER::ACTION_build;
+
+	$self->ACTION_empty_logs;
+}
+
+sub ACTION_empty_logs {
+	my $self = shift;
+
+	my $logs = File::Spec->catfile($self->blib, 'logs');
+	mkpath($logs);
+
+	my $log = File::Spec->catfile($logs, 'contentment.log');
+	open FH, ">$log" or die "Failed to create $log";
+	close FH;
+}
+
+sub process_mason_files {
+	my $self = shift;
+
+	my $files = $self->find_all_files('mason', 'docroots');
+
+	while (my ($file, $dest) = each %$files) {
+		$self->copy_if_modified(from => $file, to => File::Spec->catfile($self->blib, $dest) );
+	}
+}
+
+sub process_config_files {
+	my $self = shift;
+
+	my $files = $self->find_all_files('config', 'etc');
+
+	while (my ($file, $dest) = each %$files) {
+		$self->copy_if_modified(from => $file, to => File::Spec->catfile($self->blib, $dest) );
+	}
+}
+
+sub skip_files {
+	return 0 if -d $File::Find::name;
+	!m/\bRCS\b|\bCVS\b|,v$|\B\.svn\b|~$|\.tmp$|\.old$|\.bak$|\#$|\b\.#/;
+}
+
+sub find_all_files {
+	my $self = shift;
+	my $type = shift;
+	my $dir  = shift;
+
+	if (my $files = $self->{properties}{"${type}_files"}) {
+		return { map $self->localize_file_path($_), %$files };
+	}
+
+	return {} unless -d $dir;
+	return { map {$_, $_}
+		map $self->localize_file_path($_),
+		grep !/\.#/,
+		@{ $self->rscan_dir($dir, \&skip_files) } };
 }
 
 sub my_destdir { my $self = shift; $$self{properties}{destdir} || '/' }

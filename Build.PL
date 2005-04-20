@@ -1,8 +1,43 @@
 use strict;
 use lib 'buildlib';
 
-use Module::Build 0.21;
+use File::Basename;
+use Module::Build 0.2610;
 use Contentment::Build;
+
+# The --install_path argument is rather less useful than I'd hoped. Thus, I'll
+# make it as useful as I need. So there.
+
+my @args = @ARGV;
+my @newargs;
+my %relocs;
+
+while (my $arg = pop @args) {
+	if ($arg eq '--install_path') {
+		my $path = pop @args;
+	
+		# Let Module::Build do the whining about errors.
+		unless (defined $path && $path =~ /=/) {
+			push @newargs, $arg;
+			push @newargs, $path if defined $path;
+			push @newargs, @args if @args;
+			last;
+		}
+
+		my ($here, $there) = split /=/, $path;
+
+		if ($here =~ /\W/) {
+			# Aha! Let's make sure this gets relocated properly.
+			$relocs{$here} = $there;
+		} else {
+			# It's not one of mine. I'll just leave it alone.
+			push @newargs, $arg, $path;
+		}
+	} else {
+		# Again, not mine. Give it back.
+		push @newargs, $arg;
+	}
+}
 
 my $build = Contentment::Build->new(
 	module_name        => 'Contentment',
@@ -10,48 +45,90 @@ my $build = Contentment::Build->new(
 	dist_version_from  => 'lib/Contentment.pm.in',
 	license            => 'perl',
 	requires           => {
-		'Class::Accessor'   => '0.19',
-		'HTML::Mason'		=> '1.20',
-		'Log::Log4perl'		=> '0.47',
-		'MIME::Types'       => '1.13',
-		'perl'				=> '5.6.1',
-		'SPOPS'				=> '0.87', 
-		'SQL::Translator'   => '0.06', 
-		'YAML'				=> '0.35', 
+		'Class::Accessor'         => '0.19',
+		'Data::UUID'		      => '0.11',
+		'DateTime::Format::DBI'   => '0.031',
+		'File::System'            => '1.03',
+		'HTML::Mason'		      => '1.20',
+		'Log::Log4perl'		      => '0.47',
+		'MIME::Types'             => '1.13',
+		'perl'				      => '5.6.1',
+		'SPOPS'				      => '0.87', 
+		'SQL::Translator'         => '0.06', 
+		'YAML'				      => '0.35', 
 	},
 	recommends         => {
-		'Pod::Simple'       => '3.02',
-		'Text::Balanced'	=> '1.95',
+		'DateTime::Format::MySQL' => '0.0301',
+		'Pod::Simple'             => '3.02',
+		'Text::Balanced'	      => '1.95',
 	},
 	PL_files           => {
-		'lib/Contentment.pm.PL' 			=> 'lib/Contentment.pm',
-		'etc/Contentment.conf.PL'			=> 'etc/Contentment.conf',
-		'docs/Contentment/Manual.pod.PL'	=> 'docs/Contentment/Manual.pod',
-	},
-	pod_files          => {
-		'docs/Contentment/Manual.pod'              => 'lib/Contentment/Manual.pod',
-		'docs/Contentment/Manual/Features.pod'     => 'lib/Contentment/Manual/Features.pod',
-		'docs/Contentment/Manual/Install.pod'      => 'lib/Contentment/Manual/Install.pod',
-		'docs/Contentment/Manual/Introduction.pod' => 'lib/Contentment/Manual/Introduction.pod',
+		'buildlib/Contentment.pm.PL' 	=> 'lib/Contentment.pm',
+		'buildlib/Contentment.conf.PL'	=> 'etc/Contentment.conf.sample',
+		'buildlib//Manual.pod.PL'		=> 'docs/Contentment/Manual.pod',
 	},
 );
 
-my $confdir   = $build->{args}{confdir}       || '/etc/Contentment';
-my $basedir   = $build->{args}{basedir}       || '/var/www/localhost/htdocs';
-my $sampledir = $build->{args}{sampledir}     || '/var/www/localhost/content';
-my $cgidir    = $build->{args}{cgidir}        || "/$basedir/cgi-bin";
-my $tempdir   = $build->{args}{tempdir}       || '/tmp/mason/data';
+# Locating the various directories of Contentment has been nasty-ugly. I've
+# revamped this a bit. Hopefully, this is a little more sane. 
+#
+# Basically, what I really want is a central installation directory like this:
+#
+# - .../Contentment/
+#   - bin/
+#   - cgi-bin/
+#   - docroots/
+#     - master/
+#     - sample/
+#     - site/
+#   - etc/
+#   - lib/
+#     - Contentment.pm
+#     - Contentment/
+#     - ...
+#   - logs/
+#   - tmp -> /tmp/Contentment/
+# - /tmp/Contentment/
+#
+# However, experience shows that frequently "docroots/master" and "cgi-bin" need
+# to relocted within some predefined and immovable location. Other parts might
+# need to be reloacted too, so we won't restrict relocs to these guys.
+#
+# A second factor is that we are moving the libraries into a specific location.
+# This is because each Contentment installation needs it's own copy of the
+# libraries since the installed libs have a hard coded location for the
+# configuration files and such. I may be able to work around this eventually,
+# but that's an optimization for later.
 
-$build->notes(confdir => $confdir);
-$build->notes(basedir => $basedir);
-$build->notes(sampledir => $sampledir);
-$build->notes(cgidir => $cgidir);
-$build->notes(tempdir => $tempdir);
+my $cms_root = $build->{args}{cms_root};
 
-print "Configuration installation directory: ",$build->notes('confdir'),"\n";
-print "Mason base directory:                 ",$build->notes('basedir'),"\n";
-print "Sample site installation directory:   ",$build->notes('sampledir'),"\n";
-print "CGI directory:                        ",$build->notes('cgidir'),"\n";
-print "Temporary Mason directory:            ",$build->notes('tempdir'),"\n";
+$build->{properties}{install_base} ||= "/usr/local/Contentment";
 
+my $cms_root = $build->{properties}{install_base};
+
+while (my ($here, $there) = each %relocs) {
+	$build->{properties}{install_path}{$here} = $there;
+}
+
+$build->{properties}{install_path}{'cgi-bin'}  ||= "$cms_root/cgi-bin";
+$build->{properties}{install_path}{'docroots'} ||= "$cms_root/docroots";
+$build->{properties}{install_path}{'etc'}      ||= "$cms_root/etc";
+$build->{properties}{install_path}{'logs'}     ||= "$cms_root/logs";
+$build->{properties}{install_path}{'tmp'}      ||= '/tmp/'.basename($cms_root).'/mason/data';
+
+$build->notes('etc_dir')    = $build->{properties}{install_path}{'etc'};
+$build->notes('master_dir') = 
+	$build->{properties}{install_path}{'docroots/master'} ||
+	"$build->{properties}{install_path}{docroots}/master";
+$build->notes('site_dir')   =
+	$build->{properties}{install_path}{'docroots/site'} ||
+	"$build->{properties}{install_path}{docroots}/site";
+$build->notes('sample_dir') =
+	$build->{properties}{install_path}{'docroots/sample'} ||
+	"$build->{properties}{install_path}{docroots}/site";
+$build->notes('tmp_dir')    = $build->{properties}{install_path}{'tmp'};
+$build->notes('cgi_dir')    = $build->{properties}{install_path}{'cgi-bin'};
+
+$build->add_build_element('mason');
+$build->add_build_element('config');
 $build->create_build_script;
