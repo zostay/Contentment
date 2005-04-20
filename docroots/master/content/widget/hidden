@@ -1,0 +1,11 @@
+<%init>
+$context->add_widget(
+	processor => 'process_hidden',
+	name      => $name,
+	value     => $value);
+</%init>
+
+<%args>
+$name
+$value
+</%args>

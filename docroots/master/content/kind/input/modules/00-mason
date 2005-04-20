@@ -1,0 +1,9 @@
+<%init>
+$log->debug("Testing to see if $filename matches $conf{mason_files}");
+return "mason" if $filename =~ /$conf{mason_files}/;
+return;
+</%init>
+
+<%args>
+$filename
+</%args>

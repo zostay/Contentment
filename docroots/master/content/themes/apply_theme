@@ -1,0 +1,13 @@
+<&| "/content/themes/$final_kind/$theme/$master", file => $file &><% $m->content %></&>
+
+<%init>
+my $final_kind = $to || $m->comp('/content/kind/final/kind');
+
+my $file = $vfs->lookup_source($root_file);
+</%init>
+
+<%args>
+$to => undef
+$theme => 'default'
+$master => 'main'
+</%args>

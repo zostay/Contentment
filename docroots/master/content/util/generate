@@ -1,0 +1,51 @@
+<%perl>
+unless ($relname || $rootname || $localname) {
+	die "No file given to generate.";
+}
+
+if ($relname) {
+	warn 'DEPRECATION: The relname argument to generate is deprecated. Use rootname instead.';
+	$rootname = $relname;
+} elsif ($localname) {
+	my $dir = $m->caller->dir_path;
+	$rootname = "$dir/$localname";
+}
+
+my $file = $vfs->lookup_source($rootname);
+
+my $result;
+if ($file) {
+	$log->debug("generate found a file: $file");
+
+	if ($top) {
+		my $original_kind = $file->generated_kind;
+		$context->original_kind($original_kind);
+		$log->debug("File type ",$file->filetype," says $file->{path} generates original kind of $original_kind");
+	}
+
+</%perl>
+<&| /content/util/cache, file => $file, top => $top &>
+%	if (defined $to) {
+<&| /content/transform/apply_transformation, to => $to, from => $file->generated_kind &>
+% $result = $file->generate($top);
+</&>
+<%perl>
+	} else {
+		$result = $file->generate($top);
+	}
+</%perl>
+</&>
+<%perl>
+} else {
+	$result = undef;
+}
+
+return $result;
+</%perl>
+<%args>
+$relname => undef
+$rootname => undef
+$localname => undef
+$top => 0
+$to => undef
+</%args>

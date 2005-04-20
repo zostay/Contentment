@@ -1,0 +1,9 @@
+<&| /content/themes/apply_theme, to => $kind &>
+<% $m->content %>
+</&>
+<%args>
+$kind
+</%args>
+<%attr>
+kind => qr(^text/html$)
+</%attr>

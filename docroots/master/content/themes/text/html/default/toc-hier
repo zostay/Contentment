@@ -1,0 +1,25 @@
+<%args>
+	@files
+</%args>
+
+<ul class="toc">
+% my $last_num = $files[0]->property('depth');
+% for my $file (@files) {
+% 	my $url  = $file->path;
+% 	$url =~ s/\.\w+$/\.html/;
+%
+% 	my $num = $file->property('depth');
+% 	while ($num > $last_num) {
+%		print q(<ul class="toc">);
+%		$last_num++;
+%	}
+%	while ($num < $last_num) {
+%		print q(</ul>);
+%		$last_num--;
+%	}
+
+	<li class="toc-item">
+		<a href="<% $url %>"><% $file->property('title') %></a> - <% $file->property('abstract') %>
+	</li>
+% }
+</ul>

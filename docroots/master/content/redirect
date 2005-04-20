@@ -1,0 +1,30 @@
+<%args>
+$to
+</%args>
+
+<%init>
+delete $ARGS{to};
+my @args;
+while (my ($k, $v) = each %ARGS) {
+	if (ref $v eq 'ARRAY') {
+		push @args, "$k=$_" foreach (@$v);
+	} else {
+		push @args, "$k=$v";
+	}
+}
+
+my $url;
+if ($to =~ /^http:/) {
+	$url = $to;
+} else {
+	$url = "$full_base$to";
+}
+
+if (@args) {
+	$url .= '?';
+	$url .= join '&', @args;
+}
+
+$log->debug("Redirecting to $url");
+$m->redirect($url);
+</%init>

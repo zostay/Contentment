@@ -1,0 +1,14 @@
+<div class="toc">
+% for my $file (@files) {
+% 	my $html = "$file";
+% 	$html =~ s/\.\w+$/\.html/;
+	<div class="toc-item">
+		<a href="<% $html %>"><% $file->property('title') %></a> - <% $file->property('abstract') %>
+	</div>
+% }
+</div>
+
+<%args>
+@files
+</%args>
+

@@ -1,0 +1,80 @@
+% eval {
+<&| /content/filter/apply_filter &>
+<&| /content/transform/apply_transformation &>
+% 	$m->call_next;
+</&>
+</&>
+% };
+%
+% $ERROR = $@;
+<%init>
+use Contentment::Context;
+use Contentment::Session;
+
+my $q = $m->cgi_object;
+my $id = $q->cookie('SESSIONID');
+
+my $ERROR;
+
+my %session;
+my $session;
+if ($id) {
+	$session = Contentment::Session->fetch($id, { skip_security => 1 });
+	if ($session) {
+		$log->debug("Reusing existing SESSIONID $id");
+		%session = %{ $session->session_data };
+	}
+}
+
+unless ($session) {
+	$session = Contentment::Session->new;
+	$session->{session_data} = {};
+	$session->save;
+
+	$id = $session->id;
+	$log->debug("Creating a new SESSIONID $id");
+}
+
+my $cookie = $q->cookie(
+	-name    => 'SESSIONID',
+	-value   => $id,
+	-expires => 'never');
+$r->header_out('Cookie', $cookie);
+
+$Contentment::context = $context = Contentment::Context->new({
+	url            => $url,
+	session_id     => $id, 
+	session        => \%session, 
+	m              => $m, 
+	r              => $r,
+	last_processed => \@__processed_uuid__,
+});
+$url = $q->url;
+$full_base = $q->url(-base => 1) . $base;
+</%init>
+<%perl>
+$session->{session_data} = \%session;
+$session->save;
+
+if ($ERROR) {
+	if ($m->aborted) {
+		die $ERROR;
+	} else {
+		$log->error("Treating error as 404: $ERROR");
+		$m->clear_buffer;
+</%perl>
+File not found.
+<%perl>
+		$m->abort(404);
+	}
+}
+</%perl>
+<%filter>
+s{^\s+}{}; s{\s+$}{};
+</%filter>
+<%flags>
+inherit => undef
+</%flags>
+<%args>
+@__processed_uuid__ => ()
+</%args>

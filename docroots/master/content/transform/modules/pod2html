@@ -1,0 +1,18 @@
+<%init>
+eval { use Contentment::Transform::Pod2Html; };
+die "pod2html transformation unavailable, may need to install Pod::Simple: $@"
+	if $@;
+
+my $parser = Contentment::Transform::Pod2Html->new;
+</%init>
+<%perl>
+my $str;
+$parser->output_string(\$str);
+$parser->parse_string_document($m->content);
+</%perl>
+<% $str %>
+<%attr>
+input_kinds => [ 'text/x-perl', 'text/x-pod' ]
+output_kind => 'text/html'
+cost => 1
+</%attr>

@@ -1,0 +1,8 @@
+% $context->start_widget_action($action, $url, $default_map);
+<a href="/content/widget/process?<%$context->form_id%>.activate=link"><%$m->content%></a>
+% $context->end_widget_action;
+
+<%args>
+$action
+$default_map
+</%args>

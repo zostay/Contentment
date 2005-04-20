@@ -1,0 +1,27 @@
+<div class="form">
+<%perl>
+$context->start_form(
+	name        => $name, 
+	action      => $action, 
+	default_map => $default_map,
+	resume      => $resume,
+);
+my $top = $context->is_top_submission;
+if ($top) {
+</%perl>
+<form action="/content/widget/process" method="POST">
+<input type="hidden" name="<%$context->submission->{alias}%>__uuid__" value="<%$context->submission->{uuid}%>"/>
+% }
+<% $m->content %>
+% if ($top) {
+</form>
+% }
+% $context->end_form;
+</div>
+
+<%args>
+$name
+$action
+$default_map
+$resume      => undef
+</%args>

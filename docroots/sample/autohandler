@@ -1,0 +1,8 @@
+<html>
+<head>
+<title><% $m->base_comp->attr_if_exists("title") || "Untitled Page" %></title>
+</head>
+<body>
+% $m->call_next;
+</body>
+</html>
