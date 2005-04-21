@@ -7,7 +7,7 @@ use Carp;
 use Log::Log4perl ':easy';
 use YAML 'LoadFile';
 
-our $VERSION = '0.007002';
+our $VERSION = '0.009_001';
 
 use constant ETC_DIR => '@@CONFDIR@@';
 

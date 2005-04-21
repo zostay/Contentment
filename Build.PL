@@ -12,9 +12,9 @@ my @args = @ARGV;
 my @newargs;
 my %relocs;
 
-while (my $arg = pop @args) {
+while (my $arg = shift @args) {
 	if ($arg eq '--install_path') {
-		my $path = pop @args;
+		my $path = shift @args;
 	
 		# Let Module::Build do the whining about errors.
 		unless (defined $path && $path =~ /=/) {
@@ -26,7 +26,7 @@ while (my $arg = pop @args) {
 
 		my ($here, $there) = split /=/, $path;
 
-		if ($here =~ /\W/) {
+		if ($here =~ /[\/-]/) {
 			# Aha! Let's make sure this gets relocated properly.
 			$relocs{$here} = $there;
 		} else {
@@ -38,6 +38,7 @@ while (my $arg = pop @args) {
 		push @newargs, $arg;
 	}
 }
+@ARGV = @newargs;
 
 my $build = Contentment::Build->new(
 	module_name        => 'Contentment',
@@ -63,9 +64,12 @@ my $build = Contentment::Build->new(
 		'Text::Balanced'	      => '1.95',
 	},
 	PL_files           => {
-		'buildlib/Contentment.pm.PL' 	=> 'lib/Contentment.pm',
-		'buildlib/Contentment.conf.PL'	=> 'etc/Contentment.conf.sample',
-		'buildlib//Manual.pod.PL'		=> 'docs/Contentment/Manual.pod',
+		'buildlib/expand-notes.PL' 	=> [
+			'lib/Contentment.pm',
+			'etc/Contentment.conf.sample', 
+			'etc/log4perl.conf.file',
+		],
+		'buildlib/docindex.PL'		=> 'lib/Contentment/Manual.pod',
 	},
 );
 
@@ -110,25 +114,29 @@ while (my ($here, $there) = each %relocs) {
 	$build->{properties}{install_path}{$here} = $there;
 }
 
+$build->{properties}{install_path}{'bin'}      ||= "$cms_root/bin";
 $build->{properties}{install_path}{'cgi-bin'}  ||= "$cms_root/cgi-bin";
 $build->{properties}{install_path}{'docroots'} ||= "$cms_root/docroots";
 $build->{properties}{install_path}{'etc'}      ||= "$cms_root/etc";
 $build->{properties}{install_path}{'logs'}     ||= "$cms_root/logs";
 $build->{properties}{install_path}{'tmp'}      ||= '/tmp/'.basename($cms_root).'/mason/data';
 
-$build->notes('etc_dir')    = $build->{properties}{install_path}{'etc'};
-$build->notes('master_dir') = 
+$build->notes('basename'   => basename($cms_root));
+$build->notes('etc_dir'    => $build->{properties}{install_path}{'etc'});
+$build->notes('master_dir' =>
 	$build->{properties}{install_path}{'docroots/master'} ||
-	"$build->{properties}{install_path}{docroots}/master";
-$build->notes('site_dir')   =
+	"$build->{properties}{install_path}{docroots}/master");
+$build->notes('site_dir'   =>
 	$build->{properties}{install_path}{'docroots/site'} ||
-	"$build->{properties}{install_path}{docroots}/site";
-$build->notes('sample_dir') =
+	"$build->{properties}{install_path}{docroots}/site");
+$build->notes('sample_dir' =>
 	$build->{properties}{install_path}{'docroots/sample'} ||
-	"$build->{properties}{install_path}{docroots}/site";
-$build->notes('tmp_dir')    = $build->{properties}{install_path}{'tmp'};
-$build->notes('cgi_dir')    = $build->{properties}{install_path}{'cgi-bin'};
+	"$build->{properties}{install_path}{docroots}/site");
+$build->notes('tmp_dir'    => $build->{properties}{install_path}{'tmp'});
+$build->notes('cgi_dir'    => $build->{properties}{install_path}{'cgi-bin'});
+$build->notes('logs_dir'   => $build->{properties}{install_path}{'logs'});
 
+$build->add_build_element('cgi');
 $build->add_build_element('mason');
 $build->add_build_element('config');
 $build->create_build_script;
