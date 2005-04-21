@@ -3,6 +3,8 @@
 use strict;
 use warnings;
 
+use lib '@@LIB_DIR@@';
+
 use Contentment;
 use Contentment::VFS;
 use Contentment::VFSResolver;

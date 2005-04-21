@@ -12,7 +12,20 @@ while (@ARGV) {
 	open IFH, "$infile" or die "Cannot open file $infile to generate $outfile.";
 	open OFH, ">$outfile" or die "Cannot open file $outfile for generation.";
 
-	print OFH "# This file was automatically generated. DO NOT EDIT!!!\n\n";
+	my $first_line = <IFH>;
+	while (my ($key, $value) = each %notes) {
+		$first_line =~ s/\@\@$key\@\@/$value/ig;
+	}
+	
+	if ($first_line =~ /^#!/) {
+		print OFH $first_line;
+		print OFH "\n# This file was automatically generated. DO NOT EDIT!!!\n";
+		print OFH "# You should edit $infile.in, instead.\n\n";
+	} else {
+		print OFH "# This file was automatically generated. DO NOT EDIT!!!\n";
+		print OFH "# You should edit $infile.in, instead.\n\n";
+		print OFH $first_line;
+	}
 
 	my %notes = $build->notes;
 	while (<IFH>) {

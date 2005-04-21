@@ -65,9 +65,10 @@ my $build = Contentment::Build->new(
 	},
 	PL_files           => {
 		'buildlib/expand-notes.PL' 	=> [
-			'lib/Contentment.pm',
+			'docroots/htdocs/cgi-bin/handler.cgi',
 			'etc/Contentment.conf.sample', 
 			'etc/log4perl.conf.file',
+			'lib/Contentment.pm',
 		],
 		'buildlib/docindex.PL'		=> 'lib/Contentment/Manual.pod',
 	},
@@ -80,8 +81,9 @@ my $build = Contentment::Build->new(
 #
 # - .../Contentment/
 #   - bin/
-#   - cgi-bin/
 #   - docroots/
+#     - htdocs/
+#       - cgi-bin/
 #     - master/
 #     - sample/
 #     - site/
@@ -115,7 +117,6 @@ while (my ($here, $there) = each %relocs) {
 }
 
 $build->{properties}{install_path}{'bin'}      ||= "$cms_root/bin";
-$build->{properties}{install_path}{'cgi-bin'}  ||= "$cms_root/cgi-bin";
 $build->{properties}{install_path}{'docroots'} ||= "$cms_root/docroots";
 $build->{properties}{install_path}{'etc'}      ||= "$cms_root/etc";
 $build->{properties}{install_path}{'logs'}     ||= "$cms_root/logs";
@@ -123,6 +124,9 @@ $build->{properties}{install_path}{'tmp'}      ||= '/tmp/'.basename($cms_root).'
 
 $build->notes('basename'   => basename($cms_root));
 $build->notes('etc_dir'    => $build->{properties}{install_path}{'etc'});
+$build->notes('htdocs_dir' =>
+	$build->{properties}{install_path}{'docroots/htdocs'} ||
+	"$build->{properties}{intall_path}{docroots}/htdocs");
 $build->notes('master_dir' =>
 	$build->{properties}{install_path}{'docroots/master'} ||
 	"$build->{properties}{install_path}{docroots}/master");
@@ -133,10 +137,14 @@ $build->notes('sample_dir' =>
 	$build->{properties}{install_path}{'docroots/sample'} ||
 	"$build->{properties}{install_path}{docroots}/site");
 $build->notes('tmp_dir'    => $build->{properties}{install_path}{'tmp'});
-$build->notes('cgi_dir'    => $build->{properties}{install_path}{'cgi-bin'});
+$build->notes('cgi_dir'    => 
+	$build->{properties}{install_path}{'docroots/htdocs/cgi-bin'} ||
+	$build->{properties}{install_path}{'docroots/htdocs'}."/cgi-bin" ||
+	"$build->{properties}{install_path}{docroots}/htdocs/cgi-bin");
 $build->notes('logs_dir'   => $build->{properties}{install_path}{'logs'});
+$build->notes('lib_dir'    =>
+	$build->{properties}{install_path}{'lib'} || "$cms_root/lib");
 
-$build->add_build_element('cgi');
 $build->add_build_element('mason');
 $build->add_build_element('config');
 $build->create_build_script;

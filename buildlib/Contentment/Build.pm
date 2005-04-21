@@ -38,16 +38,6 @@ sub ACTION_empty_logs {
 	close FH;
 }
 
-sub process_cgi_files {
-	my $self = shift;
-
-	my $files = $self->find_all_files('cgi', 'cgi-bin');
-
-	while (my ($file, $dest) = each %$files) {
-		$self->copy_if_modified(from => $file, to => File::Spec->catfile($self->blib, $dest) );
-	}
-}
-
 sub process_mason_files {
 	my $self = shift;
 
@@ -70,7 +60,7 @@ sub process_config_files {
 
 sub skip_files {
 	return 0 if -d $File::Find::name;
-	!m/\bRCS\b|\bCVS\b|,v$|\B\.svn\b|~$|\.tmp$|\.old$|\.bak$|\#$|\b\.#/;
+	!m/\bRCS\b|\bCVS\b|,v$|\B\.svn\b|~$|\.tmp$|\.old$|\.bak$|\#$|\b\.#|\.in$/;
 }
 
 sub find_all_files {

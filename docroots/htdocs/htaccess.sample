@@ -1,0 +1,9 @@
+# let folks in
+Order allow,deny
+Allow from all
+
+# behind the scenes, pass every URL on to the CGI handler. This way, they go to
+# /foo/bar/baz, but the web server sees /cgi-bin/handler.cgi/foo/bar/baz
+RewriteEngine on
+RewriteRule "^$"    "cgi-bin/handler.cgi/index.html" [L]
+RewriteRule "(.*)$" "cgi-bin/handler.cgi/$1"         [L]

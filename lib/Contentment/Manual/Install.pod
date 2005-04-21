@@ -48,51 +48,63 @@ The F<log4perl.conf> configuration file is for L<Log::Log4perl>, so you should s
 
 =head2 CGI CONFIGURATION
 
-As of this release, Contentment is used via a CGI script only. In the future, there may also be other targets (the most likely target to be added is one for mod_perl). However, the CGI script may not be sufficient for your installation. If you need to modify the include paths of perl, you may want to create a secondary CGI wrapper script. I hope to provide these modifications as part of the build process in the future.
+As of this release, Contentment is used via a CGI script only. In the future, there may also be other targets (the most likely target to be added is one for mod_perl). However, the CGI script may not be sufficient for your installation. For example, if you have your Perl libraries stored in a non-standard directory (as may be the case if you're running on a host that didn't have the module you needed so you installed it into your home directory), then you'll need to add extra directories to the Perl library search path.
 
-Here is an example of such a script:
+Another reason you might want to do this is if Perl has been installed to a non-standard location. The CGI script assumes Perl can be found at F</usr/bin/perl>. However, Perl might actually be installed at F</usr/local/bin/perl>.
 
-  #!/usr/bin/perl
-  
-  use strict;
-  use warnings;
-  
-  use lib '/usr/local/lib/perl';
-  use lib '/var/www/localhost/lib/perl';
-  use lib '/home/sterling/local/lib/perl';
-  
-  require 'handler.cgi';
+You may do this by either modifying F<handler.cgi> directly (not recommended) or by creating a secondary script (recommended). The reason the latter is recommended is that if you choose to upgrade Contentment in the future, the install script will obliterate any custom changes to F<handler.cgi>. Keeping them in a separate file will keep your changes safe.
 
-This will add the paths F</usr/local/lib/perl> and F</var/www/localhost/lib/perl> and F</home/sterling/local/lib/perl> to help the CGI script find the libraries it may need.
+An example script is provided in the F<cgi-bin> directory named F<handler-path.cgi.sample>. You may customize that file and rename it to F<handler-path.cgi>. If you need custom library paths, replace the sample paths with yours. If you need to modify the location of Perl, you should change the very first line (the sh-bang line starting with "#!") to contain the name of the appropriate Perl program file.
 
-You could also add the necessary lines to the top of F<handler.cgi>, but you'll need to be careful during upgrades to make sure your alterations aren't clobbered.
+You may also add to this file any additonal initialization or Perl code you want performed before the CGI handler is run. Do I<not> run anything after the C<require "handler.cgi"> line though. The CGI handler quits with a call to C<exit>, so any code placed there will I<never run>.
+
+Finally, you'll need to adjust your web server configuration to use F<handler-path.cgi> rather than F<handler.cgi>.
 
 =head1 WEB SERVER CONFIGURATION
 
-This configuration is specific to Apache web server, the only web server this service has yet been tested upon. Here is an example configuration that should work.
+This configuration is specific to Apache web server, the only web server this service has yet been tested upon. Here is an example configuration that should work. If you use Contentment with another web server, please let me know!
 
-First, an F<.htaccess> file to be placed in F<docroots/master>:
+First, you will need to place an F<.htaccess> file in the F<docroots/htdocs> directory. A sample file has been included named F<htaccess.sample>. For most installations, this file is fine as is and can just be renamed to F<.htaccess>. 
+Yet, you will need to edit it under at least the following two circumstances:
 
-  Order allow,deny
-  Allow from all
-  
-  Options FollowSymLinks
-  
-  RewriteEngine on
-  RewriteRule "^$" "http://www.contentment.org/cgi-bin/handler-path.cgi/index.html" [L]
-  RewriteRule "(.*)$" "http://www.contentment.org/cgi-bin/handler-path.cgi/$1" [L]
+=over
 
-In this case, you may need another F<.htaccess> file in F<cgi-bin>:
+=item 1.
 
-  Order allow,deny
-  Allow from all
-  
-  Options ExecCGI
-  SetHandler cgi-script
-  
-  RewriteEngine off
+You have created a custom CGI wrapper for F<handler.cgi> (described in the previous section). 
 
-In the future a set of default files will probably be provided with some alternatives given somewhere in the distribution.
+=item 2.
+
+The F<cgi-bin> directory is not installed within F<docroots/htdocs>.
+
+=back
+
+In either case (and certainly others), you may wish to customize the F<.htaccess> file. The important lines are:
+
+  RewriteRule "^$"    "cgi-bin/handler.cgi/index.html" [L]
+  RewriteRule "(.*)$" "cgi-bin/handler.cgi/$1"         [L]
+
+If you're using a custom handler, then replace the C<handler.cgi> on both lines with the name of your handler (C<handler-path.cgi> if you name it as suggested in the previous section).
+
+If you've relocated F<cgi-bin>, then you need to make sure the start of the line locates it. For example, if the URL to your Contentment site is:
+
+  http://www.yourhost.com/contentment/
+
+and the CGI script is at:
+
+  http://www.yourhost.com/cgi-bin/handler.cgi
+
+You can just add a "C</>" to the front of each part starting with "C<cgi-bin>".
+
+As another example, if the URL to your Contentment site is:
+
+  http://www.yourhost.com/~foo/bar/Contentment/
+
+and the CGI script is at:
+
+  http://www.yourhost.com/~foo/htbin/Contentment/handler.cgi
+
+You can replace "C<cgi-bin>" in each line with "C</~foo/htbin/Contentment>".
 
 =head1 AUTHOR
 
