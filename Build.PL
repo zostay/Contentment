@@ -42,7 +42,6 @@ while (my $arg = shift @args) {
 
 my $build = Contentment::Build->new(
 	module_name        => 'Contentment',
-	create_makefile_pl => 1,
 	dist_version_from  => 'lib/Contentment.pm.in',
 	license            => 'perl',
 	requires           => {
