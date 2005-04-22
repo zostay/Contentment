@@ -1,0 +1,101 @@
+=head1 NAME
+
+Contentment::Manual::Bugs - An overview of the stuff needed doing
+
+=head1 DESCRIPTION
+
+This file is the antithesis of L<Contentment::Manual::Features> and should describe the list of things that should be added or should be fixed. I'll try to keep this up-to-date, but you know how that goes...
+
+=head1 ENHANCEMENTS
+
+This is a list of features that should be added.
+
+=over
+
+=item *
+
+There should be an interactive installer so a user can run the Build script with the C<-i> flag and get stepped through the process. I think I could make this setup nearly all the important situations and would make Contentment more accessible.
+
+=item *
+
+System upgrades suck. If tables change between versions, Contentment doesn't know how to cope. Some kind of C<update_table> API needs to be made.
+
+=item *
+
+The C<_create_table> methods sucks. It should be named C<create_table> and it needs to be able to do more in the way of initial data setup, etc.
+
+=item *
+
+All content is still stored on the file system. This is boring and not very advantageous for a lot of things. More database-based apps are needed.
+
+=item *
+
+Need a blogger module.
+
+=item *
+
+Need a blog aggregator module. (I actually have a primitive one written, but I need to enhance it and add database support prior to release.)
+
+=item *
+
+Need a C<Contentment::FileType::Perl> module to generate from Perl scripts.
+
+=item *
+
+Need a C<Contentment::FileType::Python> module to generate from Python scripts.
+
+=item *
+
+Need a C<Contentment::FileType::PHP> module to generate from PHP scripts.
+
+=item *
+
+Need a C<Contentment::FileType::Template> module to genearte from Template Toolkit scripts.
+
+=item *
+
+Need to add cron support. Probably, we can create a F<bin> script that can queue up any cron modules to handle folks who have direct access to cron. Then add a F</content/util/cron> script to handle the folks who live without (in the vein of Drupal's F<cron.php>).
+
+=back
+
+=head1 BUGS
+
+This is a list of outstanding bugs that should be fixed.
+
+=over
+
+=item *
+
+The VFS system is a pile of poo. I've written the L<File::System> module (available from CPAN) to address this issue, but it hasn't yet been properly incorporated.
+
+=item *
+
+The internals of the API are still altered way too often. The API needs to be stabilized prior to the "1.x" version.
+
+=item *
+
+The L<Contentment::Security::DBI> stuff is broken because it hasn't been updated to use the new forms API.
+
+=item *
+
+There are a number of inconsistencies throughout the system that have arisen because of the recent addition of the VFS and a couple other features. These should be addressed.
+
+=item *
+
+Mason is used to do too much. More of the work needs to be brought into Perl modules. It was convenient to start this way, but moving over to Perl modules will lead to a better and more flexible architecture in the long run.
+
+=back
+
+=head1 SEE ALSO
+
+L<Contentment::Manual::Features>
+
+=head1 AUTHOR
+
+Andrew Sterling Hanenkamp E<lt>hanenkamp@users.sourceforge.netE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2005 Andrew Sterling Hanenkamp. All Rights Reserved.
+
+Contentment is released under the same terms and license as Perl itself.

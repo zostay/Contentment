@@ -8,9 +8,12 @@
 
 temp_dir: "@@TMP_DIR@@"
 comp_dirs:
+ - [ site, "@@SITE_DIR@@" ]
  - [ sample, "@@SAMPLE_DIR@@" ]
  - [ master,  "@@MASTER_DIR@@" ]
 log4perl_conf: "@@ETC_DIR@@/log4perl.conf"
-EOF
 
-close FH;
+# These are the settings you will most likely need to customize:
+dbi_dsn:  "dbi:mysql:mydb"
+dbi_user: "dbuser"
+dbi_pass: "secret"

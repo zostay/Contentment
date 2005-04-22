@@ -8,16 +8,19 @@ use ExtUtils::Install;
 use File::Path;
 use File::Spec;
 
-#sub ACTION_install {
-#	my $self = shift;
-#
-#	$self->SUPER::ACTION_install;
-#	
+sub ACTION_install {
+	my $self = shift;
+
+	$self->SUPER::ACTION_install;
+
+	my $logs = $self->notes('logs_dir');
+	chmod 0600, File::Spec->catfile($logs, "contentment.log");
+	
 #	$self->ACTION_install_conf;
 #	$self->ACTION_install_sample;
 #	$self->ACTION_install_base;
 #	$self->ACTION_install_cgi;
-#}
+}
 
 sub ACTION_build {
 	my $self = shift;
@@ -44,7 +47,8 @@ sub process_mason_files {
 	my $files = $self->find_all_files('mason', 'docroots');
 
 	while (my ($file, $dest) = each %$files) {
-		$self->copy_if_modified(from => $file, to => File::Spec->catfile($self->blib, $dest) );
+		my $result = $self->copy_if_modified(from => $file, to => File::Spec->catfile($self->blib, $dest) ) or next;
+		$self->make_executable($result) if $result =~ /\.cgi$/;
 	}
 }
 

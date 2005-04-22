@@ -135,7 +135,7 @@ $build->notes('site_dir'   =>
 	"$build->{properties}{install_path}{docroots}/site");
 $build->notes('sample_dir' =>
 	$build->{properties}{install_path}{'docroots/sample'} ||
-	"$build->{properties}{install_path}{docroots}/site");
+	"$build->{properties}{install_path}{docroots}/sample");
 $build->notes('tmp_dir'    => $build->{properties}{install_path}{'tmp'});
 $build->notes('cgi_dir'    => 
 	$build->{properties}{install_path}{'docroots/htdocs/cgi-bin'} ||

@@ -20,10 +20,10 @@ while (@ARGV) {
 	if ($first_line =~ /^#!/) {
 		print OFH $first_line;
 		print OFH "\n# This file was automatically generated. DO NOT EDIT!!!\n";
-		print OFH "# You should edit $infile.in, instead.\n\n";
+		print OFH "# You should edit $infile, instead.\n\n";
 	} else {
 		print OFH "# This file was automatically generated. DO NOT EDIT!!!\n";
-		print OFH "# You should edit $infile.in, instead.\n\n";
+		print OFH "# You should edit $infile, instead.\n\n";
 		print OFH $first_line;
 	}
 
@@ -38,4 +38,6 @@ while (@ARGV) {
 	close IFH;
 	close OFH;
 
+	my $mode = (stat $infile)[2] & 0777;
+	chmod $mode, $outfile;
 }

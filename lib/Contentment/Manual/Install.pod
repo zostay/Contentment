@@ -77,16 +77,31 @@ You have created a custom CGI wrapper for F<handler.cgi> (described in the previ
 
 The F<cgi-bin> directory is not installed within F<docroots/htdocs>.
 
+=item 3.
+
+You've installed Contentment outside of your Apache documentation root directory. (E.g., in a home directory for F</~foo/>)
+
 =back
 
-In either case (and certainly others), you may wish to customize the F<.htaccess> file. The important lines are:
+In either case (and certainly others), you may wish to customize the F<.htaccess> file. 
+
+=head2 CUSTOM HANDLER
+
+If you are using a custom handler, the important lines are:
 
   RewriteRule "^$"    "cgi-bin/handler.cgi/index.html" [L]
   RewriteRule "(.*)$" "cgi-bin/handler.cgi/$1"         [L]
 
-If you're using a custom handler, then replace the C<handler.cgi> on both lines with the name of your handler (C<handler-path.cgi> if you name it as suggested in the previous section).
+You'll want to replace the C<handler.cgi> on both lines with the name of your handler (C<handler-path.cgi> if you name it as suggested in the previous section).
 
-If you've relocated F<cgi-bin>, then you need to make sure the start of the line locates it. For example, if the URL to your Contentment site is:
+=head2 RELOCATED CGI-BIN
+
+If you've relocated F<cgi-bin>, then you need to make sure the rewrite engine locates it properly. Here, the same two lines as above are important:
+
+  RewriteRule "^$"    "cgi-bin/handler.cgi/index.html" [L]
+  RewriteRule "(.*)$" "cgi-bin/handler.cgi/$1"         [L]
+
+For example, if the URL to your Contentment site is:
 
   http://www.yourhost.com/contentment/
 
@@ -94,7 +109,7 @@ and the CGI script is at:
 
   http://www.yourhost.com/cgi-bin/handler.cgi
 
-You can just add a "C</>" to the front of each part starting with "C<cgi-bin>".
+You want to add a "C</>" to the front of each of the two rules starting with "C<cgi-bin>".
 
 As another example, if the URL to your Contentment site is:
 
@@ -105,6 +120,24 @@ and the CGI script is at:
   http://www.yourhost.com/~foo/htbin/Contentment/handler.cgi
 
 You can replace "C<cgi-bin>" in each line with "C</~foo/htbin/Contentment>".
+
+=head2 RELOCATED HTDOCS
+
+If the F<cgi-bin> is still within the C<htdocs> folder, but you've moved the C<htdocs> folder to a place in a UserDir or an alias, then you can uncomment and modify the line:
+
+  RewriteBase "/~foo/Contentment"
+
+The replacement for F</~foo/Contentment> will be the URL needed to reach your installation.
+
+It's installed in my UserDir at work, for example. The URL is:
+
+  http://www.cis.ksu.edu/~sterling/
+
+Thus, my C<RewriteBase> line reads:
+
+  RewriteBase "/~sterling"
+
+That covers most of the basic situations. It's probable that someone will come up with something a bit more complicated. If you need help you can contact me at the email address below.
 
 =head1 AUTHOR
 
