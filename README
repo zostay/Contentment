@@ -1,0 +1,27 @@
+Contentment
+===========
+
+Andrew Sterling Hanenkamp, <hanenkamp@users.sourceforge.net>
+
+Contentment is a content management system. It was originally designed to help maintain knowledge base information related to a systems support ste and information related to a course site.
+
+The system is generally intended to be easy to use and easy to code. Optimization and scalability have not been major goals at this point. It provides a fairly straightforward way of creating a web site through file-based pages and adds theming, indexing, dynamic page generation, and format transformation with very little effort.
+
+INSTALLATION
+
+For complete installation instructions, see the documentation of Contentment::Manual::Install. You may do this via:
+
+  perldoc lib/Contentment/Manual/Install.pm
+
+Basic installation is via the typical Module::Build formula:
+
+  perl Build.PL
+  ./Build
+  ./Build test
+  ./Build install
+
+COPYRIGHT AND LICENSE
+
+Copyright 2005 Andrew Sterling Hanenkamp. All Rights Reserved.
+
+Contentment is distributed and licensed under the same terms as Perl itself.
