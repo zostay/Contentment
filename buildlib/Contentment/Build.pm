@@ -15,11 +15,6 @@ sub ACTION_install {
 
 	my $logs = $self->notes('logs_dir');
 	chmod 0600, File::Spec->catfile($logs, "contentment.log");
-	
-#	$self->ACTION_install_conf;
-#	$self->ACTION_install_sample;
-#	$self->ACTION_install_base;
-#	$self->ACTION_install_cgi;
 }
 
 sub ACTION_build {
@@ -109,37 +104,6 @@ sub safe_install {
 	}
 
 	install({ 'read' => '', $safe_dir => $to_dir });
-}
-
-sub ACTION_install_conf {
-	my $self = shift;
-
-	$self->safe_install('etc', $self->notes('confdir'), qw/
-		!Contentment.conf
-		Contentment.defaults.conf
-		!log4perl.conf
-	/);
-}
-
-sub ACTION_install_sample {
-	my $self = shift;
-
-	my $sampledir = $self->my_destdir.$self->notes('sampledir');
-	install({ 'read' => '', 'sample' => $sampledir });
-}
-
-sub ACTION_install_base {
-	my $self = shift;
-
-	my $basedir = $self->my_destdir.$self->notes('basedir');
-	install({ 'read' => '', 'html' => $basedir });
-}
-
-sub ACTION_install_cgi {
-	my $self = shift;
-
-	my $cgidir = $self->my_destdir.$self->notes('cgidir');
-	install({ 'read' => '', 'cgi-bin' => $cgidir });
 }
 
 1
