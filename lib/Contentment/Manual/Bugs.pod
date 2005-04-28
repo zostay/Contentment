@@ -56,6 +56,26 @@ Need a C<Contentment::FileType::Template> module to genearte from Template Toolk
 
 Need to add cron support. Probably, we can create a F<bin> script that can queue up any cron modules to handle folks who have direct access to cron. Then add a F</content/util/cron> script to handle the folks who live without (in the vein of Drupal's F<cron.php>).
 
+=item *
+
+When a theme fails, it'd be nifty if we could fail back to a generic theme.
+
+=item *
+
+Should be able to customize the error pages.
+
+=item *
+
+Menu utility.
+
+=item *
+
+Crumbtrail utility.
+
+=item *
+
+UNIT TESTS! I need to promptly profusely populate the test directory.
+
 =back
 
 =head1 BUGS
@@ -83,6 +103,10 @@ There are a number of inconsistencies throughout the system that have arisen bec
 =item *
 
 Mason is used to do too much. More of the work needs to be brought into Perl modules. It was convenient to start this way, but moving over to Perl modules will lead to a better and more flexible architecture in the long run.
+
+=item *
+
+The ordering of directories in F</content/themes> is dumb. It is currently F</content/themes/$type/$template/$master>. It should be F</content/themes/$template/$type/$master> instead.
 
 =back
 

@@ -37,7 +37,7 @@ $h->interp->set_global('$log'       => $log);
 $h->interp->set_global('$req_path'  => $req_path);
 $h->interp->set_global('$vfs'       => Contentment::VFS->new);
 
-$ENV{PATH_INFO} =~ s#^$conf->{base}/#/content/input/#;
+$ENV{PATH_INFO} =~ s#^/#/content/input/#;
 $log->debug("Mason will handle request as $ENV{PATH_INFO}");
 
 $h->handle_request;

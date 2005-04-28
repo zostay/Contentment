@@ -1,8 +1,0 @@
-<h1>Welcome</h1>
-
-Welcome to Contentment.
-
-<%attr>
-title => 'Welcome'
-kind => 'text/html'
-</%attr>
