@@ -74,8 +74,6 @@ if ($original_kind eq $final_kind) {
 $log->debug("Transformation #3: original kind is not final kind, transformation needed");
 
 # Step 4: Assess the available transformers.
-my @dirs = map $$_[1], @comp_dirs;
-
 use Contentment::Util::Transformation;
 my $transform = Contentment::Util::Transformation->new;
 
@@ -83,7 +81,7 @@ my $found = 0;
 my @files = $vfs->glob('/content/transform/modules/*');
 for my $filename (@files) {
 	my $file = $vfs->lookup($filename);
-	next if $file->is_directory;
+	next if $file->is_container;
 	
 	$log->debug("Found transformation module $file");
 	my $comp = $m->fetch_comp($file->path);

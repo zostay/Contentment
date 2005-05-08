@@ -12,7 +12,7 @@ use Params::Validate qw/:all/;
 
 use base qw/ HTML::Mason::Resolver /;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
@@ -27,11 +27,11 @@ L<Contentment::VFS>.
 
 =cut
 
-# ====== START HACKS FOR RESOLVER BUGS ===========================================
+# === START HACKS FOR RESOLVER BUGS ===========================================
 # Added this stuff to allow this to work---bug in the resolver setup makes me
 # need to accept comp_root.
 
-# TODO Remove this when the fix the bug.
+# TODO Remove this when they fix the bug.
 
 __PACKAGE__->valid_params
     (
@@ -49,7 +49,7 @@ sub comp_root {
 	return $self->{comp_root};
 }
 
-# ====== END HACKS FOR RESOLVER BUGS ===++========================================
+# === END HACKS FOR RESOLVER BUGS =============================================
 
 sub get_info {
 	my $self = shift;
@@ -60,16 +60,20 @@ sub get_info {
 	$log->debug("VFS Resolver searching for $path");
 
 	if (my $file = $vfs->lookup($path)) {
-		$log->debug("VFS Resolver lookup found ", $file->canonpath);
+		$log->debug("VFS Resolver lookup found ", $file->path);
 
 		return HTML::Mason::ComponentSource->new(
-			friendly_name   => $file->canonpath,
-			comp_id         => $file->canonpath,
-			last_modified   => $file->property('mtime'),
+			friendly_name   => $file->path,
+			comp_id         => $file->path,
+			last_modified   => $file->get_property('mtime'),
 			comp_path       => $path,
-			comp_class      => 'HTML::Mason::Component::FileBased',
-			extra           => { comp_root => $file->root },
-			source_callback => sub { join '', $file->lines },
+			comp_class      => 'HTML::Mason::Component',
+			source_callback => sub { scalar($file->content) },
+			# DUMB! comp_roots shouldn't be needed for anything but the
+			# resolver.
+			extra           => {
+				comp_root => '/tmp/fake-comp-root',
+			}
 		);
 	}
 
@@ -84,5 +88,21 @@ sub glob_path {
 	$log->debug("VFS Resolver globbing for $glob");
 	return Contentment::VFS->new->glob($glob);
 }
+
+=head1 SEE ALSO 
+
+L<Contentment::VFS>, L<HTML::Mason::Resolver>
+
+=head1 AUTHOR
+
+Andrew Sterling Hanenkamp, E<gt>hanenkamp@users.sourceforge.netE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2005 Andrew Sterling Hanenkamp. All Rights Reserved.
+
+Contentment is distributed and licensed under the same terms as Perl itself.
+
+=cut
 
 1

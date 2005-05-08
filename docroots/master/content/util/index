@@ -31,8 +31,8 @@ sub smart_cmp {
 		$sort_mult = -1;
 	}
 
-	my $first  = $a->property($arg);
-	my $second = $b->property($arg);
+	my $first  = $a->get_property($arg);
+	my $second = $b->get_property($arg);
 
 	if (looks_like_number($first) && looks_like_number($second)) {
 		($first <=> $second) * $sort_mult;
@@ -44,28 +44,28 @@ sub smart_cmp {
 my @files = $vfs->find(sub {
 	my $file = local $_ = shift;
 	if (/$conf{non_indexed_files}/) {
-		$file->is_directory && $file->prune(1);
+		$file->is_container and $File::System::prune = 1;
 		return 0;
 	}
 
 	for my $exclude (@exclude_children) {
 		if (/$exclude/) {
-			$file->is_directory && $file->prune(1);
+			$file->is_container and $File::System::prune = 1;
 		}
 	}
 
 	for my $exclude (@excludes) {
 		if (/$exclude/) {
-			$file->is_directory && $file->prune(1);
+			$file->is_container and $File::System::prune = 1;
 			return 0;
 		}
 	}
 
-	if ($file->is_directory) {
-		$file->prune(1) unless $recursive;
+	if ($file->is_container) {
+		$File::System::prune = 1 unless $recursive;
 		
 		# Directories without indexes are always pruned
-		$file->prune(1) unless $file->lookup_source;
+		$File::System::prune = 1 unless $file->lookup_source;
 
 		return 0 unless $file->lookup_source;
 	

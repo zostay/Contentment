@@ -3,12 +3,12 @@
 </%args>
 
 <ul class="toc">
-% my $last_num = $files[0]->property('depth');
+% my $last_num = scalar(split '/', $file->path);
 % for my $file (@files) {
 % 	my $url  = $file->path;
 % 	$url =~ s/\.\w+$/\.html/;
 %
-% 	my $num = $file->property('depth');
+% 	my $num = scalar(split '/', $file->path);
 % 	while ($num > $last_num) {
 %		print q(<ul class="toc">);
 %		$last_num++;
@@ -19,7 +19,7 @@
 %	}
 
 	<li class="toc-item">
-		<a href="<% $url %>"><% $file->property('title') %></a> - <% $file->property('abstract') %>
+		<a href="<% $url %>"><% $file->get_property('title') || $file->path %></a> - <% $file->get_property('abstract') %>
 	</li>
 % }
 </ul>

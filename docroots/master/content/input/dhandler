@@ -5,9 +5,9 @@ $log->info("input dhandler preparing to generate $relname");
 my $real_file = $vfs->lookup($relname);
 $root_file = $vfs->lookup_source($relname);
 
-if (defined $real_file && $real_file->is_directory && $relname !~ /\/$/) {
+if (defined $real_file && $real_file->is_container && $relname !~ /\/$/) {
 	$log->debug("Redirecting directory /$relname -> /$relname/");
-	$m->comp("/content/redirect", to => "/$relname/", %ARGS);
+	$m->comp("/content/util/redirect", to => "/$relname/", %ARGS);
 }
 
 my $result = eval { $m->comp("/content/util/generate", rootname => $relname, top => 1) };

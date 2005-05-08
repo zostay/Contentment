@@ -1,7 +1,7 @@
 <%init>
 my $kind = undef;
 for my $file ($vfs->glob('/content/kind/final/modules/*')) {
-	$kind = $m->comp($file);
+	$kind = $m->comp("$file");
 	defined $kind and last;
 }
 

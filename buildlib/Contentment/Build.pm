@@ -17,6 +17,14 @@ sub ACTION_install {
 	chmod 0600, File::Spec->catfile($logs, "contentment.log");
 }
 
+sub ACTION_distdir {
+	my $self = shift;
+
+	$self->SUPER::ACTION_distdir;
+
+	$self->do_system('svn log svn+ssh://sterling@contentment.org/home/sterling/svn/Contentment/trunk > '.File::Spec->catfile($self->dist_dir, 'Changelog'));
+}
+
 sub ACTION_build {
 	my $self = shift;
 

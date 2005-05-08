@@ -2,10 +2,10 @@
 	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title><%$file->property('title')||'Untitled'%></title>
+<title><%$file->get_property('title')||$file->path%></title>
 <link rel="STYLESHEET" type="text/css" href="/content/themes/style/default/main.css"/>
-% if (defined $file->property('abstract')) {
-<meta name="description" content="<%$file->property('abstract')%>"/>
+% if (defined $file->get_property('abstract')) {
+<meta name="description" content="<%$file->get_property('abstract')%>"/>
 % }
 </head>
 <body>

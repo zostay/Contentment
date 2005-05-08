@@ -11,7 +11,7 @@ use Text::Balanced qw/ extract_quotelike /;
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 NAME
 
@@ -128,6 +128,19 @@ sub props {
 	close $fh;
 
 	return $file->{ft_props} = \%props;
+}
+
+=item @properties = Contentment::FileType::POD-E<gt>properties($file)
+
+Returns the list of properties for the file.
+
+=cut
+
+sub properties {
+	my $class = shift;
+	my $file  = shift;
+
+	return keys %{ $class->props($file) };
 }
 
 =item $value = Contentment::FileType::POD-E<gt>property($file, $value)

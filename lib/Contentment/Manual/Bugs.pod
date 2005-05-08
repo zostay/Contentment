@@ -76,6 +76,10 @@ Crumbtrail utility.
 
 UNIT TESTS! I need to promptly profusely populate the test directory.
 
+=item *
+
+Create a request preprocessing system and a request postprocessing system. Place the session/context creation in the preprocessor and themes/filtesr in the postprocessor.
+
 =back
 
 =head1 BUGS
@@ -107,6 +111,22 @@ Mason is used to do too much. More of the work needs to be brought into Perl mod
 =item *
 
 The ordering of directories in F</content/themes> is dumb. It is currently F</content/themes/$type/$template/$master>. It should be F</content/themes/$template/$type/$master> instead.
+
+=item *
+
+Need to get into a better habit of incrementing version numbers (or write a script to do it on commit!).
+
+=item *
+
+L<SPOPSx::Tool::DateTime> and L<SPOPSx::Tool::HashField> don't belong here. They should be forked into their own file.
+
+=item *
+
+Need to document all the Mason components.
+
+=item *
+
+More frequent releases are desireable.
 
 =back
 

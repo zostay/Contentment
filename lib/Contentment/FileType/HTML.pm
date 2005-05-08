@@ -7,7 +7,7 @@ use Log::Log4perl;
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 NAME
 
@@ -48,7 +48,52 @@ Returns 'text/html'.
 
 sub generated_kind { 'text/html' }
 
-=item $result = Contentment::FileType::HTML-E<gt>generate($file, $key)
+# =item $properties = Contentment::FileType::HTML-E<gt>props($file)
+#
+# Decodes the properties found in the file, caches them in the file, and returns
+# the hash reference containing them.
+#
+# =cut
+
+sub props {
+	my $class = shift;
+	my $file  = shift;
+
+	return $file->{ft_props} if defined $file->{ft_props};
+
+	my %props;
+
+	local $_ = $file->content;
+
+	($props{title}) = m[<title>(.*?)</title>]si;
+
+	while (my $meta = m[(<\s*meta[^>]+?name=(?:"[^"]+"|\S+\s)[^>]*?>)]sig) {
+		$meta =~ m{name=(?:"([^"]+)"|([^\\>\S]+))}si;
+		my $key = $1 || $2;
+
+		$meta =~ m{content=(?:"([^"]*)"|([^\\>\S]*))}si;
+		my $value = $1 || $2;
+
+		$props{$key} = $value;
+	}
+		
+	return $file->{ft_props} = \%props;
+}
+
+=item @properties = Contentment::FileType::HTML-E<gt>properties($file)
+
+Returns list of properties available in the file.
+
+=cut
+
+sub properties {
+	my $class = shift;
+	my $file  = shift;
+
+	return keys %{ $class->props($file) };
+}
+
+=item $result = Contentment::FileType::HTML-E<gt>get_property($file, $key)
 
 Returns the contents of the C<title> tag when C<$key> is "title".
 
@@ -56,26 +101,12 @@ Returns the contents of the C<content> attribute of any C<meta> tag where the ke
 
 =cut
 
-sub property {
+sub get_property {
 	my $class = shift;
 	my $file  = shift;
 	my $key   = shift;
 
-	local $_ = join '', $file->lines;
-
-	my $value;
-	if ($key eq 'title') {
-		my ($title) = m[<title>(.*?)</title>]si;
-		$value = $title;
-	} else {
-		my ($meta) = m[(<\s*meta[^>]+?name=(?:"$key"|$key\s)[^>]*?>)]si;
-		if ($meta) {
-			my @value = $meta =~ m[content=(?:"(.*?)"|(\S*))]si;
-			$value = $value[0] || $value[1];
-		}
-	}
-		
-	return $value;
+	return $class->props($file)->{$key};
 }
 
 =item $result = Contentment::FileType::HTML-E<gt>generate($file)

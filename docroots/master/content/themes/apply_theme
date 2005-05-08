@@ -1,4 +1,4 @@
-<&| "/content/themes/$final_kind/$theme/$master", file => $file &><% $m->content %></&>
+<&| "/content/themes/$theme/$final_kind/$master", file => $file &><% $m->content %></&>
 
 <%init>
 my $final_kind = $to || $m->comp('/content/kind/final/kind');

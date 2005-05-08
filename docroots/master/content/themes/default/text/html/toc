@@ -3,7 +3,7 @@
 % 	my $html = "$file";
 % 	$html =~ s/\.\w+$/\.html/;
 	<div class="toc-item">
-		<a href="<% $html %>"><% $file->property('title') %></a> - <% $file->property('abstract') %>
+		<a href="<% $html %>"><% $file->get_property('title') || $file->path %></a> - <% $file->get_property('abstract') %>
 	</div>
 % }
 </div>

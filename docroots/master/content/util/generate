@@ -27,11 +27,11 @@ if ($file) {
 <&| /content/util/cache, file => $file, top => $top &>
 %	if (defined $to) {
 <&| /content/transform/apply_transformation, to => $to, from => $file->generated_kind &>
-% $result = $file->generate($top);
+% $result = $file->generate;
 </&>
 <%perl>
 	} else {
-		$result = $file->generate($top);
+		$result = $file->generate;
 	}
 </%perl>
 </&>

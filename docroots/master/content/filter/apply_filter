@@ -16,27 +16,17 @@ my $output = $m->content;
 $final_kind ||= $m->comp("/content/kind/final/kind");
 $log->debug("Applying filters for final kind $final_kind");
 
-my @dirs = map $$_[1], @comp_dirs;
-
-my %found;
-for my $dir (@dirs) {
-	for my $filename (<$dir/content/filter/modules/*>) {
-		$filename =~ s|^$dir/|/|;
-		next if $found{$filename};
-
-		$found{$filename}++;
-
-		$log->debug("Loading filter component $filename");
-		my $comp = $m->fetch_comp($filename);
-		my $kind = $comp->attr('kind');
-		if ($final_kind =~ /$kind/) {
-			$log->debug("Filter $filename matches $final_kind, applying...");
-			my $input = $output;
-			$output = undef;
+for my $filename ($vfs->glob("/content/filter/modules/*")) {
+	$log->debug("Loading filter component $filename");
+	my $comp = $m->fetch_comp("$filename");
+	my $kind = $comp->attr('kind');
+	if ($final_kind =~ /$kind/) {
+		$log->debug("Filter $filename matches $final_kind, applying...");
+		my $input = $output;
+		$output = undef;
 </%perl>
 <&| { store => \$output }, $comp, kind => $final_kind &><% $input %></&>
 <%perl>
-		}
 	}
 }
 </%perl>

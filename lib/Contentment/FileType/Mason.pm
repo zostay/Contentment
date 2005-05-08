@@ -7,7 +7,7 @@ use base 'Contentment::FileType::Other';
 
 use Log::Log4perl;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
@@ -102,6 +102,23 @@ sub comp {
 	return $file->{ft_comp};
 }
 
+=item @properties = Contentment::FileType::Mason-E<gt>properties($file)
+
+Returns the names of all the properties found in the file.
+
+=cut
+
+sub properties {
+	my $class = shift;
+	my $file  = shift;
+
+	if (my $comp = $class->comp($file)) {
+		return $comp->attributes;
+	} else {
+		return ();
+	}
+}
+
 =item $value = Contentment::FileType::Mason-E<gt>property($file, $key)
 
 Checks to see if the Mason component for C<$file> contains an attribute named C<$key> and returns that attribute.
@@ -126,18 +143,30 @@ Runs the Mason component for C<$file>. The output is captured and printed out to
 
 =cut
 
+# FIXME Generate uses an "unsupported" feature of Mason to set the content. This
+# should probably be fixed up to use an anonymous Mason component handler or
+# something. Perhaps that will be a good thing to do once we aren't using Mason
+# as the front-loader anymore.
+
 sub generate {
 	my $class = shift;
 	my $file  = shift;
+	my %args  = @_;
 
 	if (my $comp = $class->comp($file)) {
 		$log->debug("Compiling/Running component $file");
 
+		my %content;
+		if ($args{content}) {
+			my $content = delete $args{content};
+			$content{content} = $content;
+		}
+
 		my $buf;
 		my $result = $Contentment::context->m->comp(
-			{ store => \$buf }, $comp,
+			{ store => \$buf, %content }, $comp,
 			$Contentment::context->m->request_args,
-			@_,
+			%args,
 		);
 
 		print $buf;

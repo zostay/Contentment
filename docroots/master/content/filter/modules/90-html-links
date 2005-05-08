@@ -1,0 +1,10 @@
+<%args>
+$kind
+</%args>
+<% $m->content %>
+<%filter>
+s{url\(/}{url(/}g;
+</%filter>
+<%attr>
+kind => qr(^text/css$)
+</%attr>

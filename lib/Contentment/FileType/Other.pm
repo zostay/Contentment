@@ -8,7 +8,7 @@ use MIME::Types;
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 NAME
 
@@ -69,13 +69,21 @@ sub generated_kind {
 	return $class->real_kind($file);
 }
 
+=item @properties = Contentment::FileType::Other-E<gt>properties($file)
+
+Always returns an empty list.
+
+=cut
+
+sub properties { () }
+
 =item $value = Contentment::FileType::Other-E<gt>property($file, $key)
 
 Always returns C<undef>.
 
 =cut
 
-sub property { }
+sub get_property { }
 
 =item $result = Contentment::FileType::Other-E<gt>generate($file, @args)
 

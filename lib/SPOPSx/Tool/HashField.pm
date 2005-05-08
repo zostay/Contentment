@@ -3,13 +3,13 @@ package SPOPSx::Tool::HashField;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use YAML qw(Load Dump);
 
 =head1 NAME
 
-SPOPSx::Tool::Hashfield - A SPOPS extension allowing for the storage of Perl hashes
+SPOPSx::Tool::HashField - A SPOPS extension allowing for the storage of Perl hashes
 
 =head1 SYNOPSIS
 

@@ -7,10 +7,11 @@
 # properly.
 
 temp_dir: "@@TMP_DIR@@"
-comp_dirs:
- - [ site, "@@SITE_DIR@@" ]
- - [ sample, "@@SAMPLE_DIR@@" ]
- - [ master,  "@@MASTER_DIR@@" ]
+vfs:
+ - 'Layered'
+ - [ 'Real', root => '@@SITE_DIR@@' ]
+ - [ 'Real', root => '@@SAMPLE_DIR@@' ]
+ - [ 'Real', root => '@@MASTER_DIR@@' ]
 log4perl_conf: "@@ETC_DIR@@/log4perl.conf"
 
 # These are the settings you will most likely need to customize:
