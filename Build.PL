@@ -42,7 +42,7 @@ while (my $arg = shift @args) {
 
 my $build = Contentment::Build->new(
 	module_name        => 'Contentment',
-	dist_version_from  => 'lib/Contentment.pm.in',
+	dist_version_from  => 'lib/Contentment.pm',
 	license            => 'perl',
 	create_makefile_pl => 'passthrough',
 	requires           => {
@@ -69,7 +69,7 @@ my $build = Contentment::Build->new(
 			'docroots/htdocs/cgi-bin/handler.cgi',
 			'etc/Contentment.conf.sample', 
 			'etc/log4perl.conf.file',
-			'lib/Contentment.pm',
+			'lib/Contentment/Config.pm',
 		],
 		'buildlib/docindex.PL'		=> 'lib/Contentment/Manual.pod',
 	},

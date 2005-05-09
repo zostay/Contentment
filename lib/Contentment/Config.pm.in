@@ -1,0 +1,8 @@
+package Contentment::Config;
+
+use strict;
+use warnings;
+
+use constant ETC_DIR => '@@ETC_DIR@@';
+
+1;

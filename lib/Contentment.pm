@@ -4,12 +4,11 @@ use strict;
 use warnings;
 
 use Carp;
+use Contentment::Config;
 use Log::Log4perl ':easy';
 use YAML 'LoadFile';
 
-our $VERSION = '0.009_002';
-
-use constant ETC_DIR => '@@ETC_DIR@@';
+our $VERSION = '0.010_001';
 
 BEGIN {
 	Log::Log4perl::easy_init($DEBUG);
@@ -31,15 +30,15 @@ General configuration information and some general-purpose methods can be found 
 
 =item $conf = Contentment->configuration
 
-Reads the configuration files F<ETC_DIR/Contentment.defaults.conf> and F<ETC_DIR/Contentment.conf>.
+Reads the configuration files F<Contentment::Config::ETC_DIR/Contentment.defaults.conf> and F<Contentment::Config::ETC_DIR/Contentment.conf>.
 
 =cut
 
 my %configuration;
 sub configuration {
 	unless (%configuration) {
-		my $defaults_file = ETC_DIR.'/Contentment.defaults.conf';
-		my $locals_file   = ETC_DIR.'/Contentment.conf';
+		my $defaults_file = Contentment::Config::ETC_DIR.'/Contentment.defaults.conf';
+		my $locals_file   = Contentment::Config::ETC_DIR.'/Contentment.conf';
 
 		my ($defaults, $locals);
 		eval {
