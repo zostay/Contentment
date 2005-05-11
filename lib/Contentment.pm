@@ -4,8 +4,12 @@ use strict;
 use warnings;
 
 use Carp;
+use CGI;
 use Contentment::Config;
+use Contentment::VFS;
+use IO::String;
 use Log::Log4perl ':easy';
+use Tie::Simple;
 use YAML 'LoadFile';
 
 our $VERSION = '0.010_001';
@@ -14,9 +18,22 @@ BEGIN {
 	Log::Log4perl::easy_init($DEBUG);
 }
 
-sub dc { "(".shift(@_).") (".shift(@_).":".shift(@_).") " }
-$SIG{__WARN__} = sub { Log::Log4perl::get_logger->warn(dc(caller),@_)  };
-$SIG{__DIE__}  = sub { eval { Log::Log4perl::get_logger->fatal(dc(caller),@_) }; confess @_; };
+sub dc { sprintf "(package %s) (file %s:line %d) (called %s)", @_ }
+sub scream {
+	my $i = 2;
+	my $str;
+	while (my @c = caller($i++)) {
+		$str .= sprintf "\tFrom package %s (%s:%d) called %s\n", @c;
+	}
+	return $str;
+}
+$SIG{__WARN__} = sub { Log::Log4perl::get_logger->warn(dc(caller(1)),"@_")  };
+$SIG{__DIE__}  = sub { eval { Log::Log4perl::get_logger->error("An error prevented Contentment from serving this request: @_\n ",scream) }; confess @_; };
+
+my $log = Log::Log4perl->get_logger(__PACKAGE__);
+
+# Globals
+our %context;
 
 =head1 NAME
 
@@ -80,6 +97,95 @@ sub run_plugin {
 
 	no strict 'refs';
 	return $plugin->(@_);
+}
+
+=item Contentment->call_hooks($dir, @args)
+
+Run the appropriate generator on all files in F</content/hooks/$dir> and all subdirectories. The given C<@args> are passed each time.
+
+Logs, but otherwise ignores, any errors that occur.
+
+=cut
+
+sub call_hooks {
+	my $class = shift;
+	my $dir   = shift;
+	my $vfs   = Contentment::VFS->new;
+
+	my $hook_dir = $vfs->lookup("/content/hooks/$dir");
+
+	for my $file ($vfs->find(sub { shift->has_content }, $hook_dir)) {
+		$file->generate(@_);
+	}
+}
+
+=item Contentment->cgi_handler
+
+Handles CGI requests.
+
+=cut
+
+sub cgi_handler {
+	my $conf = Contentment->configuration;
+	%context = ( conf => $conf );
+	my $vfs = $conf->{vfs} = Contentment::VFS->new;
+
+	open(REALOUT, ">&STDOUT");
+	open(REALERR, ">&STDERR");
+
+	tie *LOGOUTFH, 'Tie::Simple', {},
+		WRITE => sub { 
+			my ($self, $scalar, $length, $offset) = @_;
+			$log->info(substr($scalar, $offset, $length));
+		};
+
+	tie *LOGERRFH, 'Tie::Simple', {},
+		WRITE => sub {
+			my ($self, $scalar, $length, $offset) = @_;
+			$log->error(substr($scalar, $offset, $length));
+		};
+
+	open(STDOUT, ">&LOGOUTFH");
+	open(STDERR, ">&LOGERRFH");
+
+	Contentment->call_hooks('request/initialize');
+
+	$ENV{PATH_INFO} =~ s{$conf->{base}/}{/};
+	my $q = $Contentment::context{q} = CGI->new;
+
+	Contentment->call_hooks('request/preprocess');
+
+	my $fh = IO::String->new;
+	my $old_fh = select $fh;
+
+	# Generation code here
+	my $file = $vfs->lookup_source('/content/util/generate');
+	$file->generate(rootname => $q->path_info);
+
+	select $old_fh;
+
+	$Contentment::context{output} = ${ $fh->string_ref };
+
+	Contentment->call_hooks('request/postprocess');
+
+	my %response_headers;
+	while (my ($head, $val) = each %{ $Contentment::context{response}{headers} }) {
+		$response_headers{"-$head"} = $val;
+	}
+
+	$response_headers{'-status'} = $Contentment::context{response}{status} || '200 OK';
+	$response_headers{'-type'}   = $Contentment::context{response}{type} || 'text/html';
+
+	print REALOUT $Contentment::context{q}->header(%response_headers);
+	print REALOUT $Contentment::context{output};
+
+	Contentment->call_hooks('request/finish');
+
+	open(STDOUT, ">&REALOUT");
+	open(STDERR, ">&REALERR");
+
+	close(REALOUT);
+	close(REALERR);
 }
 
 =back

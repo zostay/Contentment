@@ -17,7 +17,7 @@ our $VERSION = '0.01';
 my @letters = ( 'a' .. 'z', 'A' .. 'Z', '0' .. '9' );
 
 __PACKAGE__->mk_ro_accessors(qw/ url session_id session m r vfs setting /);
-__PACKAGE__->mk_accessors(qw/ original_kind panel panels submission submissions last_processed /);
+__PACKAGE__->mk_accessors(qw/ original_kind panel panels submission submissions last_processed output /);
 
 =head1 NAME
 
@@ -94,6 +94,10 @@ This is a stack of submissions in case of nested forms. Don't mess with this unl
 =item $context-E<gt>last_processed
 
 This is a list of form submission UUIDs that were processed by an immediately preceding C</content/widget/process.mason> run, which redirected to the current request.
+
+=item $context-E<gt>output
+
+This is the output destined for the client. This can be read from and written to to change that is prior to finishing the request handling.
 
 =back
 

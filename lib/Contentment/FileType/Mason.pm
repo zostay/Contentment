@@ -5,6 +5,7 @@ use warnings;
 
 use base 'Contentment::FileType::Other';
 
+use HTML::Mason::CGIHandler;
 use Log::Log4perl;
 
 our $VERSION = '0.02';
@@ -93,8 +94,11 @@ sub comp {
 
 	return $file->{ft_comp} if defined $file->{ft_comp};
 
+	my $interp = $class->interp($file->path);
+	my $m = $interp->make_request(comp => $file->path);
+
 	$log->debug("Loading component for file $file.");
-	$file->{ft_comp} = $Contentment::context->m->fetch_comp($file->path);
+	$file->{ft_comp} = $m->fetch_comp($file->path);
 
 	warn "Failed to fetch Mason component for $file"
 		unless $file->{ft_comp};
@@ -137,6 +141,72 @@ sub property {
 	}
 }
 
+=item $interp = Contentment::FileType::Mason-E<gt>interp($path)
+
+Returns an L<HTML::Mason::Interp> object. Used internally. The C<$path> argument is used to setup the log context.
+
+=cut
+
+my $interp;
+sub interp {
+	my $class = shift;
+	my $path  = shift;
+
+	if (defined $interp) {
+		$interp->set_global('$log' => Log::Log4perl->get_logger($path));
+		return $interp;
+	}
+
+	my $conf = $Contentment::context{conf};
+
+	$interp = HTML::Mason::Interp->new(
+		data_dir       => $conf->{temp_dir},
+		allow_globals  => [ qw( %conf %context $log $vfs ) ],
+		resolver_class => 'Contentment::VFSResolver',
+	);
+
+	$interp->set_global('%conf'    => $conf);
+	$interp->set_global('%context' => \%Contentment::context);
+	$interp->set_global('$log'     => Log::Log4perl->get_logger($path));
+	$interp->set_global('$vfs'     => Contentment::VFS->new);
+
+	return $interp;
+}
+
+my $m;
+sub request {
+	my $class = shift;
+	my $path  = shift;
+
+	return $m if defined $m;
+
+	return $m = $interp->make_request(comp => $path);
+}
+
+my $cgi_handler;
+sub cgi_handler {
+	my $class = shift;
+	
+	return $cgi_handler if defined $cgi_handler;
+
+	$cgi_handler = HTML::Mason::CGIHandler->new(
+		data_dir => $Contentment::context{conf}{temp_dir},
+		allow_globals => [ qw(
+			$base $full_base $url $req_path
+			%conf $log $context $vfs $root_file
+		) ],
+		resolver_class => 'Contentment::VFSResolver',
+	);
+
+	$cgi_handler->interp->set_global('$base'     => $Contentment::context{conf}{base});
+	$cgi_handler->interp->set_global('%conf'     => %{ $Contentment::context{conf} });
+	$cgi_handler->interp->set_global('$log'      => Log::Log4perl->get_logger('mason'));
+	$cgi_handler->interp->set_global('$req_path' => $Contentment::context{q}->path_info);
+	$cgi_handler->interp->set_global('$vfs'      => Contentment::VFS->new);
+
+	return $cgi_handler;
+}
+
 =item $result = Contentment::FileType::Mason-E<gt>generate($file, @args)
 
 Runs the Mason component for C<$file>. The output is captured and printed out to the currently C<select>ed file handle. The result of running the component is returned.
@@ -152,29 +222,28 @@ sub generate {
 	my $class = shift;
 	my $file  = shift;
 	my %args  = @_;
+	
+	$log->debug("Compiling/Running component $file");
 
-	if (my $comp = $class->comp($file)) {
-		$log->debug("Compiling/Running component $file");
+	my $interp  = $class->interp($file->path);
+	my $request = $interp->make_request(comp => $file->path);
 
-		my %content;
-		if ($args{content}) {
-			my $content = delete $args{content};
-			$content{content} = $content;
-		}
+	my $fake_comp = $interp->make_component(comp_source => '');
 
-		my $buf;
-		my $result = $Contentment::context->m->comp(
-			{ store => \$buf, %content }, $comp,
-			$Contentment::context->m->request_args,
-			%args,
-		);
-
-		print $buf;
-
-		return $result;
-	} else {
-		die "Failed to compile component $file: $@";
+	my %content;
+	if ($args{content}) {
+		my $content = delete $args{content};
+		$content{content} = $content;
 	}
+
+	my $buf;
+	my $result = $request->comp(
+		{ %content, base_comp => $fake_comp },
+		$file->path,
+		%args,
+	);
+
+	return $result;
 }
 
 =back

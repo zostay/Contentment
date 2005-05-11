@@ -91,6 +91,47 @@ sub get_security {
 	return { SEC_SCOPE_WORLD() => SEC_LEVEL_NONE };
 }
 
+sub open_session {
+	my $q = $Contentment::context{q};
+
+	my $id = $q->cookie('SESSIONID');
+
+	my %session;
+	my $session;
+	my ($id) {
+		$session = Contentment::Session->fetch($id, { skip_security => 1 });
+		if ($session) {
+			$log->debug("Reusing existing SESSIONID $id");
+			%session = %{ $session->session_data };
+		}
+	}
+
+	unless ($session) {
+		$session = Contentment::Session->new;
+		$session->{session_data} = {};
+		$session->save;
+
+		$id = $session->id;
+		$log->debug("Creating a new SESSIONID $id");
+	}
+
+	my $cookie = $q->cookie(
+		-name    => 'SESSIONID',
+		-value   => $id,
+		-expires => 'never');
+	$Contentment::context{output_headers}{Cookie} = $cookie;
+
+	$Contentment::context{session_id} = $id;
+	$Contentment::context{session} = \%session;
+}
+
+sub close_session {
+	my $id = $Contentment::context{session_id};
+	my $session = Contentment::Session->fetch($id, { skip_security => 1 });
+	$session->{session_data} = $Contentment::context{session};
+	$session->save;
+}
+
 =head1 SEE ALSO
 
 L<Contentment::Context>

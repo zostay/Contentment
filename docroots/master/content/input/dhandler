@@ -1,4 +1,5 @@
 <%perl>
+$log->info("Given URL: ", $m->cgi_object->url);
 my $relname = $m->dhandler_arg;
 $log->info("input dhandler preparing to generate $relname");
 

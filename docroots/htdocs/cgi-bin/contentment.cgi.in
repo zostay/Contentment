@@ -1,0 +1,12 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use lib '@@LIB_DIR@@';
+
+use Contentment;
+
+Contentment->cgi_handler;
+
+exit 0;

@@ -57,6 +57,7 @@ my $build = Contentment::Build->new(
 		'perl'				      => '5.6.1',
 		'SPOPS'				      => '0.87', 
 		'SQL::Translator'         => '0.06', 
+		'Tie::Simple'             => '1.02',
 		'YAML'				      => '0.35', 
 	},
 	recommends         => {

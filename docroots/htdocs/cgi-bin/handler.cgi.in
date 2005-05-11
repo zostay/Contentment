@@ -16,7 +16,13 @@ my $log = Log::Log4perl->get_logger("cgi_handler");
 
 $log->info("Handling request $ENV{PATH_INFO}");
 
-my $h = new HTML::Mason::CGIHandler->new (
+$ENV{PATH_INFO} =~ s#^$conf->{base}/#/#;
+$ENV{PATH_INFO} =~ s#^/#/content/input/#;
+$log->debug("Mason will handle request as $ENV{PATH_INFO}");
+
+my $req_path = $ENV{PATH_INFO};
+
+my $h = HTML::Mason::CGIHandler->new (
 	data_dir       => $conf->{temp_dir},
 	allow_globals  => [ qw(
 		$base $full_base $url $req_path
@@ -25,17 +31,11 @@ my $h = new HTML::Mason::CGIHandler->new (
 	resolver_class => 'Contentment::VFSResolver',
 );
 
-my $req_path = $ENV{PATH_INFO};
-$req_path =~ s#^$conf->{base}/#/#;
-
 $h->interp->set_global('$base'      => $conf->{base});
 $h->interp->set_global('%conf'      => %$conf);
 $h->interp->set_global('$log'       => $log);
 $h->interp->set_global('$req_path'  => $req_path);
 $h->interp->set_global('$vfs'       => Contentment::VFS->new);
-
-$ENV{PATH_INFO} =~ s#^/#/content/input/#;
-$log->debug("Mason will handle request as $ENV{PATH_INFO}");
 
 $h->handle_request;
 
