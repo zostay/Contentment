@@ -49,7 +49,7 @@ sub new {
 
 	my $class = shift;
 
-	my $conf = Contentment::configuration;
+	my $conf = Contentment->configuration;
 
 	return $class->SUPER::new($conf->{vfs});
 }
@@ -147,11 +147,14 @@ sub get_property {
 	my $self = shift;
 	my $key  = shift;
 
-	if ($self->has_content && $self->filetype 
+	my $value = $self->SUPER::get_property($key);
+	if (defined $value) {
+		return $value;
+	} elsif ($self->has_content && $self->filetype 
 			&& grep { $_ eq $key } $self->filetype->properties($self)) {
 		return $self->filetype->get_property($self, $key);
 	} else {
-		return $self->SUPER::get_property($key);
+		return undef;
 	}
 }
 
@@ -235,7 +238,7 @@ sub filetype {
 	defined $self->{filetype} and
 		return $self->{filetype};
 
-	my $conf = Contentment::configuration;
+	my $conf = Contentment->configuration;
 
 	for my $plugin (@{ $conf->{filetype_plugins} }) {
 		eval "require $plugin";

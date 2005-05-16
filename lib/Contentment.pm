@@ -5,22 +5,33 @@ use warnings;
 
 use Carp;
 use Contentment::Config;
+use Contentment::VFS;
 use Log::Log4perl ':easy';
 use YAML 'LoadFile';
 
-our $VERSION = '0.010_001';
+our $VERSION = '0.009_004';
 
 BEGIN {
 	Log::Log4perl::easy_init($DEBUG);
 }
 
-sub dc { "(".shift(@_).") (".shift(@_).":".shift(@_).") " }
-$SIG{__WARN__} = sub { Log::Log4perl::get_logger->warn(dc(caller),@_)  };
-$SIG{__DIE__}  = sub { eval { Log::Log4perl::get_logger->fatal(dc(caller),@_) }; confess @_; };
+sub dc { sprintf "(package %s) (file %s:line %d) (called %s)", @_ }
+sub scream {
+	my $i = 2;
+	my $str;
+	while (my @c = caller($i++)) {
+		$str .= sprintf "\tFrom package %s (%s:%d) called %s\n", @c;
+	}
+	return $str;
+}
+$SIG{__WARN__} = sub { Log::Log4perl::get_logger->warn(dc(caller(1)),"@_")  };
+$SIG{__DIE__}  = sub { eval { Log::Log4perl::get_logger->error("An error prevented Contentment from serving this request: @_\n ",scream) }; confess @_; };
+
+my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
 =head1 NAME
 
-Contentment - This is the main module of Contentment
+Contentment - Contentment is a Mason/Perl-bsed CMS
 
 =head1 DESCRIPTION
 
@@ -80,6 +91,26 @@ sub run_plugin {
 
 	no strict 'refs';
 	return $plugin->(@_);
+}
+
+=item Contentment->call_hooks($dir, @args)
+
+Run the appropriate generator on all files in F</content/hooks/$dir> and all subdirectories. The given C<@args> are passed each time.
+
+Logs, but otherwise ignores, any errors that occur.
+
+=cut
+
+sub call_hooks {
+	my $class = shift;
+	my $dir   = shift;
+	my $vfs   = Contentment::VFS->new;
+
+	my $hook_dir = $vfs->lookup("/content/hooks/$dir");
+
+	for my $file ($vfs->find(sub { shift->has_content }, $hook_dir)) {
+		$file->generate(@_);
+	}
 }
 
 =back
