@@ -22,7 +22,7 @@ sub ACTION_distdir {
 
 	$self->SUPER::ACTION_distdir;
 
-	$self->do_system('svn log svn+ssh://sterling@contentment.org/home/sterling/svn/Contentment/trunk > '.File::Spec->catfile($self->dist_dir, 'Changelog'));
+	$self->do_system('svn log svn+ssh://sterling@contentment.org/home/sterling/svn/trunk/Contentment > '.File::Spec->catfile($self->dist_dir, 'Changelog'));
 }
 
 sub ACTION_build {
