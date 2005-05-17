@@ -9,7 +9,7 @@ use Contentment::VFS;
 use Log::Log4perl ':easy';
 use YAML 'LoadFile';
 
-our $VERSION = '0.009_004';
+our $VERSION = '0.009_005';
 
 BEGIN {
 	Log::Log4perl::easy_init($DEBUG);
