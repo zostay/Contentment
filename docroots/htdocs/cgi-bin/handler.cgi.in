@@ -28,7 +28,7 @@ my $h = new HTML::Mason::CGIHandler->new (
 my $req_path = $ENV{PATH_INFO};
 $req_path =~ s#^$conf->{base}/#/#;
 
-$ENV{PATH_INFO} =~ s#^$conf->{base}/#/content/input/#;
+$ENV{PATH_INFO} =~ s#^/#/content/input/#;
 $log->debug("Mason will handle request as $ENV{PATH_INFO}");
 
 $h->interp->set_global('$base'      => $conf->{base});

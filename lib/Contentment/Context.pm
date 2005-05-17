@@ -12,12 +12,12 @@ use DateTime;
 use Log::Log4perl;
 my $log = Log::Log4perl->get_logger('Contentment::Context');
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 my @letters = ( 'a' .. 'z', 'A' .. 'Z', '0' .. '9' );
 
-__PACKAGE__->mk_ro_accessors(qw/ url session_id session m r vfs setting /);
-__PACKAGE__->mk_accessors(qw/ original_kind panel panels submission submissions last_processed /);
+__PACKAGE__->mk_ro_accessors(qw/ url m r vfs setting /);
+__PACKAGE__->mk_accessors(qw/ original_kind panel panels submission submissions last_processed session session_id /);
 
 =head1 NAME
 

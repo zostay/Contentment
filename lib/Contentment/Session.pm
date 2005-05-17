@@ -3,8 +3,9 @@ package Contentment::Session;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
+use Contentment;
 use Log::Log4perl;
 use SPOPS::Initialize;
 use SPOPS::Secure qw/ :scope :level /;
@@ -89,6 +90,49 @@ sub get_security {
 	}
 
 	return { SEC_SCOPE_WORLD() => SEC_LEVEL_NONE };
+}
+
+sub open_session {
+	my $q = $Contentment::context->m->cgi_object;
+
+	my $id = $q->cookie('SESSIONID');
+
+	my %session;
+	my $session;
+	if ($id) {
+		$session = Contentment::Session->fetch($id, { skip_security => 1 });
+		if ($session) {
+			$log->debug("Reusing existing SESSIONID $id");
+			%session = %{ $session->session_data };
+		}
+	}
+
+	unless ($session) {
+		$session = Contentment::Session->new;
+		$session->{session_data} = {};
+		$session->save;
+
+		$id = $session->id;
+		$log->debug("Creating a new SESSIONID $id");
+	}
+
+	my $conf = Contentment->configuration;
+
+	my $cookie = $q->cookie(
+		-name    => 'SESSIONID',
+		-value   => $id,
+		-expires => $conf->{cookie_session_duration});
+	$Contentment::context->r->header_out('Cookie', $cookie);
+	
+	$Contentment::context->session_id($id);
+	$Contentment::context->session(\%session);
+}
+
+sub close_session {
+	my $id = $Contentment::context->session_id;
+	my $session = Contentment::Session->fetch($id, { skip_security => 1 });
+	$session->{session_data} = $Contentment::context->session;
+	$session->save;
 }
 
 =head1 SEE ALSO

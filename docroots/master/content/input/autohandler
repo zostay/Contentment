@@ -11,50 +11,23 @@
 use Contentment::Context;
 use Contentment::Session;
 
-my $q = $m->cgi_object;
-my $id = $q->cookie('SESSIONID');
-
 my $ERROR;
-
-my %session;
-my $session;
-if ($id) {
-	$session = Contentment::Session->fetch($id, { skip_security => 1 });
-	if ($session) {
-		$log->debug("Reusing existing SESSIONID $id");
-		%session = %{ $session->session_data };
-	}
-}
-
-unless ($session) {
-	$session = Contentment::Session->new;
-	$session->{session_data} = {};
-	$session->save;
-
-	$id = $session->id;
-	$log->debug("Creating a new SESSIONID $id");
-}
-
-my $cookie = $q->cookie(
-	-name    => 'SESSIONID',
-	-value   => $id,
-	-expires => 'never');
-$r->header_out('Cookie', $cookie);
 
 $Contentment::context = $context = Contentment::Context->new({
 	url            => $url,
-	session_id     => $id, 
-	session        => \%session, 
 	m              => $m, 
 	r              => $r,
 	last_processed => \@__processed_uuid__,
 });
+
+my $q = $m->cgi_object;
 $url = $q->url;
 $full_base = $q->url(-base => 1) . $base;
+
+Contentment::Session->open_session;
 </%init>
 <%perl>
-$session->{session_data} = \%session;
-$session->save;
+Contentment::Session->close_session;
 
 if ($ERROR) {
 	if ($m->aborted) {
