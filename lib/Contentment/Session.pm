@@ -3,7 +3,7 @@ package Contentment::Session;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use Contentment;
 use Log::Log4perl;
@@ -121,7 +121,7 @@ sub open_session {
 	my $cookie = $q->cookie(
 		-name    => 'SESSIONID',
 		-value   => $id,
-		-expires => $conf->{cookie_session_duration});
+		-expires => $conf->{session_cookie_duration});
 	$Contentment::context->r->header_out('Cookie', $cookie);
 	
 	$Contentment::context->session_id($id);

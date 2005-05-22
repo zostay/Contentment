@@ -7,7 +7,7 @@ use base 'Contentment::FileType::Other';
 
 use Log::Log4perl;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
@@ -67,12 +67,12 @@ sub generated_kind {
 	my $file  = shift;
 	
 	my $generated_kind;
-	unless ($generated_kind = $class->property($file, 'kind')) {
+	unless ($generated_kind = $file->get_property($file, 'kind')) {
 		if ($file->path =~ /\.m?html$/) {
 			$generated_kind = 'text/html';
 		} elsif ($file->path =~ /\.mason$/) {
 			my $path = $file->path;
-			s/\.mason$// =~ $path;
+			$path =~ s/\.mason$//;
 
 			$generated_kind = $class->mimetypes->mimeTypeOf($path);
 		}
@@ -119,13 +119,13 @@ sub properties {
 	}
 }
 
-=item $value = Contentment::FileType::Mason-E<gt>property($file, $key)
+=item $value = Contentment::FileType::Mason-E<gt>get_property($file, $key)
 
 Checks to see if the Mason component for C<$file> contains an attribute named C<$key> and returns that attribute.
 
 =cut
 
-sub property {
+sub get_property {
 	my $class = shift;
 	my $file  = shift;
 	my $prop  = shift;
@@ -162,9 +162,17 @@ sub generate {
 			$content{content} = $content;
 		}
 
-		my $buf;
+		my $buf = '';
 		my $result = $Contentment::context->m->comp(
-			{ store => \$buf, %content }, $comp,
+			{ 	content => sub { 
+					my $m = $Contentment::context->m;
+					while (<STDIN>) {
+						$m->print($_);
+					}
+				},
+				store => \$buf,
+			}, 
+			$comp,
 			$Contentment::context->m->request_args,
 			%args,
 		);

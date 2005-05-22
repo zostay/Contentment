@@ -8,7 +8,7 @@ use MIME::Types;
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 NAME
 
@@ -77,7 +77,7 @@ Always returns an empty list.
 
 sub properties { () }
 
-=item $value = Contentment::FileType::Other-E<gt>property($file, $key)
+=item $value = Contentment::FileType::Other-E<gt>get_property($file, $key)
 
 Always returns C<undef>.
 

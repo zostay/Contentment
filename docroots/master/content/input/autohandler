@@ -1,15 +1,34 @@
-% eval {
-<&| /content/filter/apply_filter &>
-<&| /content/transform/apply_transformation &>
-% 	$m->call_next;
-</&>
-</&>
-% };
-%
-% $ERROR = $@;
+<%perl>
+eval {
+	# Generate the original output
+	my $original_output = File::Temp::tempfile;
+	Contentment->capture_streams(\*STDIN, $original_output, sub {
+		$m->call_next
+	});
+
+	# Transform that output according to the postprocessors
+	seek $original_output, 0, 0;
+	my $final_output = File::Temp::tempfile;
+	Contentment->capture_streams($original_output, $final_output, sub {
+		Contentment->call_hooks('request/postprocess')
+	});
+
+	seek $final_output, 0, 0;
+	while (<$final_output>) {
+		$log->debug("FINAL: $_");
+		$m->print($_);
+	}
+};
+
+$ERROR = $@;
+</%perl>
 <%init>
+use Contentment;
 use Contentment::Context;
 use Contentment::Session;
+use File::Temp;
+
+Contentment->call_hooks('request/initialize');
 
 my $ERROR;
 
@@ -24,10 +43,10 @@ my $q = $m->cgi_object;
 $url = $q->url;
 $full_base = $q->url(-base => 1) . $base;
 
-Contentment::Session->open_session;
+Contentment->call_hooks('request/preprocess');
 </%init>
 <%perl>
-Contentment::Session->close_session;
+Contentment->call_hooks('request/finish');
 
 if ($ERROR) {
 	if ($m->aborted) {

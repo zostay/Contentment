@@ -1,0 +1,97 @@
+=head1 NAME
+
+Contentment::FileType - Contract all filetype plugins must adhere to
+
+=head1 DESCRIPTION
+
+The filetype plugins are used to determine a few important bits of information about VFS files in Contentment:
+
+=over
+
+=item 1.
+
+What kind of file is this?
+
+=item 2.
+
+What kind of file do I get when it is generated?
+
+=item 3.
+
+Are there any additional properties stored within this file's meetadata? What are they?
+
+=item 4.
+
+How do I generate this file?
+
+=back
+
+=head2 FILE KIND
+
+=over
+
+=item $preference = Contentment::FileType::TYPE-E<gt>filetype_match($file)
+
+The filetype plugin MUST provide a method named C<filetype_match>. This method accepts a single argument, the VFS file to be checked. This method returns a numeric value. A return of zero indicates that this filetype plugin is unable to identify the filetype and should not be used. A return of one or greater indicates that this plugin is able to identify the filetype. Filetypes that return greater return values are preferred to those with lesser return values.
+
+=item $kind = Contentment::FileType::TYPE-E<gt>real_kind($file)
+
+The filetype plugin MUST provide a method named C<real_kind>. This method accepts a single argument, the VFS file to be checked. This method returns a string containing the name of the kind this file has in the VFS. This is the kind of file we would see if we simply read it's content from the disk. There is no required format for the name, but MIME types provide a common and simple starting point.
+
+=back
+
+=head2 GENERATED KIND
+
+=over
+
+=item $kind = Contentment::FileType::TYPE-E<gt>generated_kind($file, @args)
+
+The filetype plugin MUST provide a method named C<generated_kind>. This method accepts at least a single argument, the VFS file to be checked. This method returns a string containing the name of the kind of file that will be generated if the C<generate> method were called with this file and the exact same arguments C<@args>. There is no required format for the name, but MIME types provide a common and simple starting point. 
+
+It is possible for this method to return C<undef>, if no actual output is generated---i.e., as is the case if and only if a file is generated for the result from the C<generate> method only and gives no output. If a method gives output, its kind should be given as a defined value, e.g., C<"unknown">.
+
+=back
+
+=head2 PROPERTIES
+
+=over
+
+=item @property_keys = Contentment::FileType::TYPE-E<gt>properties($file)
+
+The filetype plugin MUST provide a method named C<properties>. This method accepts a single argument, the VFS file to be checked. This method returns a list of strings containing the names of all metadata properties that can be found within the file.
+
+=item $value = Contentment::FileType::TYPE-E<gt>get_property($file, $key)
+
+The filetype plugin MUST provide a method named C<get_property>. This method accepts a two arguments, the VFS file to be checked and the name of a key to retrive. If there is a metadata value for the given file and key, then its value should be returned. Otherwise, the method should return C<undef>.
+
+=back
+
+=head2 GENERATION
+
+=over
+
+=item $result = Contentment::FileType::TYPE-E<gt>generate($file, @args)
+
+The filetype plugin MUST provide a method named C<generate>. This method accepts at least one argument, the VFS file to be checked. Any additional arguments may be used by the generator to alter the generation process or be passed on to the file while running if the file is a script or something similar.
+
+Generation itself will involve the C<STDOUT> file handle. The actual data generated will be sent to C<STDOUT>. It may be that a generator expects some file input as well. In this case, the generator may read from C<STDIN> to capture any input found there. Obviously, it is necessary when generating a file to redirect the input and output streams prior to generation. L<Contentment> provides facilities to do this.
+
+Finally, the generate function may return a value. The format for the return value is not defined and can be anything.
+
+=back
+
+=head1 SEE ALSO
+
+L<Contentment::FileType::Other> is a good base class for filetype plugins.
+
+=head1 AUTHOR
+
+Andrew Sterling Hanenkamp, E<lt>hanenkamp@users.hanenkamp.comE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2005 Andrew Sterling Hanenkamp. All Rights Reserved.
+
+Contentment is licensed and distributed under the same terms as Perl itself.
+
+=cut

@@ -6,10 +6,12 @@ use warnings;
 use Carp;
 use Contentment::Config;
 use Contentment::VFS;
+use File::Temp;
 use Log::Log4perl ':easy';
+use Symbol;
 use YAML 'LoadFile';
 
-our $VERSION = '0.009_005';
+our $VERSION = '0.009_006';
 
 BEGIN {
 	Log::Log4perl::easy_init($DEBUG);
@@ -93,9 +95,117 @@ sub run_plugin {
 	return $plugin->(@_);
 }
 
-=item Contentment->call_hooks($dir, @args)
+=item $result = Contentment-E<gt>capture_streams($in, $out, $code, @args)
+
+This is a helpful method for redirecting input and output for some bit of code. The C<$in> must be a readable file handle and C<$out> must be a writable file handle. The C<$code> is a CODE reference to be run.
+
+First, the C<STDIN> file handle will be saved and then redirected to use C<$in>. The C<STDOUT> file handle will be saved and then redirected to use C<$out>.
+
+Next, the C<$code> will be run in this environment and any additional arguments given will be based to the subroutine.
+
+Finally, C<STDIN> and C<STDOUT> are restored and any result returned by C<$code> is returned. If an exception is raised while running C<$code>, then the file handles are safely restored before this method rethrows the exception.
+
+=cut
+
+sub capture_streams {
+	my $class = shift;
+	my $in    = shift;
+	my $out   = shift;
+	my $code  = shift;
+
+	$log->debug("Redirecting STDIN and STDOUT for capture.");
+
+	my $tie_in  = UNIVERSAL::can($in,  'TIEHANDLE');
+	my $tie_out = UNIVERSAL::can($out, 'TIEHANDLE');
+
+	my ($save_in, $save_out);
+	my ($save_in_fd, $save_out_fd);
+
+	# Save/capture STDIN
+	if ($tie_in) {
+		$save_in = tied *STDIN;
+		tie *STDIN, $in;
+	} else {
+		if (tied *STDIN) {
+			$save_in = tied *STDIN;
+			no warnings 'untie';
+			untie *STDIN;
+		}
+		$save_in_fd = gensym;
+		open($save_in_fd, '<&STDIN');
+		open(STDIN, '<&='.fileno($in));
+	}
+
+	# Save/capture STDOUT
+	if ($tie_out) {
+		$save_out = tied *STDOUT;
+		tie *STDOUT, $out;
+	} else {
+		if (tied *STDOUT) {
+			$save_out = tied *STDOUT;
+			no warnings 'untie';
+			untie *STDOUT;
+		}
+		$save_out_fd = gensym;
+		open($save_out_fd, '>&STDOUT');
+		open(STDOUT, '>&='.fileno($out));
+	}
+
+	my $ofh = select STDOUT;
+
+	# Run code within captured handles
+	my $result;
+	if (wantarray) {
+		my @array = $code->(@_);
+		$result = \@array;
+	} else {
+		$result = $code->(@_);
+	}
+
+	select $ofh;
+
+	# Restore STDOUT
+	if ($tie_out) {
+		if (defined $save_out) {
+			tie *STDOUT, $save_out;
+		} else {
+			no warnings 'untie';
+			untie *STDOUT;
+		}
+	} else {
+		open(STDOUT, '>&='.fileno($save_out_fd));
+		close($save_out_fd);
+		
+		if (defined $save_out) {
+			tie *STDOUT, $save_out;
+		}
+	}
+
+	# Restore STDIN
+	if ($tie_in) {
+		if (defined $save_in) {
+			tie *STDIN, $save_in;
+		} else {
+			no warnings 'untie';
+			untie *STDIN;
+		}
+	} else {
+		open(STDIN, '<&='.fileno($save_in_fd));
+		close($save_in_fd);
+
+		if (defined $save_in) {
+			tie *STDIN, $save_in;
+		}
+	}
+
+	return wantarray ? @$result : $result;
+}
+
+=item Contentment-E<gt>call_hooks($dir, @args)
 
 Run the appropriate generator on all files in F</content/hooks/$dir> and all subdirectories. The given C<@args> are passed each time.
+
+The first hook will be given the input from the current C<STDIN> and the last hook will generate output straight to the current C<STDOUT>. In between, the previous hooks output to C<STDOUT> becomes the next hooks input on C<STDIN>.
 
 Logs, but otherwise ignores, any errors that occur.
 
@@ -108,8 +218,49 @@ sub call_hooks {
 
 	my $hook_dir = $vfs->lookup("/content/hooks/$dir");
 
-	for my $file ($vfs->find(sub { shift->has_content }, $hook_dir)) {
-		$file->generate(@_);
+	unless ($hook_dir) {
+		$log->warn("Failed to find a directory named '/content/hooks/$dir'. No hooks to run.");
+		return undef;
+	}
+
+	$log->debug("Looking for hooks in '$hook_dir'");
+
+	my @hooks = $hook_dir->find(sub { 
+		my $self = shift;
+		$self->has_content && $self->path !~ /\/\./ 
+	});
+	$log->debug("Found ",scalar(@hooks)," hooks in '$hook_dir'.");
+
+	my $out = File::Temp::tempfile;
+	binmode $out;
+	while (<STDIN>) {
+		print $out $_;
+	}
+	seek $out, 0, 0;
+
+	my ($in, $result);
+	for (my $i = 0; $i <= $#hooks; ++$i) {
+		$in  = $out;
+		$out = File::Temp::tempfile;
+		binmode $out;
+
+		$result = eval {
+			Contentment->capture_streams($in, $out, sub {
+				$log->debug("Executing hook '$hooks[$i]'");
+
+				$hooks[$i]->generate(@_)
+			})
+		};
+
+		if ($@) {
+			$log->error("Error during call_hooks ($hooks[$i]): $@");
+		}
+
+		seek $out, 0, 0;
+	}
+
+	while (<$out>) {
+		print STDOUT $_;
 	}
 }
 

@@ -11,7 +11,7 @@ use Text::Balanced qw/ extract_quotelike /;
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 NAME
 
@@ -143,7 +143,7 @@ sub properties {
 	return keys %{ $class->props($file) };
 }
 
-=item $value = Contentment::FileType::POD-E<gt>property($file, $value)
+=item $value = Contentment::FileType::POD-E<gt>get_property($file, $value)
 
 This method returns properties detected in one of two ways. First, the "title" and "abstract" properties are detected by searching for a heading named "NAME". The next non-blank line formated like "title - abstract" is then used to file those fields. For example,
 
@@ -167,7 +167,7 @@ Here we would have a property named "date" of "2005-3-17 7:23", "author" of "And
 
 =cut
 
-sub property { 
+sub get_property { 
 	my $class = shift;
 	my $file  = shift;
 	my $prop  = shift;
