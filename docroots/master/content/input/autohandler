@@ -15,7 +15,6 @@ eval {
 
 	seek $final_output, 0, 0;
 	while (<$final_output>) {
-		$log->debug("FINAL: $_");
 		$m->print($_);
 	}
 };

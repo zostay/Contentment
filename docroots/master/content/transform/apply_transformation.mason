@@ -52,8 +52,6 @@ unless (defined $input) {
 	return;
 }
 
-$log->debug("TRANSFORM: $input");
-
 # Step 1: Determine the original kind.
 my $original_kind = $from || $context->original_kind;
 $log->debug("Transformation #1: original kind is $original_kind");
