@@ -6,6 +6,8 @@ Contentment::Manual::Bugs - An overview of the stuff needed doing
 
 This file is the antithesis of L<Contentment::Manual::Features> and should describe the list of things that should be added or should be fixed. I'll try to keep this up-to-date, but you know how that goes...
 
+Be sure to see the change log available at CPAN for details of when features have been added. I'm probably going to clear out the "RESOLVED" section after something's been fixed/added for a bit.
+
 =head1 ENHANCEMENTS
 
 This is a list of features that should be added.
@@ -35,10 +37,6 @@ Need a blogger module.
 =item *
 
 Need a blog aggregator module. (I actually have a primitive one written, but I need to enhance it and add database support prior to release.)
-
-=item *
-
-Need a C<Contentment::FileType::Perl> module to generate from Perl scripts.
 
 =item *
 
@@ -76,10 +74,6 @@ Crumbtrail utility.
 
 UNIT TESTS! I need to promptly profusely populate the test directory.
 
-=item *
-
-Create a request preprocessing system and a request postprocessing system. Place the session/context creation in the preprocessor and themes/filtesr in the postprocessor.
-
 =back
 
 =head1 BUGS
@@ -87,10 +81,6 @@ Create a request preprocessing system and a request postprocessing system. Place
 This is a list of outstanding bugs that should be fixed.
 
 =over
-
-=item *
-
-The VFS system is a pile of poo. I've written the L<File::System> module (available from CPAN) to address this issue, but it hasn't yet been properly incorporated.
 
 =item *
 
@@ -110,10 +100,6 @@ Mason is used to do too much. More of the work needs to be brought into Perl mod
 
 =item *
 
-The ordering of directories in F</content/themes> is dumb. It is currently F</content/themes/$type/$template/$master>. It should be F</content/themes/$template/$type/$master> instead.
-
-=item *
-
 Need to get into a better habit of incrementing version numbers (or write a script to do it on commit!).
 
 =item *
@@ -127,6 +113,30 @@ Need to document all the Mason components.
 =item *
 
 More frequent releases are desireable.
+
+=back
+
+=head1 RESOLVED
+
+The dates listed aren't the dates these have been added, but the dates I moved them in this file. This needs to be smarter, but that'll wait.
+
+=over
+
+=item *
+
+2005-06-11. I<The VFS system is a pile of poo. I've written the L<File::System> module (available from CPAN) to address this issue, but it hasn't yet been properly incorporated.> Contentment relies heavily upon the facilities of L<File::System>.
+
+=item *
+
+2005-06-11. I<Need a C<Contentment::FileType::Perl> module to generate from Perl scripts.> I named the module L<Contentment::FileType::PL>. A similar module, C<Contentment::FileType::PM> might also be forth coming.
+
+=item *
+
+2005-06-11. I<Create a request preprocessing system and a request postprocessing system. Place the session/context creation in the preprocessor and themes/filtesr in the postprocessor.> Not only have I done this, but I've added a whole system for creating hooks to make similar tasks easier. The transformation, file typing, and filtering systems will probably be remolded to use this.
+
+=item *
+
+2005-06-11. I<The ordering of directories in F</content/themes> is dumb. It is currently F</content/themes/$type/$template/$master>. It should be F</content/themes/$template/$type/$master> instead.> Done.
 
 =back
 

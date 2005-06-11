@@ -10,7 +10,9 @@ L<Contentment::Manual::Introduction> - Introduction to Contentment
 
 L<Contentment::Manual::Install> - Installation instructions
 
-L<Contentment::Manual::Features> - Non-technical overview of features
+L<Contentment::Manual::Features> - Overview of the features of Contentment
+
+L<Contentment::Manual::Bugs> - An overview of the stuff needed doing
 
 =head2 PERL API
 
@@ -24,4 +26,4 @@ L<Contentment::Manual::Features> - Non-technical overview of features
 
 Copyright 2005 Andrew Sterling Hanenkamp. All Rights Reserved.
 
-=for meta short_title => 'Contentment'
+=for meta short_title => 'Manual'

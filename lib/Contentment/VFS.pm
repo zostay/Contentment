@@ -9,7 +9,7 @@ use File::Spec;
 use File::System;
 use Log::Log4perl;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use base 'File::System::Passthrough';
 
@@ -150,9 +150,9 @@ sub get_property {
 	my $value = $self->SUPER::get_property($key);
 	if (defined $value) {
 		return $value;
-	} elsif ($self->has_content && $self->filetype 
-			&& grep { $_ eq $key } $self->filetype->properties($self)) {
-		return $self->filetype->get_property($self, $key);
+	} elsif ($self->has_content and $self->filetype and
+			$value = $self->filetype->get_property($self, $key)) {
+		return $value;
 	} else {
 		return undef;
 	}

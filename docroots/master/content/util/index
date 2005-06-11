@@ -11,11 +11,13 @@ $include_dirs     => 0
 $exclude_root     => 0
 @excludes         => ()
 @exclude_children => ()
+$prune_unindexed  => 1
 </%args>
 
 <%init>
 if ($dir !~ /^\//) {
 	$dir = $m->caller->dir_path."/$dir";
+	$log->debug("Indexing directory '$dir'");
 }
 </%init>
 
@@ -64,8 +66,7 @@ my @files = $vfs->find(sub {
 	if ($file->is_container) {
 		$File::System::prune = 1 unless $recursive;
 		
-		# Directories without indexes are always pruned
-		$File::System::prune = 1 unless $file->lookup_source;
+		$File::System::prune = 1 if $prune_unindexed && !$file->lookup_source;
 
 		return 0 unless $file->lookup_source;
 	

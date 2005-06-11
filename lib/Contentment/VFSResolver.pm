@@ -12,7 +12,7 @@ use Params::Validate qw/:all/;
 
 use base qw/ HTML::Mason::Resolver /;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
@@ -66,8 +66,8 @@ sub get_info {
 			friendly_name   => $file->path,
 			comp_id         => $file->path,
 			last_modified   => $file->get_property('mtime'),
-			comp_path       => $path,
-			comp_class      => 'HTML::Mason::Component',
+			comp_path       => $file->path,
+			comp_class      => 'HTML::Mason::Component::FileBased',
 			source_callback => sub { scalar($file->content) },
 			# DUMB! comp_roots shouldn't be needed for anything but the
 			# resolver.
