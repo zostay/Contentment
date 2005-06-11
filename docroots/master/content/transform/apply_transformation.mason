@@ -48,7 +48,7 @@ $to   => undef
 # Step 0: Force content to be executed first.
 my $input = $m->content;
 unless (defined $input) {
-	warn "No input to transform, not bothing; possible bug in generator.";
+	warn "No input to transform, not bothering; possible bug in generator.";
 	return;
 }
 
@@ -101,21 +101,29 @@ $log->debug("Transformation #4: discovered $found transformations");
 # Step 5: Attempt to find the cheapest transformation available.
 my $transforms = $transform->shortest_path($original_kind, $final_kind);
 
-(defined $transforms and @$transforms > 0)
-	or die "Oops! No way to get from $original_kind kind to $final_kind kind.";
+unless (defined $transforms and @$transforms > 0) {
+	$log->error("Oops! No way to get from $original_kind kind to $final_kind kind.");
+	$log->error("Outputting original untransformed, this could get ugly.");
 
-$log->debug("Transformation #5: transformation from original to final in ",scalar(@$transforms)," moves");
+</%perl>
+<% $input %>
+<%perl>
+} else {
+	$log->debug("Transformation #5: transformation from original to final in ",scalar(@$transforms)," moves");
 
-# Step 6: Use the transforms to get us there. We can let Mason do all the nasty
-# work of feeding the data around, we just loop through our transformations and
-# then spew out the result.
-my $output;
-for my $transform (@$transforms) {
-	$log->debug("Transformation #6: Applying transformation $transform");
+	# Step 6: Use the transforms to get us there. We can let Mason do all the nasty
+	# work of feeding the data around, we just loop through our transformations and
+	# then spew out the result.
+	my $output;
+	for my $transform (@$transforms) {
+		$log->debug("Transformation #6: Applying transformation $transform");
 </%perl>
 <&| { store => \$output }, $transform &><% $input %></&>
 <%perl>
-	$input = $output;
-}
+		$input = $output;
+	}
 </%perl>
 <% $output %>
+<%perl>
+}
+</%perl>

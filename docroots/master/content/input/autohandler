@@ -48,16 +48,21 @@ Contentment->call_hooks('request/preprocess');
 Contentment->call_hooks('request/finish');
 
 if ($ERROR) {
-	if ($m->aborted) {
-		die $ERROR;
+	$log->debug("An exception was raised: $ERROR");
+	if ($m->aborted($ERROR)) {
+		$log->info("Rethrowing an abort.");
+		die $ERROR; # Aborts should be rethrown so Mason gets them
 	} else {
 		$log->error("Treating error as 404: $ERROR");
 		$m->clear_buffer;
 </%perl>
 File not found.
 <%perl>
+		$log->error("Returning '404 File not found'.");
 		$m->abort(404);
 	}
+} else {
+	$log->debug("No exception was raised.");
 }
 </%perl>
 <%filter>

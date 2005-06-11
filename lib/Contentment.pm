@@ -11,7 +11,7 @@ use Log::Log4perl ':easy';
 use Symbol;
 use YAML 'LoadFile';
 
-our $VERSION = '0.009_006';
+our $VERSION = '0.009_007';
 
 BEGIN {
 	Log::Log4perl::easy_init($DEBUG);
@@ -33,7 +33,7 @@ my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
 =head1 NAME
 
-Contentment - Contentment is a Mason/Perl-bsed CMS
+Contentment - A Mason/Perl-based content management system
 
 =head1 DESCRIPTION
 
@@ -43,7 +43,7 @@ General configuration information and some general-purpose methods can be found 
 
 =item $conf = Contentment->configuration
 
-Reads the configuration files F<Contentment::Config::ETC_DIR/Contentment.defaults.conf> and F<Contentment::Config::ETC_DIR/Contentment.conf>.
+Reads the configuration files F<ETC_DIR/Contentment.defaults.conf> and F<ETC_DIR/Contentment.conf>.
 
 =cut
 
@@ -155,12 +155,17 @@ sub capture_streams {
 
 	# Run code within captured handles
 	my $result;
-	if (wantarray) {
-		my @array = $code->(@_);
-		$result = \@array;
-	} else {
-		$result = $code->(@_);
-	}
+	my $wantarray = wantarray;
+	eval {
+		if ($wantarray) {
+			my @array = $code->(@_);
+			$result = \@array;
+		} else {
+			$result = $code->(@_);
+		}
+	};
+
+	my $ERROR = $@;
 
 	select $ofh;
 
@@ -198,7 +203,11 @@ sub capture_streams {
 		}
 	}
 
-	return wantarray ? @$result : $result;
+	if ($ERROR) {
+		die $ERROR;
+	} else {
+		return $wantarray ? @$result : $result;
+	}
 }
 
 =item Contentment-E<gt>call_hooks($dir, @args)

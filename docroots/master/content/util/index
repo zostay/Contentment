@@ -89,4 +89,4 @@ $log->debug("Index returning these files: ",join(' ', @files));
 my $final_kind = $kind || $m->comp('/content/kind/final/kind');
 </%perl>
 
-<& "/content/themes/$final_kind/$theme/$master", files => \@files &>
+<& "/content/themes/$theme/$final_kind/$master", files => \@files &>

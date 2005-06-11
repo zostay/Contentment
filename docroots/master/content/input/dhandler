@@ -8,10 +8,15 @@ $root_file = $vfs->lookup_source($relname);
 
 if (defined $real_file && $real_file->is_container && $relname !~ /\/$/) {
 	$log->debug("Redirecting directory /$relname -> /$relname/");
-	$m->comp("/content/util/redirect", to => "/$relname/", %ARGS);
+	$m->comp("/content/util/redirect", to => "$relname/", %ARGS);
 }
 
-my $result = eval { $m->comp("/content/util/generate", rootname => $relname, top => 1) };
+my $result = eval { 
+	defined $root_file ||
+		die "Path does not exist: $relname";
+
+	$m->comp("/content/util/generate", rootname => $relname, top => 1) 
+};
 
 unless ($@) {
 	return $result;
