@@ -12,7 +12,7 @@ use Log::Log4perl ':easy';
 use Symbol;
 use YAML 'LoadFile';
 
-our $VERSION = '0.009_009';
+our $VERSION = '0.009_010';
 
 BEGIN {
 	Log::Log4perl::easy_init($DEBUG);
