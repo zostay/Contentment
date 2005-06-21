@@ -59,6 +59,7 @@ my $build = Contentment::Build->new(
 		'YAML'				      => '0.35', 
 	},
 	recommends         => {
+		'DBD::mysql'              => '2.9008',
 		'DateTime::Format::MySQL' => '0.0301',
 		'Pod::Simple'             => '3.02',
 		'Text::Balanced'	      => '1.95',
@@ -120,7 +121,7 @@ $build->{properties}{install_path}{'bin'}      ||= "$cms_root/bin";
 $build->{properties}{install_path}{'docroots'} ||= "$cms_root/docroots";
 $build->{properties}{install_path}{'etc'}      ||= "$cms_root/etc";
 $build->{properties}{install_path}{'logs'}     ||= "$cms_root/logs";
-$build->{properties}{install_path}{'tmp'}      ||= '/tmp/'.basename($cms_root).'/mason/data';
+$build->{properties}{install_path}{'tmp'}      ||= '/tmp/'.basename($cms_root);
 
 $build->notes('basename'   => basename($cms_root));
 $build->notes('etc_dir'    => $build->{properties}{install_path}{'etc'});

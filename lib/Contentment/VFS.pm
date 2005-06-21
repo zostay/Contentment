@@ -9,7 +9,7 @@ use File::Spec;
 use File::System;
 use Log::Log4perl;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 use base 'File::System::Passthrough';
 
@@ -155,6 +155,25 @@ sub get_property {
 		return $value;
 	} else {
 		return undef;
+	}
+}
+
+=item $headers = $obj-E<gt>generate_headers(@_)
+
+This method is only valid when C<has_content> returns true. This calls the C<generate_headers> method of the file type returned by the C<filetype> method or returns an empty hash reference.
+
+=cut
+
+sub generate_headers {
+	my $self = shift;
+
+	$self->has_content
+		or croak "Cannot call 'generate_headers' on a file with no content.";
+
+	if (my $filetype = $self->filetype) {
+		return $filetype->generate_headers($self, @_);
+	} else {
+		return {};
 	}
 }
 

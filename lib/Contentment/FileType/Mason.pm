@@ -7,7 +7,7 @@ use base 'Contentment::FileType::Other';
 
 use Log::Log4perl;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
@@ -136,6 +136,14 @@ sub get_property {
 		return;
 	}
 }
+
+=item $headers = Contentment::FileType::Mason-E<gt>generate_headers($file, @args)
+
+Returns an empty hash.
+
+=cut
+
+sub generate_headers { return {} }
 
 =item $result = Contentment::FileType::Mason-E<gt>generate($file, @args)
 

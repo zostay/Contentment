@@ -6,6 +6,10 @@
 	$ancestor->get_property('title') ||
 	($ancestor->is_root ? 'Home' : $ancestor->basename)%></a>
 % }
+%
+% unless (@ancestors) {
+&nbsp;
+% }
 
 <%args>
 $file

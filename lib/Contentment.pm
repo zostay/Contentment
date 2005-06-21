@@ -3,6 +3,7 @@ package Contentment;
 use strict;
 use warnings;
 
+use Cache::FileCache;
 use Carp;
 use Contentment::Config;
 use Contentment::VFS;
@@ -11,7 +12,7 @@ use Log::Log4perl ':easy';
 use Symbol;
 use YAML 'LoadFile';
 
-our $VERSION = '0.009_008';
+our $VERSION = '0.009_009';
 
 BEGIN {
 	Log::Log4perl::easy_init($DEBUG);
@@ -210,6 +211,30 @@ sub capture_streams {
 	}
 }
 
+=item $cache = $context-E<gt>cache($namespace)
+
+Returns a L<Cache::Cache> interface that can be used to cache generated output, etc.
+
+=cut
+
+my %cache;
+sub cache {
+	my $ctx = shift;
+	my $namespace = shift;
+	my $default_expires_in = shift || '3 hours';
+
+	unless (defined $cache{$namespace}) {
+		$cache{$namespace} = Cache::FileCache->new({
+			cache_root => Contentment->configuration->{temp_dir}."/cache",
+			namespace  => $namespace,
+			default_expires_in => $default_expires_in,
+			directory_umask => 022,
+		});
+	}
+
+	return $cache{$namespace};
+}
+
 =item Contentment-E<gt>call_hooks($dir, @args)
 
 Run the appropriate generator on all files in F</content/hooks/$dir> and all subdirectories. The given C<@args> are passed each time.
@@ -223,22 +248,32 @@ Logs, but otherwise ignores, any errors that occur.
 sub call_hooks {
 	my $class = shift;
 	my $dir   = shift;
-	my $vfs   = Contentment::VFS->new;
+	
+	my $cache = Contentment->cache('Contentment');
+	my @hooks;
+	if (my $hooks = $cache->get("hooks:$dir")) {
+		@hooks = @$hooks;
+		$log->debug("Cached ",scalar(@hooks)," hooks in '/content/hooks/$dir'.");
+	} else {
+		my $vfs   = Contentment::VFS->new;
 
-	my $hook_dir = $vfs->lookup("/content/hooks/$dir");
+		my $hook_dir = $vfs->lookup("/content/hooks/$dir");
 
-	unless ($hook_dir) {
-		$log->warn("Failed to find a directory named '/content/hooks/$dir'. No hooks to run.");
-		return undef;
+		unless ($hook_dir) {
+			$log->debug("Failed to find a directory named '/content/hooks/$dir'. No hooks to run.");
+			return undef;
+		}
+
+		$log->debug("Looking for hooks in '$hook_dir'");
+
+		my @hooks = $hook_dir->find(sub { 
+			my $self = shift;
+			$self->has_content && $self->path !~ /\/\./ 
+		});
+		$log->debug("Found ",scalar(@hooks)," hooks in '$hook_dir'.");
+
+		$cache->set("hooks:$dir" => \@hooks);
 	}
-
-	$log->debug("Looking for hooks in '$hook_dir'");
-
-	my @hooks = $hook_dir->find(sub { 
-		my $self = shift;
-		$self->has_content && $self->path !~ /\/\./ 
-	});
-	$log->debug("Found ",scalar(@hooks)," hooks in '$hook_dir'.");
 
 	my $out = File::Temp::tempfile;
 	binmode $out;

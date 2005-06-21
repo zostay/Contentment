@@ -3,12 +3,14 @@ package Contentment::FileType::Other;
 use strict;
 use warnings;
 
+use Cache::FileCache;
+use DateTime;
 use Log::Log4perl;
 use MIME::Types;
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 =head1 NAME
 
@@ -85,6 +87,29 @@ Always returns C<undef>.
 
 sub get_property { }
 
+=item $headers = Contentment::FileType::Other-E<gt>generate_headers($file, @args)
+
+Uses the file's C<mtime> property (if set) to set the C<Last-Modified> header.
+
+=cut
+
+sub generate_headers {
+	my $class = shift;
+	my $file  = shift;
+
+	my %headers;
+
+	my $mtime = $file->get_property('mtime');
+	if ($mtime) {
+		$mtime = DateTime->from_epoch( epoch => $mtime );
+		$headers{'Last-Modified'} = sprintf("%s, %02d %s %d %s GMT",
+				$mtime->day_abbr, $mtime->day, $mtime->month_abbr,
+				$mtime->year, $mtime->hms);
+	}
+
+	return \%headers;
+}
+
 =item $result = Contentment::FileType::Other-E<gt>generate($file, @args)
 
 Always returns true. Writes the contents of the file to the currently selected file handle.
@@ -97,8 +122,10 @@ sub generate {
 
 	my $fh = $file->open("r");
 	binmode $fh;
-	while (<$fh>) {
-		print;
+
+	my $buf;
+	while (read $fh, $buf, 8192) {
+		print $buf;
 	}
 	close $fh;
 

@@ -23,19 +23,22 @@ if ($file) {
 		$log->debug("File type ",$file->filetype," says $file->{path} generates original kind of $original_kind");
 	}
 
-</%perl>
-<&| /content/util/cache, file => $file, top => $top &>
-%	if (defined $to) {
-<&| /content/transform/apply_transformation, to => $to, from => $file->generated_kind &>
-% $result = $file->generate;
-</&>
-<%perl>
-	} else {
-		$result = $file->generate;
+	my $headers = $file->generate_headers($m->request_args);
+	while (my ($key, $value) = each %$headers) {
+		$r->header_out($key => $value);
 	}
+
+	if ($r->method ne 'HEAD') {
+		if (defined $to) {
 </%perl>
+<&| /content/transform/apply_transformation, to => $to, from => $file->generated_kind &>
+% $result = $file->generate($m->request_args);
 </&>
 <%perl>
+		} else {
+			$result = $file->generate;
+		}
+	}
 } else {
 	$result = undef;
 }

@@ -8,6 +8,6 @@ my $file = $vfs->lookup_source($root_file);
 
 <%args>
 $to => undef
-$theme => 'default'
-$master => 'main'
+$theme => $conf{theme_default}
+$master => $conf{master_default}
 </%args>

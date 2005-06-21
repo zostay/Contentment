@@ -10,7 +10,7 @@ use Log::Log4perl;
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 NAME
 
@@ -74,6 +74,14 @@ sub generated_kind {
 
 	return $generated_kind;
 }
+
+=item $headers = Contentment::FileType::PL-E<gt>generate_headers($file, @args)
+
+Returns an empty reference to a hash.
+
+=cut
+
+sub generate_headers { return {} }
 
 =item $result = Contentment::FileType::Perl-E<gt>generate($file, @args)
 

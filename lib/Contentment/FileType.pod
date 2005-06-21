@@ -70,6 +70,14 @@ The filetype plugin MUST provide a method named C<get_property>. This method acc
 
 =over
 
+=item $headers = Contentment::FileType::TYPE-E<gt>generate_headers($file, @args)
+
+The filetype plugin MUST provide a method named C<generate_headers>. This method accepts at least one argument, the VFS file to be checked. Any additional arguments may be used by the generated to alter the generation process or be passed on to the file while running, if the file is a script or something similar.
+
+This method is called when this generator is to be given the opportunity to set HTTP headers on the request. This may or may not be followed by a call to C<generate>, as it might be that no content is required (such as is the case with an HTTP HEAD request).
+
+This method is expected to return a reference to a hash, where each key is the name of a header to set and each value is the value to give that header.
+
 =item $result = Contentment::FileType::TYPE-E<gt>generate($file, @args)
 
 The filetype plugin MUST provide a method named C<generate>. This method accepts at least one argument, the VFS file to be checked. Any additional arguments may be used by the generator to alter the generation process or be passed on to the file while running if the file is a script or something similar.

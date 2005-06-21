@@ -3,7 +3,7 @@ package Contentment::SPOPS;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use Contentment;
 use DBI;
@@ -65,7 +65,7 @@ sub _create_table {
 
 	my $dbh = global_datasource_handle;
 	unless (grep m/`?$table_name`?/, $dbh->tables(undef, undef, $table_name)) {
-		$log->warn("Table $table_name does not exist, will attempt to create");
+		$log->info("Table $table_name does not exist, will attempt to create");
 		my $conf = Contentment::configuration;
 
 		my $output;
@@ -79,11 +79,11 @@ sub _create_table {
 		} else {
 			$output = $sql;
 		}
-		$log->warn("Creating table $table_name: '$output'");
+		$log->info("Creating table $table_name: '$output'");
 
 		$dbh->do($output);
 	} else {
-		$log->info("Table $table_name already exists");
+		$log->debug("Table $table_name already exists");
 	}
 }
 

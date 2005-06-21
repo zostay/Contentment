@@ -8,10 +8,10 @@
 
 temp_dir: "@@TMP_DIR@@"
 vfs:
- - 'Layered'
- - [ 'Real', root => '@@SITE_DIR@@' ]
- - [ 'Real', root => '@@SAMPLE_DIR@@' ]
- - [ 'Real', root => '@@MASTER_DIR@@' ]
+ - Layered
+ - [ Real, root, '@@SITE_DIR@@' ]
+ - [ Real, root, '@@SAMPLE_DIR@@' ]
+ - [ Real, root, '@@MASTER_DIR@@' ]
 log4perl_conf: "@@ETC_DIR@@/log4perl.conf"
 
 # These are the settings you will most likely need to customize:
