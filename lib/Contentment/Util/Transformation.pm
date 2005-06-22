@@ -6,7 +6,7 @@ use warnings;
 use Log::Log4perl;
 my $log = Log::Log4perl->get_logger('Contentment::Util::Transformation');
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 NAME
 
@@ -36,7 +36,8 @@ sub add_transformation {
 	$cost < 0 and $cost = 0; # Dijkstra's doesn't handle negative path costs
 
 	for my $input_kind (@$input_kinds) {
-		$log->debug("Transformation adding $input_kind -> $output_kind at cost $cost");
+		$log->is_debug &&
+			$log->debug("Transformation adding $input_kind -> $output_kind at cost $cost");
 		push @{ $self->{$input_kind} }, {
 			cost        => $cost,
 			input_kind  => $input_kind,
@@ -50,7 +51,8 @@ sub add_transformation {
 sub shortest_path {
 	my ($self, $original, $final) = @_;
 
-	$log->debug("Transformation attempting to find shortest path $original => $final");
+	$log->is_debug &&
+		$log->debug("Transformation attempting to find shortest path $original => $final");
 
 	return undef unless defined $self->{$original};
 

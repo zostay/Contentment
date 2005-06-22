@@ -4,10 +4,11 @@ use strict;
 use warnings;
 
 use Log::Log4perl;
+use base 'Contentment::FileType::Other';
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 NAME
 

@@ -3,7 +3,7 @@ package Contentment::Session;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 use Contentment;
 use Log::Log4perl;
@@ -102,7 +102,8 @@ sub open_session {
 	if ($id) {
 		$session = Contentment::Session->fetch($id, { skip_security => 1 });
 		if ($session) {
-			$log->debug("Reusing existing SESSIONID $id");
+			$log->is_debug &&
+				$log->debug("Reusing existing SESSIONID $id");
 			%session = %{ $session->session_data };
 		}
 	}
@@ -113,7 +114,8 @@ sub open_session {
 		$session->save;
 
 		$id = $session->id;
-		$log->debug("Creating a new SESSIONID $id");
+		$log->is_debug &&
+			$log->debug("Creating a new SESSIONID $id");
 	}
 
 	my $conf = Contentment->configuration;

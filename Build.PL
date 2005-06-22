@@ -61,12 +61,14 @@ my $build = Contentment::Build->new(
 	recommends         => {
 		'DBD::mysql'              => '2.9008',
 		'DateTime::Format::MySQL' => '0.0301',
+		'FCGI'                    => '0.67',
 		'Pod::Simple'             => '3.02',
 		'Text::Balanced'	      => '1.95',
 	},
 	PL_files           => {
 		'buildlib/expand-notes.PL' 	=> [
 			'docroots/htdocs/cgi-bin/handler.cgi',
+			'docroots/htdocs/cgi-bin/handler.fcgi',
 			'etc/Contentment.conf.sample', 
 			'etc/log4perl.conf.file',
 			'lib/Contentment/Config.pm',

@@ -10,7 +10,7 @@ use Log::Log4perl;
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 NAME
 
@@ -112,7 +112,8 @@ sub generate {
 		croak $@ if $@ 
 	};
 
-	$log->debug("Running code in '$file'");
+	$log->is_debug &&
+		$log->debug("Running code in '$file'");
 
 #	Carp::cluck("Running code in '$file'");
 

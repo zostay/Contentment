@@ -12,7 +12,7 @@ use Log::Log4perl ':easy';
 use Symbol;
 use YAML 'LoadFile';
 
-our $VERSION = '0.009_010';
+our $VERSION = '0.009_011';
 
 BEGIN {
 	Log::Log4perl::easy_init($DEBUG);
@@ -114,7 +114,8 @@ sub capture_streams {
 	my $out   = shift;
 	my $code  = shift;
 
-	$log->debug("Redirecting STDIN and STDOUT for capture.");
+	$log->is_debug &&
+		$log->debug("Redirecting STDIN and STDOUT for capture.");
 
 	my $tie_in  = UNIVERSAL::can($in,  'TIEHANDLE');
 	my $tie_out = UNIVERSAL::can($out, 'TIEHANDLE');
@@ -253,24 +254,28 @@ sub call_hooks {
 	my @hooks;
 	if (my $hooks = $cache->get("hooks:$dir")) {
 		@hooks = @$hooks;
-		$log->debug("Cached ",scalar(@hooks)," hooks in '/content/hooks/$dir'.");
+		$log->is_debug &&
+			$log->debug("Cached ",scalar(@hooks)," hooks in '/content/hooks/$dir'.");
 	} else {
 		my $vfs   = Contentment::VFS->new;
 
 		my $hook_dir = $vfs->lookup("/content/hooks/$dir");
 
 		unless ($hook_dir) {
-			$log->debug("Failed to find a directory named '/content/hooks/$dir'. No hooks to run.");
+			$log->is_debug &&
+				$log->debug("Failed to find a directory named '/content/hooks/$dir'. No hooks to run.");
 			return undef;
 		}
 
-		$log->debug("Looking for hooks in '$hook_dir'");
+		$log->is_debug &&
+			$log->debug("Looking for hooks in '$hook_dir'");
 
 		my @hooks = $hook_dir->find(sub { 
 			my $self = shift;
 			$self->has_content && $self->path !~ /\/\./ 
 		});
-		$log->debug("Found ",scalar(@hooks)," hooks in '$hook_dir'.");
+		$log->is_debug &&
+			$log->debug("Found ",scalar(@hooks)," hooks in '$hook_dir'.");
 
 		$cache->set("hooks:$dir" => \@hooks);
 	}
@@ -290,7 +295,8 @@ sub call_hooks {
 
 		$result = eval {
 			Contentment->capture_streams($in, $out, sub {
-				$log->debug("Executing hook '$hooks[$i]'");
+				$log->is_debug &&
+					$log->debug("Executing hook '$hooks[$i]'");
 
 				$hooks[$i]->generate(@_)
 			})

@@ -16,7 +16,7 @@ my $log = Log::Log4perl->get_logger("cgi_handler");
 
 $log->info("Handling request $ENV{PATH_INFO}");
 
-my $h = new HTML::Mason::CGIHandler->new (
+my $h = HTML::Mason::CGIHandler->new (
 	data_dir       => "$conf->{temp_dir}/mason/data",
 	allow_globals  => [ qw(
 		$base $full_base $url $req_path

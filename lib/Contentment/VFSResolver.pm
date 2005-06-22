@@ -12,7 +12,7 @@ use Params::Validate qw/:all/;
 
 use base qw/ HTML::Mason::Resolver /;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
@@ -57,10 +57,12 @@ sub get_info {
 
 	my $vfs = Contentment::VFS->new;
 
-	$log->debug("VFS Resolver searching for $path");
+	$log->is_debug &&
+		$log->debug("VFS Resolver searching for $path");
 
 	if (my $file = $vfs->lookup($path)) {
-		$log->debug("VFS Resolver lookup found ", $file->path);
+		$log->is_debug &&
+			$log->debug("VFS Resolver lookup found ", $file->path);
 
 		return HTML::Mason::ComponentSource->new(
 			friendly_name   => $file->path,
@@ -77,7 +79,8 @@ sub get_info {
 		);
 	}
 
-	$log->debug("VFS Resolver lookup found no matching file for $path");
+	$log->is_debug &&
+		$log->debug("VFS Resolver lookup found no matching file for $path");
 	return;
 }
 
@@ -85,7 +88,8 @@ sub glob_path {
 	my $self = shift;
 	my $glob = shift;
 
-	$log->debug("VFS Resolver globbing for $glob");
+	$log->is_debug &&
+		$log->debug("VFS Resolver globbing for $glob");
 	return Contentment::VFS->new->glob($glob);
 }
 

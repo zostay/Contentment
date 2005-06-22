@@ -3,7 +3,7 @@ package Contentment::SPOPS;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use Contentment;
 use DBI;
@@ -70,7 +70,8 @@ sub _create_table {
 
 		my $output;
 		if ($format ne $conf->{sql_type}) {
-			$log->debug("Format is '$format', sql_type is '$conf->{sql_type}'");
+			$log->is_debug &&
+				$log->debug("Format is '$format', sql_type is '$conf->{sql_type}'");
 			my $t = SQL::Translator->new;
 			$t->parser($format);
 			$t->producer($conf->{sql_type});
@@ -83,7 +84,8 @@ sub _create_table {
 
 		$dbh->do($output);
 	} else {
-		$log->debug("Table $table_name already exists");
+		$log->is_debug
+			&& $log->debug("Table $table_name already exists");
 	}
 }
 

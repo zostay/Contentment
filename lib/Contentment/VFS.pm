@@ -9,7 +9,7 @@ use File::Spec;
 use File::System;
 use Log::Log4perl;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use base 'File::System::Passthrough';
 
@@ -88,12 +88,14 @@ sub lookup_source {
 
 	my $result;
 
-	$log->debug("searching for a source for $path");
+	$log->is_debug &&
+		$log->debug("searching for a source for $path");
 	my $file = $self->lookup($path);
 	if (defined $file && $file->has_content) {
 		$result = $file;
 	} elsif (defined $file && $file->is_container) {
-		$log->debug("searching for directory index $path/index.*");
+		$log->is_debug &&
+			$log->debug("searching for directory index $path/index.*");
 		my @files = $self->glob("$path/index.*");
 		for my $index_file (@files) {
 			if ($file = $self->lookup($index_file) and $file->has_content) {
@@ -105,7 +107,8 @@ sub lookup_source {
 		my $copy = $path;
 		$copy =~ s/\.[\w\.]+$//;
 
-		$log->debug("searching for alternate file $copy.*");
+		$log->is_debug &&
+			$log->debug("searching for alternate file $copy.*");
 
 		my @files = $self->glob("$copy.*");
 		for my $source_file (@files) {
@@ -264,7 +267,8 @@ sub filetype {
 		warn "Failed to load $plugin: $@" if $@;
 
 		if ($plugin->can('filetype_match') && $plugin->filetype_match($self)) {
-			$log->debug("Matched file $self with filetype $plugin");
+			$log->is_debug &&
+				$log->debug("Matched file $self with filetype $plugin");
 			return $self->{filetype} = $plugin;
 		}
 	}

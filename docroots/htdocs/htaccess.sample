@@ -14,3 +14,8 @@ RewriteCond "%{REQUEST_FILENAME}" -d
 RewriteRule "^(.+[^/])$" "$1/"                            [L,R]
 RewriteRule "^$"         "cgi-bin/handler.cgi/index.html" [L]
 RewriteRule "(.*)$"      "cgi-bin/handler.cgi/$1"         [L]
+
+# Comment out the two lines above and uncomment these to use FastCGI instead of
+# plain "slow" CGI
+#RewriteRule "^$"         "cgi-bin/handler.fcgi/index.html" [L]
+#RewriteRule "(.*)$"      "cgi-bin/handler.fcgi/$1"         [L]

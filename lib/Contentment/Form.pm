@@ -3,7 +3,7 @@ package Contentment::Form;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use Contentment;
 use Contentment::SPOPS;
@@ -149,7 +149,8 @@ sub Contentment::Form::Submission::create_from_args {
 	my $class   = shift;
 	my %ARGS    = @_;
 
-	$log->debug("Loading submission from request.");
+	$log->is_debug &&
+		$log->debug("Loading submission from request.");
 
 	my %forms;
 	while (my ($key, $value) = each %ARGS) {
@@ -165,7 +166,8 @@ sub Contentment::Form::Submission::create_from_args {
 		my $uuid       = delete $form->{__uuid__};
 		my $activated  = delete $form->{__activate__} || 0;
 
-		$log->debug("Detected form submission with UUID $uuid with activation $activated.");
+		$log->is_debug &&
+			$log->debug("Detected form submission with UUID $uuid with activation $activated.");
 
 		my $submission = Contentment::Form::Submission->fetch($uuid);
 		if (!$submission) {
