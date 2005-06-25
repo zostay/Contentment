@@ -4,7 +4,7 @@ Allow from all
 
 # Execute these suckas as scripts
 Options ExecCGI
-SetHandler cgi-script
+AddHandler cgi-script cgi
 
 # In case /cgi-bin is within /master so we don't get into a redirection loop
 RewriteEngine off

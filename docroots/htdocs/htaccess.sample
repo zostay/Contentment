@@ -13,6 +13,7 @@ RewriteEngine on
 RewriteCond "%{REQUEST_FILENAME}" -d
 RewriteRule "^(.+[^/])$" "$1/"                            [L,R]
 RewriteRule "^$"         "cgi-bin/handler.cgi/index.html" [L]
+RewriteCond "%{REQUEST_FILENAME}" !-f
 RewriteRule "(.*)$"      "cgi-bin/handler.cgi/$1"         [L]
 
 # Comment out the two lines above and uncomment these to use FastCGI instead of
