@@ -12,7 +12,7 @@ use Log::Log4perl ':easy';
 use Symbol;
 use YAML 'LoadFile';
 
-our $VERSION = '0.009_012';
+our $VERSION = '0.009_013';
 
 BEGIN {
 	Log::Log4perl::easy_init($DEBUG);
@@ -74,6 +74,16 @@ sub configuration {
 	}
 	
 	return \%configuration;
+}
+
+=item my $module = Contentment->security
+
+Fetch the configured security module.
+
+=cut
+
+sub security {
+	return Contentment->configuration->{security_module};
 }
 
 =item my $result = Contentment->run_plugin($plugin, @args)

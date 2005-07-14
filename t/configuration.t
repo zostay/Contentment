@@ -4,7 +4,7 @@ use strict;
 
 use Contentment;
 use Contentment::Test;
-use Test::More tests => 1;
+use Test::More tests => 2;
 
 my $conf = {
           'master_index_default' => 'toc-heir',
@@ -57,3 +57,4 @@ my $conf = {
         };
 
 is_deeply(Contentment->configuration, $conf);
+is(Contentment->security, $conf->{security_module});
