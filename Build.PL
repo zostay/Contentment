@@ -55,6 +55,8 @@ my $build = Contentment::Build->new(
 		'MIME::Types'             => '1.13',
 		'perl'				      => '5.6.1',
 		'SPOPS'				      => '0.87', 
+		'SPOPSx::Tool::DateTime'  => '0.02',
+		'SPOPSx::Tool::YAML'      => '0.03',
 		'SQL::Translator'         => '0.06', 
 		'YAML'				      => '0.35', 
 	},
