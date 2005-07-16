@@ -2,8 +2,8 @@
 	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title><%$file->get_property('title')||$file->path%></title>
-<link rel="STYLESHEET" type="text/css" href="/content/themes/style/default/main.css"/>
+<title><%$file->get_property('title')||$file->path%> - <%$conf{site_title}%></title>
+<link rel="STYLESHEET" type="text/css" href="/content/themes/default/style/main.css"/>
 % if (defined $file->get_property('abstract')) {
 <meta name="description" content="<%$file->get_property('abstract')%>"/>
 % }

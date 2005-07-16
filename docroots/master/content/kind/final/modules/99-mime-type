@@ -3,6 +3,6 @@ use MIME::Types;
 my $type = MIME::Types->new;
 my $mimetype = $type->mimeTypeOf($url);
 $log->debug("Final type set to $mimetype for $url");
-$r->content_type($mimetype || $context->original_kind || 'text/plain');
+$r->content_type($mimetype || $context->original_kind || 'text/html');
 return $mimetype;
 </%init>

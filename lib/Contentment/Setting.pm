@@ -3,7 +3,7 @@ package Contentment::Setting;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use Log::Log4perl;
 use SPOPS::Initialize;
@@ -24,11 +24,11 @@ my %spops = (
 	setting => {
 		class             => 'Contentment::Setting',
 		isa               => [ qw/ Contentment::SPOPS / ],
-		rules_from        => [ qw/ SPOPSx::Tool::HashField / ],
+		rules_from        => [ qw/ SPOPSx::Tool::YAML / ],
 		base_table        => 'setting',
 		field             => [ qw/ namespace data / ],
 		id_field          => 'namespace',
-		hash_fields       => [ 'data' ],
+		yaml_fields       => [ 'data' ],
 		no_update         => [ qw/ setting_id namespace / ],
 		no_security       => 1,
 	},

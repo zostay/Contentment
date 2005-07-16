@@ -2,6 +2,8 @@
 
 use strict;
 
+use lib 'buildlib';
+
 use Contentment;
 use Contentment::Test;
 use Test::More tests => 2;
@@ -47,7 +49,7 @@ my $conf = {
           'site_url' => '/',
           'site_title' => 'Contentment Sample Site',
           'dbi_user' => 'testuser',
-          'temp_dir' => 'blib/tmp',
+          'temp_dir' => '/tmp/Contentment-Test',
           'log4perl_conf' => 't/etc/log4perl.conf',
           'theme_default' => 'default',
           'dbi_opt' => {

@@ -2,6 +2,7 @@
 
 use strict;
 
+use lib 'buildlib';
 use lib 't/lib';
 
 use Contentment;

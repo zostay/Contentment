@@ -49,7 +49,7 @@ my $build = Contentment::Build->new(
 		'Class::Accessor'         => '0.19',
 		'Data::UUID'		      => '0.11',
 		'DateTime::Format::DBI'   => '0.031',
-		'File::System'            => '1.03',
+		'File::System'            => '1.13',
 		'HTML::Mason'		      => '1.20',
 		'Log::Log4perl'		      => '0.47',
 		'MIME::Types'             => '1.13',
@@ -61,6 +61,7 @@ my $build = Contentment::Build->new(
 		'YAML'				      => '0.35', 
 	},
 	recommends         => {
+		'Apache::Test'            => '1.25',
 		'DBD::mysql'              => '2.9008',
 		'DateTime::Format::MySQL' => '0.0301',
 		'FCGI'                    => '0.67',

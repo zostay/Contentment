@@ -3,7 +3,7 @@ package Contentment::Form;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use Contentment;
 use Contentment::SPOPS;
@@ -59,7 +59,7 @@ my %spops = (
 	widget => {
 		class				=> 'Contentment::Form::Widget',
 		isa					=> [ qw/ Contentment::SPOPS / ],
-		rules_from			=> [ qw/ SPOPSx::Tool::HashField / ],
+		rules_from			=> [ qw/ SPOPSx::Tool::YAML / ],
 		base_table			=> 'form_widget',
 		field				=> [ qw/ 
 			widget_id 
@@ -70,7 +70,7 @@ my %spops = (
 		/ ],
 		id_field			=> 'widget_id',
 		increment_field		=> 1,
-		hash_fields			=> [ 'args' ],
+		yaml_fields			=> [ 'args' ],
 		no_insert			=> [ 'widget_id' ],
 		no_update			=> [ qw/ widget_id form_name widget_name / ],
 		no_security			=> 1,
@@ -81,7 +81,7 @@ my %spops = (
 	submission => {
 		class				=> 'Contentment::Form::Submission',
 		isa					=> [ qw/ SPOPS::Key::UUID Contentment::SPOPS / ],
-		rules_from			=> [ qw/ SPOPSx::Tool::HashField SPOPSx::Tool::DateTime / ],
+		rules_from			=> [ qw/ SPOPSx::Tool::YAML SPOPSx::Tool::DateTime / ],
 		base_table			=> 'form_submission',
 		field				=> [ qw/ uuid form_name session_id ctime ptime ftime map vars results / ],
 		datetime_format     => {
@@ -92,7 +92,7 @@ my %spops = (
 			ftime => 'DateTime::Format::MySQL',
 		},
 		id_field			=> 'uuid',
-		hash_fields         => [ qw/ vars results / ],
+		yaml_fields         => [ qw/ vars results / ],
 		no_security			=> 1,
 		no_insert			=> [ 'uuid' ],
 		has_a				=> {

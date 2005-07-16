@@ -6,6 +6,8 @@ use warnings;
 use Contentment::SPOPS;
 use SPOPS::Initialize;
 
+our $VERSION = '0.02';
+
 =head1 NAME
 
 Contentment::Security::DBI - Defines a simple, but relatively complete database security model
@@ -124,7 +126,7 @@ my %spops = (
 	user => {
 		class           => 'Contentment::Security::DBI::User',
 		isa             => [ qw/ Contentment::SPOPS / ],
-		rules_from      => [ qw/ SPOPSx::Tool::HashField / ],
+		rules_from      => [ qw/ SPOPSx::Tool::YAML / ],
 		base_table      => 'user',
 		field           => [ qw/ 
 			user_id
@@ -142,7 +144,7 @@ my %spops = (
 		/ ],
 		id_field        => 'user_id',
 		increment_field => 1,
-		hash_fields     => [ 'user_data' ],
+		yaml_fields     => [ 'user_data' ],
 		no_insert       => [ qw/ user_id ctime mtime dtime lastlog / ],
 		no_update       => [ qw/ user_id ctime / ],
 		links_to        => { 'Contentment::Security::DBI::Group' => 'group_user' },
@@ -152,7 +154,7 @@ my %spops = (
 	group => {
 		class           => 'Contentment::Security::DBI::Group',
 		isa             => [ qw/ Contentment::SPOPS / ],
-		rules_from      => [ qw/ SPOPSx::Tool::HashField / ],
+		rules_from      => [ qw/ SPOPSx::Tool::YAML / ],
 		base_table      => 'group',
 		field           => [ qw/ 
 			group_id
@@ -166,7 +168,7 @@ my %spops = (
 		/ ],
 		id_field        => 'group_id',
 		increment_field => 1,
-		hash_fields     => [ 'group_data' ],
+		yaml_fields     => [ 'group_data' ],
 		no_insert       => [ qw/ group_id ctime mtime dtime lastlog / ],
 		no_update       => [ qw/ group_id ctime / ],
 		links_to        => { 'Contentment::Security::DBI::User' => 'group_user' },

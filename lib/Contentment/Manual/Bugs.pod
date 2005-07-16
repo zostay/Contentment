@@ -104,10 +104,6 @@ Need to get into a better habit of incrementing version numbers (or write a scri
 
 =item *
 
-L<SPOPSx::Tool::DateTime> and L<SPOPSx::Tool::HashField> don't belong here. They should be forked into their own file.
-
-=item *
-
 Need to document all the Mason components.
 
 =item *
@@ -121,6 +117,10 @@ More frequent releases are desireable.
 The dates listed aren't the dates these have been added, but the dates I moved them in this file. This needs to be smarter, but that'll wait.
 
 =over
+
+=item *
+
+2005-07-14. I<L<SPOPSx::Tool::DateTime> and L<SPOPSx::Tool::HashField> don't belong here. They should be forked into their own file.> These have been moved into separate packages and L<SPOPSx::Tool::HashField> has been renamed to L<SPOPSx::Tool::YAML>.
 
 =item *
 

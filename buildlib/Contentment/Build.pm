@@ -2,7 +2,14 @@ package Contentment::Build;
 
 use strict;
 
-use base 'Module::Build';
+our $VERSION = '0.02';
+
+BEGIN {
+	use Module::Build;
+	my $build_pkg = 
+		eval { require Apache::TestMB } ? 'Apache::TestMB' : 'Module::Build';
+	our @ISA = ($build_pkg);
+}
 
 use ExtUtils::Install;
 use File::Path;
@@ -42,6 +49,40 @@ sub ACTION_empty_logs {
 	my $log = File::Spec->catfile($logs, 'contentment.log');
 	open FH, ">$log" or die "Failed to create $log";
 	close FH;
+}
+
+sub ACTION_test {
+	my $self = shift;
+
+	mkpath('t/htdocs/cgi-bin', 1);
+	mkpath('t/tmp', 1);
+
+	open IN, 'blib/docroots/htdocs/cgi-bin/handler.cgi'
+		or die "Cannot open blib/docroots/htdocs/cgi-bin/handler.cgi: $!";
+	open OUT, '>t/htdocs/cgi-bin/handler.cgi',
+		or die "Cannot open t/htdocs/cgi-bin/handler.cgi: $!";
+
+	while (<IN>) {
+		print OUT $_ unless /^use lib/;
+
+		if (/^use lib/) {
+			print OUT "BEGIN { chdir '../../..' }\n\n";
+			print OUT "use blib;\n";
+			print OUT "use lib 'buildlib';\n";
+		} elsif (/^use Contentment;/) {
+			print OUT "use Contentment::Test;\n";
+		}
+	}
+
+	close IN;
+	close OUT;
+
+	$self->make_executable('t/htdocs/cgi-bin');
+
+	$self->add_to_cleanup('t/htdocs/cgi-bin/handler.cgi');
+	$self->add_to_cleanup('t/tmp');
+
+	$self->SUPER::ACTION_test;
 }
 
 sub process_mason_files {

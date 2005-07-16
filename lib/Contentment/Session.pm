@@ -3,7 +3,7 @@ package Contentment::Session;
 use strict;
 use warnings;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use Contentment;
 use Log::Log4perl;
@@ -26,12 +26,12 @@ my %spops = (
 	session => {
 		class             => 'Contentment::Session',
 		isa               => [ qw/ SPOPS::Key::Random Contentment::SPOPS / ],
-		rules_from        => [ qw/ SPOPSx::Tool::HashField / ],
+		rules_from        => [ qw/ SPOPSx::Tool::YAML / ],
 		base_table        => 'session',
 		field             => [ qw/ session_id session_data / ],
 		id_field          => 'session_id',
 		id_width          => 20,
-		hash_fields       => [ 'session_data' ],
+		yaml_fields       => [ 'session_data' ],
 		no_insert         => [ 'session_id' ],
 		no_update         => [ 'session_id' ],
 	},

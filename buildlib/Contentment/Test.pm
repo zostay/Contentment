@@ -2,11 +2,7 @@ package Contentment::Test;
 
 use strict;
 
-our $VERSION = '0.01';
-
-use File::Path;
-
-mkpath 'blib/tmp';
+our $VERSION = '0.02';
 
 no warnings 'redefine';
 

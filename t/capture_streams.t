@@ -2,6 +2,8 @@
 
 use strict;
 
+use lib 'buildlib';
+
 use Contentment;
 use Contentment::Test;
 use File::Temp 'tempfile';

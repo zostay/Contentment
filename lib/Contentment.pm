@@ -3,7 +3,9 @@ package Contentment;
 use strict;
 use warnings;
 
-use Cache::FileCache;
+#use Cache::FileCache;
+use Cache::BaseCache;
+use Cache::NullCache;
 use Carp;
 use Contentment::Config;
 use Contentment::VFS;
@@ -12,7 +14,7 @@ use Log::Log4perl ':easy';
 use Symbol;
 use YAML 'LoadFile';
 
-our $VERSION = '0.009_014';
+our $VERSION = '0.009_015';
 
 BEGIN {
 	Log::Log4perl::easy_init($DEBUG);
@@ -235,12 +237,13 @@ sub cache {
 	my $default_expires_in = shift || '3 hours';
 
 	unless (defined $cache{$namespace}) {
-		$cache{$namespace} = Cache::FileCache->new({
-			cache_root => Contentment->configuration->{temp_dir}."/cache",
-			namespace  => $namespace,
-			default_expires_in => $default_expires_in,
-			directory_umask => 022,
-		});
+		$cache{$namespace} = Cache::NullCache->new;
+#		$cache{$namespace} = Cache::FileCache->new({
+#			cache_root => Contentment->configuration->{temp_dir}."/cache",
+#			namespace  => $namespace,
+#			default_expires_in => $default_expires_in,
+#			directory_umask => 022,
+#		});
 	}
 
 	return $cache{$namespace};
@@ -260,13 +263,13 @@ sub call_hooks {
 	my $class = shift;
 	my $dir   = shift;
 	
-	my $cache = Contentment->cache('Contentment');
-	my @hooks;
-	if (my $hooks = $cache->get("hooks:$dir")) {
-		@hooks = @$hooks;
-		$log->is_debug &&
-			$log->debug("Cached ",scalar(@hooks)," hooks in '/content/hooks/$dir'.");
-	} else {
+#	my $cache = Contentment->cache('Contentment');
+#	my @hooks;
+#	if (my $hooks = $cache->get("hooks:$dir")) {
+#		@hooks = @$hooks;
+#		$log->is_debug &&
+#			$log->debug("Cached ",scalar(@hooks)," hooks in '/content/hooks/$dir'.");
+#	} else {
 		my $vfs   = Contentment::VFS->new;
 
 		my $hook_dir = $vfs->lookup("/content/hooks/$dir");
@@ -287,8 +290,8 @@ sub call_hooks {
 		$log->is_debug &&
 			$log->debug("Found ",scalar(@hooks)," hooks in '$hook_dir'.");
 
-		$cache->set("hooks:$dir" => \@hooks);
-	}
+#		$cache->set("hooks:$dir" => \@hooks);
+#	}
 
 	my $out = File::Temp::tempfile;
 	binmode $out;
