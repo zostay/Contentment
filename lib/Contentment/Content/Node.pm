@@ -3,6 +3,8 @@ package Contentment::Content::Node;
 use strict;
 use warnings;
 
+our $VERSION = '0.02';
+
 use Carp;
 use DateTime;
 use Log::Log4perl;
@@ -38,8 +40,8 @@ my %spops = (
 			module
 			path
 			enabled
-			owner
-			group
+			node_owner
+			node_group
 			ctime
 			creator
 			mtime
@@ -65,6 +67,7 @@ my %spops = (
 		field			=> [ qw/
 			node_rev_id
 			revision_id
+			node_id
 			ctime
 			creator
 			mtime
@@ -91,9 +94,9 @@ __PACKAGE__->_create_table('MySQL', 'node', q(
 		current_node_rev_id	INT(11),
 		module			VARCHAR(100) NOT NULL,
 		path			VARCHAR(255),
-		enabled			INT(1) NOT NULL
-		owner			VARCHAR(150) NOT NULL,
-		group			VARCHAR(150) NOT NULL,
+		enabled			INT(1) NOT NULL,
+		node_owner		VARCHAR(150) NOT NULL,
+		node_group		VARCHAR(150) NOT NULL,
 		ctime			DATETIME NOT NULL,
 		creator			VARCHAR(150) NOT NULL,
 		mtime			DATETIME NOT NULL,
@@ -107,6 +110,7 @@ __PACKAGE__->_create_table('MySQL', 'node', q(
 __PACKAGE__->_create_table('MySQL', 'revision', q(
 	CREATE TABLE revision (
 		node_rev_id		INT(11) NOT NULL AUTO_INCREMENT,
+		node_id			INT(11) NOT NULL,
 		revision_id		INT(11) NOT NULL,
 		ctime			DATETIME NOT NULL,
 		creator			VARCHAR(150) NOT NULL,

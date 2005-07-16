@@ -2,7 +2,7 @@ package Contentment::Build;
 
 use strict;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 BEGIN {
 	use Module::Build;
@@ -77,12 +77,27 @@ sub ACTION_test {
 	close IN;
 	close OUT;
 
-	$self->make_executable('t/htdocs/cgi-bin');
+	$self->make_executable('t/htdocs/cgi-bin/handler.cgi');
 
 	$self->add_to_cleanup('t/htdocs/cgi-bin/handler.cgi');
 	$self->add_to_cleanup('t/tmp');
 
 	$self->SUPER::ACTION_test;
+}
+
+sub ACTION_dbclean {
+	my $self = shift;
+
+	require blib;
+	require Contentment;
+	require Contentment::Test;
+	require Contentment::SPOPS;
+
+	my $dbh = Contentment::SPOPS->global_datasource_handle;
+	for my $table ($dbh->tables(undef, undef, undef, undef)) {
+		print STDERR "Droping table $table\n";
+		$dbh->do("drop table $table");
+	}
 }
 
 sub process_mason_files {

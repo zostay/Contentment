@@ -64,7 +64,7 @@ sub _create_table {
 	my ($class, $format, $table_name, $sql) = @_;
 
 	my $dbh = global_datasource_handle;
-	unless (grep m/`?$table_name`?/, $dbh->tables(undef, undef, $table_name)) {
+	unless (grep m/\b$table_name\b/, $dbh->tables(undef, undef, $table_name)) {
 		$log->info("Table $table_name does not exist, will attempt to create");
 		my $conf = Contentment::configuration;
 

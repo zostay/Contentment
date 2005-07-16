@@ -3,6 +3,8 @@ package Contentment::Content::Nodelet;
 use strict;
 use warnings;
 
+our $VERSION ='0.02';
+
 use Carp;
 use base 'Contentment::SPOPS';
 
@@ -66,11 +68,7 @@ In general, a nodelet is configured in exactly the same way as a regular SPOPS D
 
 =item id_field
 
-This has no meaning for nodelets. This field is ignored. You will need a primary key (of course) for your table, but you don't need to bother setting it in here. Nodelets are primarily identified by their node_id. This is done through a bit of trickery.
-
-=item rev_id_field (default: "node_rev_id")
-
-You need a field in your table which links your table to the "node_rev_id" field of the node and revision. The name of this field goes in the "ref_id_field" setting (which defaults to "node_rev_id" if not set explicitly). You may link this table to the table named "revision" by this field, if you want the database to enforce the constraint.
+The nodelet must define a field that can link back to the numeric ID of the revision table. This is the "node_rev_id" field of the revision table. This configuration setting should be set to the primary key of the nodelet table, which will be used as the foreign key to node_rev_id in revision. The identifier stored here is unique for each revision of all nodelets stored in the database.
 
 =item create_revision (default: 0)
 
@@ -108,6 +106,115 @@ If this parameter is set, then the "include_disabled" option is implied. This al
 
 =cut
 
+sub id_clause {
+	my $self = shift;
+	my $id   = shift;
+	my $opt  = shift;
+	my $p    = shift;
+
+	my $id_field = $self->id_field;
+
+	# select ID and link revisions to nodelets
+	my $base = "node.node_id = $id".
+	      " AND revision.node_rev_id = nodelet.$id_field";
+
+	# either link nodes to revisions and select by revision_id
+	# or select only head revisions
+	if ($p->{revision_id}) {
+		$base .= " AND revision.node_id = node.node_id".
+		         " AND revision.revision_id = $p->{revision_id}";
+	} else {
+		$base .= " AND revision.node_rev_id = node.head_node_rev_id";
+	}
+
+	unless ($p->{include_disabled}) {
+		$base .= " AND node.enabled = 1";
+	}
+
+	return $base;
+}
+
+# This is, as my sister would say, Fan Freaking Tastic. There should be hooks
+# from SPOPS to do this, but I'll just replace it until then.
+sub fetch {
+    my ( $class, $id, $p ) = @_;
+    $p ||= {};
+
+    $log->is_debug &&
+        $log->debug( "Trying to fetch an item of $class with ID $id and params ",
+                     join( " // ", map { sprintf( "%s -> %s", $_, defined $p->{$_} ? $p->{$_} : '' )  }
+                                        grep { defined $_ } keys %{ $p } ) );
+
+    # No ID, no object
+
+    return undef  unless ( defined( $id ) and $id ne '' and $id !~ /^tmp/ );
+
+    # Security violations bubble up to caller
+
+    my $level = $p->{security_level};
+    unless ( $p->{skip_security} ) {
+        $level ||= $class->check_action_security({ id       => $id,
+                                                   required => SEC_LEVEL_READ });
+    }
+
+    # Do any actions the class wants before fetching -- note that if
+    # any of the actions returns undef (false), we bail.
+
+    return undef unless ( $class->pre_fetch_action( { %{ $p }, id => $id } ) );
+
+    my $obj = undef;
+
+    # If we were passed the data for an object, go ahead and create
+    # it; if not, check to see if we can whip up a cached object
+
+    if ( ref $p->{data} eq 'HASH' ) {
+        $obj = $class->new({ %{ $p->{data} }, skip_default_values => 1 });
+    }
+    else {
+        $obj = $class->get_cached_object({ %{ $p }, id => $id });
+        $p->{skip_cache}++;         # Set so we don't re-cache it later
+    }
+
+    unless ( ref $obj eq $class ) {
+        my ( $raw_fields, $select_fields ) = $class->_fetch_select_fields( $p );
+        $log->is_info &&
+            $log->info( "SELECTing: ", join( "//", @{ $select_fields } ) );
+
+        # Put all the arguments into a hash (so we can reuse them simply
+        # later) and grab the record
+
+        my %args = (
+            from   => [ 
+				"node", "revision",
+				$class->table_name." nodelet",
+		   	],
+            select => $select_fields,
+            where  => $class->id_clause( $id, undef, $p ),
+            db     => $p->{db},
+            return => 'single',
+        );
+        my $row = eval { $class->db_select( \%args ) };
+        if ( $@ ) {
+            $class->fail_fetch( \%args );
+            die $@;
+        }
+
+        # If the row isn't found, return nothing; just as if an incorrect
+        # (or nonexistent) ID were passed in
+
+        return undef unless ( $row );
+
+        # Note that we pass $p along to the ->new() method, in case
+        # other information was passed in needed by it -- however, we
+        # need to be careful that certain parameters used by this
+        # method (e.g., the optional 'field_alter') is not the same as
+        # a parameter of an object -- THAT would be fun to debug...
+
+        $obj = $class->new({ id => $id, skip_default_values => 1, %{ $p } });
+        $obj->_fetch_assign_row( $raw_fields, $row, $p );
+    }
+    return $obj->_fetch_post_process( $p, $level );
+}
 =item $nodelets = Nodelet-E<gt>fetch_group(\%params)
 
 This method returns all of the nodelet records for enabled head revisions. That is, only currently enabled records are returned and only the head revision of the nodelet is returned (under normal circumstances).
