@@ -30,11 +30,17 @@ if ($file) {
 
 	if ($r->method ne 'HEAD') {
 		if (defined $to) {
-</%perl>
-<&| /content/transform/apply_transformation, to => $to, from => $file->generated_kind &>
-% $result = $file->generate($m->request_args);
-</&>
-<%perl>
+			my $transformer = $vfs->lookup("/content/transform/apply_transformation");
+
+			my $original_output = File::Temp::tempfile;
+			Contentment->capture_streams(\*STDIN, $original_output, sub {
+				$result = $file->generate($m->request_args);
+			});
+
+			seek $original_output, 0, 0;
+			Contentment->capture_streams($original_output, \*STDOUT, sub {
+				$transformer->generate;
+			});
 		} else {
 			$result = $file->generate;
 		}
@@ -45,6 +51,9 @@ if ($file) {
 
 return $result;
 </%perl>
+<%init>
+use File::Temp;
+</%init>
 <%args>
 $relname => undef
 $rootname => undef
