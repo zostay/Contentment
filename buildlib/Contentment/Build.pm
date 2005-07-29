@@ -20,6 +20,9 @@ sub ACTION_release {
 
 	require Module::Release;
 
+	# Let's <> work the way Module::Release expects	
+	@ARGV = ();
+
 	my $r = Module::Release->new;
 	$r->clean;
 	$r->build_makefile;
