@@ -15,6 +15,31 @@ use ExtUtils::Install;
 use File::Path;
 use File::Spec;
 
+sub ACTION_release {
+	my $self = shift;
+
+	require Module::Release;
+
+	my $r = Module::Release->new;
+	$r->clean;
+	$r->build_makefile;
+	$r->test;
+	$r->dist;
+	$r->dist_test;
+	$r->check_cvs;
+	exit if $self->args('t');
+
+	$r->check_for_passwords;
+	$r->cvs_tag;
+	$r->ftp_upload;
+	$r->pause_claim;
+	$r->sf_login;
+	$r->sf_qrs;
+	$r->sf_release;
+
+	print "Done.\n";
+}
+
 sub ACTION_install {
 	my $self = shift;
 
@@ -53,6 +78,8 @@ sub ACTION_empty_logs {
 
 sub ACTION_test {
 	my $self = shift;
+
+	$self->ACTION_build;
 
 	mkpath('t/htdocs/cgi-bin', 1);
 	mkpath('t/tmp', 1);

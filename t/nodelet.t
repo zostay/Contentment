@@ -7,7 +7,8 @@ use lib 'buildlib';
 use Contentment;
 use Contentment::Test;
 use DateTime;
-use Test::More tests => 17;
+#use Test::More tests => 17;
+use Test::More skip_all => "Nodelet API is not finished.";
 
 use_ok('Contentment::Content::Nodelet');
 

@@ -10,11 +10,12 @@ use Carp;
 use Contentment::Config;
 use Contentment::VFS;
 use File::Temp;
+use HTML::Mason::Request;
 use Log::Log4perl ':easy';
 use Symbol;
 use YAML 'LoadFile';
 
-our $VERSION = '0.009_016';
+our $VERSION = '0.009_017';
 
 BEGIN {
 	Log::Log4perl::easy_init($DEBUG);
@@ -78,7 +79,7 @@ sub configuration {
 	return \%configuration;
 }
 
-=item my $module = Contentment->security
+=item my $module = Contentment-E<gt>security
 
 Fetch the configured security module.
 
@@ -88,7 +89,38 @@ sub security {
 	return Contentment->configuration->{security_module};
 }
 
-=item my $result = Contentment->run_plugin($plugin, @args)
+=item my $context = Contentment-E<gt>context
+
+This method returns the singleton object for L<Contentment::Context>.
+
+=cut
+
+our $context;
+sub context {
+	return $context if $context;
+
+	Contentment->configuration;
+
+	require Contentment::Context;
+
+	my $self = shift;
+	my @last_processed = @_;
+
+	my $m = HTML::Mason::Request->instance;
+
+	my $r = eval { $m->apache_req } || eval { $m->cgi_request };
+
+	$context = Contentment::Context->new({
+		url            => eval { $m->cgi_object->url } || undef,
+		m              => $m,
+		r              => $r,
+		last_processed => \@last_processed,
+	});
+
+	return $context;
+}
+
+=item my $result = Contentment-E<gt>run_plugin($plugin, @args)
 
 This method loads the given plugin C<$plugin> and runs it with the given C<@args> and returns the result C<$result>. The C<$plugin> variable is a complete package and method name. The method name is stripped and the package name is "used". Then, the method is called.
 

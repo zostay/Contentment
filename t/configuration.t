@@ -30,6 +30,11 @@ my $conf = {
           'security_module' => 'Contentment::Security::DBI',
           'vfs' => [
                      'Layered',
+					 [
+					 	'Real',
+						'root',
+						't/testdocs',
+					 ],
                      [
                        'Real',
                        'root',

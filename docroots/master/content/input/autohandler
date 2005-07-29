@@ -31,12 +31,7 @@ Contentment->call_hooks('request/initialize');
 
 my $ERROR;
 
-$Contentment::context = $context = Contentment::Context->new({
-	url            => $url,
-	m              => $m, 
-	r              => $r,
-	last_processed => \@__processed_uuid__,
-});
+$context = Contentment->context(@__processed_uuid__);
 
 my $q = $m->cgi_object;
 $url = $q->url;

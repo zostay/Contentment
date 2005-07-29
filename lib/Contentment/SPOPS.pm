@@ -40,7 +40,7 @@ my $DB;
 sub global_datasource_handle {
 	unless (ref $DB) {
 		$log->warn("creating a new connection to database");
-		my $conf = Contentment::configuration;
+		my $conf = Contentment->configuration;
 
 		$DB = DBI->connect(
 			$conf->{dbi_dsn}, 
@@ -66,7 +66,7 @@ sub _create_table {
 	my $dbh = global_datasource_handle;
 	unless (grep m/\b$table_name\b/, $dbh->tables(undef, undef, $table_name)) {
 		$log->info("Table $table_name does not exist, will attempt to create");
-		my $conf = Contentment::configuration;
+		my $conf = Contentment->configuration;
 
 		my $output;
 		if ($format ne $conf->{sql_type}) {
@@ -235,7 +235,7 @@ Checks to see if the security model set in the Contentment configuration provide
 =cut
 
 sub is_superuser {
-	my $conf = Contentment::configuration;
+	my $conf = Contentment->configuration;
 	my $sec = $conf->{security_module};
 
 	if ( UNIVERSAL::can($sec, "is_superuser") ) {
@@ -252,7 +252,7 @@ Checks to see if the security model set in the Contentment configuration provide
 =cut
 
 sub is_supergroup {
-	my $conf = Contentment::configuration;
+	my $conf = Contentment->configuration;
 	my $sec = $conf->{security_module};
 
 	if ( UNIVERSAL::can($sec, "is_supergroup") ) {
