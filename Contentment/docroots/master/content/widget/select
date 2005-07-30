@@ -1,0 +1,69 @@
+<select name="<%$submission->{alias}.$widget->{widget_name}%>"
+	id="<%$submission->{alias}.$widget->{widget_name}%>"
+	size="<%$size%>"
+% if ($multiselect) {
+	multiselect="multiselect"
+% }
+>
+% for my $option (@options) {
+<option value="<%$option->[0]%>"
+% 	if (defined $value && ((looks_like_number $value && looks_like_number $option->[0] && $option->[0] == $value) || $option->[0] eq $value)) {
+	selected="selected"
+% 	}
+><%$option->[1]%></option>
+% }
+</select>
+
+<%init>
+use Scalar::Util qw/ looks_like_number /;
+
+my @options;
+if (defined $options) {
+	if (ref $options eq 'HASH') {
+		while (my ($key, $value) = each %$options) {
+			push @options, [ $key => $value ];
+		}
+	} elsif (ref $options eq 'ARRAY') {
+		for my $option (@$options) {
+			if (ref $option eq 'HASH') {
+				while (my ($key, $value) = each %$option) {
+					push @options, [ $key => $value ];
+				}
+			} elsif (ref $option eq 'ARRAY') {
+				my $key = $option->[0];
+				for my $value (@{$option}[1 .. $#$option]) {
+					push @options, [ $key => $value ];
+				}
+			} else {
+				push @options, [ $option => $option ];
+			}
+		}
+	} else {
+		push @options, [ $options => $options ];
+	}
+}
+
+my $submission = $context->submission;
+my $widget = Contentment::Form::Widget->build(
+	form_name   => $submission->{form_name},
+	widget_name => $name,
+	class       => 'Contentment::Form::Widget::Select',
+	args        => {
+		default     => $default,
+		override    => $override,
+		size        => $size,
+		multiselect => $multiselect,
+	    options     => \@options,
+	},
+);
+
+my $value = !$override && defined $ARGS{$name} ? $ARGS{$name} : $default;
+</%init>
+<%args>
+$name
+$size        => 1
+$multiselect => undef
+$default     => undef
+$override    => 0
+$options     => undef
+</%args>

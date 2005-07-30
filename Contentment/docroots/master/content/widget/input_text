@@ -1,0 +1,25 @@
+<& /content/widget/input,
+	name     => $name,
+	default  => $default,
+	override => $override,
+	onblur   => $onblur,
+	onfocus  => $onfocus,
+	onselect => $onselect,
+	onchange => $onchange,
+	args     => {
+		type      => 'text',
+		size      => $size,
+		maxlength => $maxlength,
+	},
+&>
+<%args>
+$name
+$default   => undef
+$override  => undef
+$onblur    => undef
+$onfocus   => undef
+$onselect  => undef
+$onchange  => undef
+$size      => 50
+$maxlength => 255
+</%args>

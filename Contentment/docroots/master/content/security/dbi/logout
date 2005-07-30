@@ -1,0 +1,4 @@
+<%init>
+delete $context->session->{session_data}{current_user};
+return $context->action_result('Success');
+</%init>

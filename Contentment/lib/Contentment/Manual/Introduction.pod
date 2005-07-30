@@ -1,0 +1,29 @@
+=head1 NAME
+
+Contentment::Manual::Introduction - Introduction to the Contentment content management system.
+
+=head1 DESCRIPTION
+
+This documentation is still being established, so it is primarily geared towards developers. Administrators and other users may also find nuggets of useful information.
+
+=head2 What is Contentment?
+
+Contentment is a "Content Management System" or CMS. It was originally designed to help maintain knowledge base information related to a systems support site and information related to a course site.
+
+The system is generally intended to be easy to use and easy to code. Optimization and scalability have not been major goals at this point. It provides a fairly straightforward way of creating a web site through file-based pages and adds theming, indexing, dynamic page generation, and format transformation with very little effort.
+
+=head2 Why Contentment?
+
+Nothing else I tried worked the way I wanted. I'm picky. So, I reinvented a "better" wheel according to my definition of better. There are lots of systems out there, but I think this one is unique in it's use of Mason and Perl together to create a generic framework. Besides these two components, most of the rest of the system is replacable.
+
+If you have a technical staff site that needs to store documents that are accessible and indexed from the web, I'd say Contentment is very nice. If you need to run a dynamic site for end-users who aren't very knowledgable, it's probably not very nice. I'm hoping to add enough functionality to make the latter case better, but Contentment is still a bit rough so far.
+
+=head1 AUTHOR
+
+As of this writing Andrew Sterling Hanenkamp is the only author for this project.
+
+=head1 COPYRIGHT AND LICENSE
+
+This software and it's documentation is the copyright of myself, Andrew Sterling Hanenkamp. I am publishing this software under the Artistic License, which is the license Perl is released under. Please read L<perlartistic> for more details.
+
+Copyright 2004 Andrew Sterling Hanenkamp. All Rights Reserved.

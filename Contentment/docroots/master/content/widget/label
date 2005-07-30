@@ -1,0 +1,27 @@
+<label id="<%$submission->{alias}.$widget->{widget_name}%>" for="<%$widget->{args}{for}%>"
+% if (defined $onblur) {
+	onblur="<%$widget->{args}{onblur}%>"
+% }
+% if (defined $onfocus) {
+	onfocus="<%$widget->{args}{onfocus}%>"
+% }
+><%$widget->{args}{title}%></label>
+<%init>
+my $submission = $context->submission;
+my $widget = Contentment::Form::Widget->build(
+	form_name   => $submission->{form_name},
+	widget_name => "${for}_label",
+	class       => 'Contentment::Form::Widget::Null',
+	args        => {
+		for     => $for,
+		onblur  => $onblur,
+		onfocus => $onfocus,
+		title   => $m->content,
+	},
+);
+</%init>
+<%args>
+$for
+$onblur => undef
+$onfocus => undef
+</%args>

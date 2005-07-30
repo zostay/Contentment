@@ -1,0 +1,64 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use lib '@@LIB_DIR@@';
+
+use Contentment;
+use Contentment::VFS;
+use Contentment::VFSResolver;
+use CGI::Fast;
+use HTML::Mason::CGIHandler;
+use Log::Log4perl;
+
+# HACK This is a hack to allow capture to work correctly with FCGI::Stream,
+# which is used to capture output by FCGI when we run CGI::Fast->new. This is a
+# little dumb, but this was the simple (hack) fix.
+sub FCGI::Stream::TIEHANDLE { return shift }
+
+my $conf = Contentment::configuration;
+my $log = Log::Log4perl->get_logger("fcgi_handler");
+my $vfs = Contentment::VFS->new;
+
+# Lazy data 
+my $cgi;
+my $h;
+
+$log->info("FastCGI Handler initialized.");
+my $counter = 0;
+
+while ($cgi = CGI::Fast->new) {
+	$counter++;
+	$log->info("Handling request ($counter) $ENV{PATH_INFO}");
+
+	if (not $h) {
+		$h = new HTML::Mason::CGIHandler->new (
+			data_dir       => "$conf->{temp_dir}/mason/data",
+			allow_globals  => [ qw(
+				$base $full_base $url $req_path
+				%conf $log $context $vfs $root_file
+			) ],
+			resolver_class => 'Contentment::VFSResolver',
+		);
+	}
+
+	my $req_path = $ENV{PATH_INFO};
+	$req_path =~ s#^$conf->{base}/#/#;
+
+	$ENV{PATH_INFO} =~ s#^/#/content/input/#;
+	$log->is_debug && 
+		$log->debug("Mason will handle request as $ENV{PATH_INFO}");
+
+	$h->interp->set_global('$base'      => $conf->{base});
+	$h->interp->set_global('%conf'      => %$conf);
+	$h->interp->set_global('$log'       => $log);
+	$h->interp->set_global('$req_path'  => $req_path);
+	$h->interp->set_global('$vfs'       => $vfs);
+
+	$h->handle_cgi_object($cgi);
+}
+
+$log->info("FastCGI Handler shutting down.");
+
+exit(0);

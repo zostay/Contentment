@@ -1,0 +1,47 @@
+=head1 NAME
+
+Contentment::Manual::Features - An overview of the features of Contentment
+
+=head1 DECRIPTION
+
+This document attempts to enumerate all of the important features of Contentment.
+
+As of this writing, it's kind of a random mish-mash of the features as I think of them. I hope to make this into a more coherent document with time.
+
+=head2 Virtual File System
+
+The VFS allows for the system to map URLs to files in a seamless way. In general, all Contentment content is treated as a file. This is fairly natural for most content in a content management system.
+
+=head2 Content Caching
+
+Any content may request that the output for a given URL be cached for some period of time or until the "mtime" property changes.
+
+=head2 Content Typification
+
+The system depends heavily upon determining the I<kind> of every file. The kind of a file is often the same as would its MIME type be, but this is only used as a convenience. Kind is basically any string that can be used to identify a a file so that semantics can be mapped to that type.
+
+This typification is done at multiple levels. For every request, the URL given by the user is used to find a source file in the VFS. The URL and accompanying HTTP request information is used to determine the I<final kind> of the request. The attributes of the source file is used to determine the I<initial kind>. The I<initial kind> is used to determine how the file is I<generated>. The file I<generator> is in charge of then determining the I<original kind>.
+
+The transformation system then uses the original kind and final kind to determine which transformations are required, if any, to output the file. The final kind also determines which set of filter plugins, if any, are run on the final output of the transformation system.
+
+=head2 File Transformation
+
+The transformation system depends on a collection of transformation plugins. Each transformation plugin is capable of translating a source file in one or more source file kinds into exactly one destination file kind. Each transformation is also associated with a cost. The transformation system performs a lowest cost path search on the plugins to determine if a path exists to transform the original kind into the final kind. It will always use the lowest cost transformation.
+
+=head2 File Filtering
+
+After all transformations have been applied. The system then applies a final set of filters to the output. These filters do not change the file kind, they merely apply additional modifications to the given files. For example, they could rewrite links or apply theming.
+
+=head2 Theming System
+
+A complete theming system is supplied.
+
+=head1 AUTHOR
+
+Andrew Sterling Hanenkamp E<lt>hanenkamp@users.sourceforge.netE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2005 Andrew Sterling Hanenkamp. All Rights Reserved.
+
+Contentment is released under the same terms and license as Perl itself.

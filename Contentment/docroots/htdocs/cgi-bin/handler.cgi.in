@@ -1,0 +1,42 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use lib '@@LIB_DIR@@';
+
+use Contentment;
+use Contentment::VFS;
+use Contentment::VFSResolver;
+use HTML::Mason::CGIHandler;
+use Log::Log4perl;
+
+my $conf = Contentment::configuration;
+my $log = Log::Log4perl->get_logger("cgi_handler");
+
+$log->info("Handling request $ENV{PATH_INFO}");
+
+my $h = HTML::Mason::CGIHandler->new (
+	data_dir       => "$conf->{temp_dir}/mason/data",
+	allow_globals  => [ qw(
+		$base $full_base $url $req_path
+		%conf $log $context $vfs $root_file
+	) ],
+	resolver_class => 'Contentment::VFSResolver',
+);
+
+my $req_path = $ENV{PATH_INFO};
+$req_path =~ s#^$conf->{base}/#/#;
+
+$ENV{PATH_INFO} =~ s#^/#/content/input/#;
+$log->debug("Mason will handle request as $ENV{PATH_INFO}");
+
+$h->interp->set_global('$base'      => $conf->{base});
+$h->interp->set_global('%conf'      => %$conf);
+$h->interp->set_global('$log'       => $log);
+$h->interp->set_global('$req_path'  => $req_path);
+$h->interp->set_global('$vfs'       => Contentment::VFS->new);
+
+$h->handle_request;
+
+exit(0);

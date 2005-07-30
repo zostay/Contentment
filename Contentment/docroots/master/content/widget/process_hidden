@@ -1,0 +1,9 @@
+<%args>
+$form_id
+$name
+$value
+</%args>
+
+<%perl>
+$context->add_form_value($form_id, $name, $value);
+</%perl>

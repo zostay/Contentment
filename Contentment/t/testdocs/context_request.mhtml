@@ -1,0 +1,31 @@
+<%perl>
+use Test::Builder;
+use Test::More tests => 15;
+my $Test = Test::Builder->new;
+$Test->failure_output(\*STDOUT);
+
+ok($context);
+like($context->url, qr{http://localhost(?::\d+)?/context_request.txt});
+ok($context->m);
+ok($context->r);
+ok($context->vfs);
+ok($context->setting);
+
+is($context->original_kind, 'text/html');
+
+ok($context->panel);
+like($context->panel->url, qr{http://localhost(?::\d+)?/context_request.txt});
+is($context->panel->name, '__DEFAULT__');
+is($context->panel->map, 'Contentment::Context::error_map');
+
+is_deeply($context->panels, []);
+
+is($context->submission, undef);
+
+is_deeply($context->submissions, []);
+
+is_deeply($context->last_processed, []);
+</%perl>
+<%attr>
+kind => 'text/plain'
+</%attr>

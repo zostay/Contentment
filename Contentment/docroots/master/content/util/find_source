@@ -1,0 +1,7 @@
+<%args>
+$relname
+</%args>
+
+<%init>
+return $vfs->lookup_source($relname);
+</%init>
