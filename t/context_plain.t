@@ -15,7 +15,7 @@ is($context->r, undef);
 ok($context->vfs);
 ok($context->setting);
 
-is($context->original_kind, 'unknown');
+is($context->original_kind, 'text/html');
 
 ok($context->panel);
 is($context->panel->url, undef);

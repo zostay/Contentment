@@ -2,7 +2,7 @@
 
 log4perl.rootLogger=WARN, File
 
-log4perl.PatternLayout.cspec.R  = sub { $ENV{REMOTE_ADDR} }
+log4perl.PatternLayout.cspec.R  = sub { $ENV{REMOTE_ADDR} || 'none' }
 
 log4perl.appender.File          = Log::Log4perl::Appender::File
 log4perl.appender.File.filename = @@LOGS_DIR@@/@@BASENAME@@.log

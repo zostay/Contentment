@@ -1,4 +1,4 @@
 <%init>
-delete $context->session->{session_data}{current_user};
+delete $context->session->{current_user};
 return $context->action_result('Success');
 </%init>

@@ -7,7 +7,7 @@ use base 'Contentment::FileType::Other';
 
 use Log::Log4perl;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
@@ -95,7 +95,7 @@ sub comp {
 
 	$log->is_debug &&
 		$log->debug("Loading component for file $file.");
-	$file->{ft_comp} = $Contentment::context->m->fetch_comp($file->path);
+	$file->{ft_comp} = Contentment->context->m->fetch_comp($file->path);
 
 	warn "Failed to fetch Mason component for $file"
 		unless $file->{ft_comp};
@@ -173,9 +173,9 @@ sub generate {
 		}
 
 		my $buf = '';
-		my $result = $Contentment::context->m->comp(
+		my $result = Contentment->context->m->comp(
 			{ 	content => sub { 
-					my $m = $Contentment::context->m;
+					my $m = Contentment->context->m;
 					while (<STDIN>) {
 						$m->print($_);
 					}
@@ -183,7 +183,7 @@ sub generate {
 				store => \$buf,
 			}, 
 			$comp,
-			$Contentment::context->m->request_args,
+			Contentment->context->m->request_args,
 			%args,
 		);
 

@@ -10,7 +10,7 @@ use Log::Log4perl;
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 =head1 NAME
 
@@ -98,8 +98,8 @@ sub generate {
 		my %conf      = %{ Contentment->configuration };
 		my $base      = $conf{base};
 		my $log       = Log::Log4perl->get_logger($file->path);
-		my $url       = $Contentment::context->m->cgi_object->url;
-		my $full_base = $Contentment::context->m->cgi_object->url(-base => 1).$base;
+		my $url       = Contentment->context->m->cgi_object->url;
+		my $full_base = Contentment->context->m->cgi_object->url(-base => 1).$base;
 		my $vfs       = Contentment::VFS->new;
 		my $_____code = $file->content;
 		

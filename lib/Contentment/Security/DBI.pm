@@ -4,9 +4,14 @@ use strict;
 use warnings;
 
 use Contentment::SPOPS;
+use Log::Log4perl;
+use Scalar::Util 'looks_like_number';
 use SPOPS::Initialize;
+use SPOPS::Secure qw/ :level :scope /;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
+
+my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
 =head1 NAME
 
@@ -126,7 +131,7 @@ my %spops = (
 	user => {
 		class           => 'Contentment::Security::DBI::User',
 		isa             => [ qw/ Contentment::SPOPS / ],
-		rules_from      => [ qw/ SPOPSx::Tool::YAML / ],
+		rules_from      => [ qw/ SPOPSx::Tool::DateTime SPOPSx::Tool::YAML / ],
 		base_table      => 'user',
 		field           => [ qw/ 
 			user_id
@@ -145,17 +150,26 @@ my %spops = (
 		id_field        => 'user_id',
 		increment_field => 1,
 		yaml_fields     => [ 'user_data' ],
-		no_insert       => [ qw/ user_id ctime mtime dtime lastlog / ],
+		datetime_format => {
+			ctime   => 'DateTime::Format::MySQL',
+			mtime   => 'DateTime::Format::MySQL',
+			dtime   => 'DateTime::Format::MySQL',
+			lastlog => 'DateTime::Format::MySQL',
+		},
+		no_insert       => [ qw/ user_id dtime lastlog / ],
 		no_update       => [ qw/ user_id ctime / ],
 		links_to        => { 'Contentment::Security::DBI::Group' => 'group_user' },
 		fetch_by        => [ qw/ username email / ],
+		default_values  => { 
+			enabled   => 1,
+		},
 	},
 
 	group => {
 		class           => 'Contentment::Security::DBI::Group',
 		isa             => [ qw/ Contentment::SPOPS / ],
-		rules_from      => [ qw/ SPOPSx::Tool::YAML / ],
-		base_table      => 'group',
+		rules_from      => [ qw/ SPOPSx::Tool::DateTime SPOPSx::Tool::YAML / ],
+		base_table      => 'groups',
 		field           => [ qw/ 
 			group_id
 			groupname
@@ -169,10 +183,18 @@ my %spops = (
 		id_field        => 'group_id',
 		increment_field => 1,
 		yaml_fields     => [ 'group_data' ],
-		no_insert       => [ qw/ group_id ctime mtime dtime lastlog / ],
+		datetime_format => {
+			ctime   => 'DateTime::Format::MySQL',
+			mtime   => 'DateTime::Format::MySQL',
+			dtime   => 'DateTime::Format::MySQL',
+		},
+		no_insert       => [ qw/ group_id dtime / ],
 		no_update       => [ qw/ group_id ctime / ],
 		links_to        => { 'Contentment::Security::DBI::User' => 'group_user' },
 		fetch_by        => [ 'groupname' ],
+		default_values  => {
+			enabled    => 1,
+		},
 	},
 );
 
@@ -183,14 +205,14 @@ Contentment::Security::DBI::User->_create_table('MySQL', 'user', q(
 		user_id			INT(11) NOT NULL AUTO_INCREMENT,
 		username		CHAR(30) NOT NULL,
 		fullname		CHAR(100) NOT NULL,
-		email			CHAR(150) NOT NULL,
-		webpage			CHAR(150) NOT NULL,
+		email			CHAR(150) NULL,
+		webpage			CHAR(150) NULL,
 		password		CHAR(100) NOT NULL,
-		ctime			DATETIME NOT NULL DEFAULT 'now',
-		mtime			DATETIME NOT NULL DEFAULT 'now',
+		ctime			DATETIME NOT NULL,
+		mtime			DATETIME NOT NULL,
 		dtime			DATETIME NULL,
 		lastlog			DATETIME NULL,
-		enabled			INT(1) NOT NULL DEFAULT '1',
+		enabled			INT(1) NOT NULL,
 		user_data		TEXT NOT NULL,
 		PRIMARY KEY (user_id),
 		UNIQUE (username));
@@ -203,19 +225,151 @@ Contentment::Security::DBI::User->_create_table('MySQL', 'group_user', q(
 		PRIMARY KEY (group_id, user_id));
 ));
 
-Contentment::Security::DBI::Group->_create_table('MySQL', 'group', q(
-	CREATE TABLE group (
+Contentment::Security::DBI::Group->_create_table('MySQL', 'groups', q(
+	CREATE TABLE groups (
 		group_id		INT(11) NOT NULL AUTO_INCREMENT,
 		groupname		CHAR(30) NOT NULL,
 		description		CHAR(100) NOT NULL,
-		ctime			DATETIME NOT NULL DEFAULT 'now',
-		mtime			DATETIME NOT NULL DEFAULT 'now',
+		ctime			DATETIME NOT NULL,
+		mtime			DATETIME NOT NULL,
 		dtime			DATETIME NULL,
-		enabled			INT(1) NOT NULL DEFAULT '1',
+		enabled			INT(1) NOT NULL,
 		group_data		TEXT NOT NULL,
 		PRIMARY KEY (group_id),
 		UNIQUE (groupname));
 ));
+
+sub _ug_update {
+	my $self = shift;
+	my $p    = shift;
+
+	my $now = DateTime->now;
+
+	if ($p->{is_add}) {
+		$self->{ctime} = $now;
+	}
+
+	$self->{mtime} = $now;
+
+	unless ($self->{enabled}) {
+		$self->{dtime} = $now;
+	}
+
+	if ($self->isa('Contentment::Security::DBI::User')) {
+		$self->{user_data}  ||= {};
+	} else {
+		$self->{group_data} ||= {};
+	}
+
+	return __PACKAGE__;
+}
+
+{
+	package Contentment::Security::DBI::User;
+
+	use Data::Dumper;
+	use SPOPS::Secure qw/ :level :scope /;
+
+	sub ruleset_factory {
+		my ($class, $rs_table) = @_;
+		unshift @{ $rs_table->{pre_save_action} }, \&Contentment::Security::DBI::_ug_update;
+		return __PACKAGE__;
+	}
+
+	sub get_security {
+		my ($self, $p) = @_;
+
+		my $item;
+		if (defined $p->{object_id}) {
+			$item = $self->fetch($p->{object_id}, { skip_security => 1 });
+		} else {
+			$item = $self;
+		}
+
+		my $current_user = $self->global_current_user;
+
+		if ($self->is_superuser || $self->is_supergroup) {
+			$log->is_debug &&
+				$log->debug("Current user is super, granting SEC_LEVEL_WRITE to user ", $item->id);
+			return { SEC_SCOPE_WORLD() => SEC_LEVEL_WRITE };
+		}
+
+		if (defined($current_user) && $item->id == $current_user->id) {
+			# it's me!
+			my $default_level = $self->SUPER::get_security($p);
+
+			$log->is_debug &&
+				$log->debug("Default permissions are: ", Dumper($default_level));
+
+			if ($default_level->{SEC_SCOPE_WORLD()} > SEC_LEVEL_READ) {
+				$log->is_debug &&
+					$log->debug("Current user ", $current_user->id, " is this user, but default perms give better than SEC_LEVEL_READ to user ", $item->id);
+				return $default_level;
+			} else {
+				$log->is_debug &&
+					$log->debug("Current user ", $current_user->id, " is this user, granting SEC_LEVEL_READ to user ", $item->id);
+				return { SEC_SCOPE_WORLD() => SEC_LEVEL_READ };
+			}
+		} else {
+			$log->is_debug &&
+				$log->debug("Current user ",(defined($current_user)?$current_user->id:"(none)")," and this user don't match, falling back to default perms for user ", $item->id);
+
+			return $self->SUPER::get_security($p);
+		}
+	}
+}
+
+{
+	package Contentment::Security::DBI::Group;
+
+	use SPOPS::Secure qw/ :level :scope /;
+
+	sub ruleset_factory {
+		my ($class, $rs_table) = @_;
+		unshift @{ $rs_table->{pre_save_action} }, \&Contentment::Security::DBI::_ug_update;
+		return __PACKAGE__;
+	}
+	
+	sub get_security {
+		my ($self, $p) = @_;
+
+		my $item;
+		if (defined $p->{object_id}) {
+			$item = $self->fetch($p->{object_id}, { security_level => SEC_LEVEL_READ, skip_security => 1 });
+		} else {
+			$item = $self;
+		}
+
+		my $current_user = $self->global_current_user;
+
+		if ($self->is_superuser || $self->is_supergroup) {
+			$log->is_debug &&
+				$log->debug("Current user is super, granting SEC_LEVEL_WRITE to user ", $item->id);
+			return { SEC_SCOPE_WORLD() => SEC_LEVEL_WRITE };
+		}
+
+		if (defined $current_user) {
+			for my $user (@{ $item->user }) {
+				if ($user->id == $current_user->id) {
+					# it's my group!
+					my $default_level = $self->SUPER::get_security($p);
+
+					if ($default_level->{SEC_SCOPE_WORLD()} > SEC_LEVEL_READ) {
+						$log->is_debug &&
+							$log->debug("Current user is in this group, but default perms give better than SEC_LEVEL_READ to group ", $item->id);
+						return $default_level;
+					} else {
+						$log->is_debug &&
+							$log->debug("Current user is in this group, granting SEC_LEVEL_READ to group ", $item->id);
+						return { SEC_SCOPE_WORLD() => SEC_LEVEL_READ };
+					}
+				}
+			}
+		}
+
+		return $self->SUPER::get_security($p);
+	}
+}
 
 =head1 SECURITY MODULE METHODS
 
@@ -230,21 +384,40 @@ Checks the databsae for a user named C<$username> and verifies that the user has
 sub check_login {
 	my ($class, $username, $password) = @_;
 
-	my $users = Contentment::Security::DBI::User->fetch_by_username($username, { skip_security => 1 });
-	return undef unless @$users;
+	$log->is_debug &&
+		$log->debug("Login attempt initiated for $username");
+
+	my $users = Contentment::Security::DBI::User->fetch_by_username(
+		$username, { skip_security => 1 }
+	);
+
+	unless (@$users == 1) {
+		if (@$users > 1) {
+			$log->error("More than one user matches username $username!");
+		} else {
+			$log->is_warning &&
+				$log->warning("Login attempt by $username FAILED (no such user)");
+		}
+
+		return undef;
+	}
 
 	my $user = $users->[0];
 	if ($user->{password} eq $password) {
+		$user->{lastlog} = DateTime->now;
+		$user->save({ skip_security => 1 });
 
-		# allow YAML to serialize and keep users from mucking with themselves	
-		my %copy = %$user; 
-		delete $copy{password}; # security precaution
+		$log->is_info &&
+			$log->info("Login by $user->{username} successful on $user->{lastlog}");
 
-		$Contentment::context->session->{session_data}{current_user} = \%copy;
+		Contentment->context->session->{current_user} = $user;
 		return $user;
-	}
+	} else {
+		$log->is_warning &&
+			$log->warning("Login attempt by $user->{username} FAILED");
 	
-	return undef;
+		return undef;
+	}
 }
 
 =item $user = Contentment::Security::DBI-E<gt>fetch_user($username)
@@ -256,7 +429,11 @@ Returns the user record for the username given or C<undef>.
 sub fetch_user {
 	my ($class, $username) = @_;
 
-	return Contentment::Security::DBI::User->fetch_by_username($username);
+	if (looks_like_number($username)) {
+		return Contentment::Security::DBI::User->fetch($username);
+	} else {
+		return Contentment::Security::DBI::User->fetch_by_username($username);
+	}
 }
 
 =item $group = Contentment::Security::DBI-E<gt>fetch_group($gropuname)
@@ -268,7 +445,11 @@ Returns the group record for the groupname given or C<undef>.
 sub fetch_group {
 	my ($class, $groupname) = @_;
 
-	return Contentment::Security::DBI::Group->fetch_by_groupname($groupname);
+	if (looks_like_number($groupname)) {
+		return Contentment::Security::DBI::Group->fetch($groupname);
+	} else {
+		return Contentment::Security::DBI::Group->fetch_by_groupname($groupname);
+	}
 }
 
 =item $users = Contentment::Security::DBI-E<gt>fetch_all_users

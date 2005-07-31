@@ -12,7 +12,7 @@ use DateTime;
 use Log::Log4perl;
 my $log = Log::Log4perl->get_logger('Contentment::Context');
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 my @letters = ( 'a' .. 'z', 'A' .. 'Z', '0' .. '9' );
 
@@ -103,9 +103,9 @@ Here is a description of the other available methods.
 
 =over
 
-=item $context = Contentment::Context-E<gt>new($url, $session_id, $session, $m, $r)
+=item $context = Contentment::Context-E<gt>new($args)
 
-Don't use this unless your're defining a new front-end to Contentment. This is used internally to initially create the context.
+Don't use this method. Instead see the C<context()> method of L<Contentment>.
 
 =cut
 
@@ -117,11 +117,11 @@ sub error_map {
 # Create a new context
 sub new {
 	my ($class, $args) = @_;
-	my $url        = $args->{url};
-	my $session_id = $args->{session_id};
-	my $session    = $args->{session};
-	my $m          = $args->{m};
-	my $r          = $args->{r};
+	my $url            = $args->{url};
+	my $session_id     = $args->{session_id};
+	my $m              = $args->{m};
+	my $r              = $args->{r};
+	my $last_processed = $args->{last_processed} || [];
 
 	my $setting = Contentment::Setting->fetch(__PACKAGE__);
 	unless (defined $setting) {
@@ -130,13 +130,12 @@ sub new {
 		$setting->{data} = {};
 	}
 
-	$class->SUPER::new({
+	my $self = $class->SUPER::new({
 		url            => $url,
 		session_id     => $session_id,
-		session        => $session,
 		m              => $m,
 		r              => $r,
-		original_kind  => 'unknown',
+		original_kind  => 'text/html',
 		vfs            => Contentment::VFS->new,
 		panel          => Contentment::Panel->new(
 			$url,
@@ -146,8 +145,16 @@ sub new {
 		panels         => [],
 		setting	       => $setting,
 		submissions    => [],
-		last_processed => $args->{last_processed} || [],
+		last_processed => $last_processed,
 	});
+
+	return $self;
+}
+
+# TODO Is there a better place to use close_session() than when the context is
+# destroyed?
+sub DESTROY {
+	Contentment::Session->close_session;
 }
 
 =item $context-E<gt>current_user

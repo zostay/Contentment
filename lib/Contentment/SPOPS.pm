@@ -3,9 +3,10 @@ package Contentment::SPOPS;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 use Contentment;
+use Data::Dumper;
 use DBI;
 use Log::Log4perl;
 use SPOPS::Secure qw/ :level :scope /;
@@ -14,7 +15,7 @@ use UNIVERSAL;
 
 my $log = Log::Log4perl->get_logger("Contentment::SPOPS");
 
-use base qw/ SPOPS::Secure SPOPS::DBI /;
+use base qw/ SPOPS::Secure SPOPS::DBI::MySQL SPOPS::DBI /;
 
 use overload '""' => sub { my $self = shift; $self->id || $self; };
 
@@ -124,7 +125,7 @@ sub can_create {
 
 	unless ( $ok ) {
 		require Contentment::Security;
-		my $perms = Contentment::Security::Permission->fetch_by_class( ref $self || $self );
+		my $perms = Contentment::Security::Permission->fetch_by_class( ref($self) || $self, { skip_security => 1 } );
 
 		my $user   = $self->global_current_user;
 		my $groups = $self->global_current_group || [];
@@ -173,7 +174,16 @@ sub check_action_security {
 	} elsif ( !$p->{is_add} ) {
 		return $self->SUPER::check_action_security($p);
 	} else {
-		return SEC_LEVEL_NONE;
+		if ($p->{required}) {
+			$self->register_security_error({ 
+				class    => (ref($self) || $self), 
+				id       => ref($self) ? $self->id : $p->{id},
+				level    => SEC_LEVEL_NONE,
+				required => $p->{required} 
+			});
+		} else {
+			return SEC_LEVEL_NONE;
+		}
 	}
 }
 
@@ -193,39 +203,64 @@ sub get_security {
 	# TODO This could be made more efficient by selecting just records with
 	# object_id == 0 or object_id = self.id
 	require Contentment::Security;
-	my $perms = Contentment::Security::Permission->fetch_by_class( ref $self || $self );
+	my $perms = Contentment::Security::Permission->fetch_by_class( 
+		ref($self) || $self, 
+		{ skip_security => 1 }
+	);
+
+	$log->is_debug && defined $perms &&
+		$log->debug("Found ", scalar(@$perms), " permission records for ", (ref($self) || $self));
 
 	my $user   = $self->global_current_user;
 	my $groups = $self->global_current_group || [];
 
+	my $id = ref($self) ? $self->id : $p->{object_id};
+
 	if ( defined $perms ) {
 		PERM: for my $perm ( @$perms ) {
-			next if $perm->{object_id} ne '0' and $perm->{object_id} ne $self->id;
+			$log->is_debug &&
+				$log->debug("Checking against permission: ", Dumper($perm));
+
+			next if $perm->{object_id} ne '0' and $perm->{object_id} ne $id;
 			next unless $perm->{capability_name} =~ /^(?:read|write)$/;
 			next if $perm->{scope} eq 'u' && !defined $user;
 			next if $perm->{scope} eq 'g' && !@$groups;
 
 			if ( $perm->{scope} eq 'u' && $perm->{scope_id} eq $user->id ) {
-				$level = SEC_LEVEL_WRITE if $perm->{capability_name} eq 'write';
-				$level = SEC_LEVEL_READ;
+				$level = $perm->{capability_name} eq 'write' ? SEC_LEVEL_WRITE :
+				         $perm->{capability_name} eq 'read'  ? SEC_LEVEL_READ  :
+						                                       SEC_LEVEL_NONE;
+				$log->is_debug &&
+					$log->debug("Scope is user and scope_id $perm->{scope_id} matches current user with capability $perm->{capability_name}, so level is now $level.");
+			
 				last PERM;
 			} elsif ( $perm->{scope} eq 'g' ) {
 				for my $group ( @$groups ) {
 					if ( $perm->{scope_id} eq $group->id ) {
-						$level = SEC_LEVEL_WRITE if $perm->{capability_name} eq 'write';
-						$level = SEC_LEVEL_READ;
+						$level = $perm->{capability_name} eq 'write' ? SEC_LEVEL_WRITE :
+								 $perm->{capability_name} eq 'read'  ? SEC_LEVEL_READ  :
+																	   SEC_LEVEL_NONE;
+						$log->is_debug &&
+							$log->debug("Scope is group and scope_id $perm->{scope_id} matches a current group with capability $perm->{capability_name}, so level is now $level.");
+			
 						last PERM;
 					}
 				}
-			} else {
-				$level = SEC_LEVEL_WRITE if $perm->{capability_name} eq 'write';
-				$level = SEC_LEVEL_READ;
+			} elsif ( $perm->{scope} eq 'w' ) {
+				$level = $perm->{capability_name} eq 'write' ? SEC_LEVEL_WRITE :
+				         $perm->{capability_name} eq 'read'  ? SEC_LEVEL_READ  :
+						                                       SEC_LEVEL_NONE;
+				$log->is_debug &&
+					$log->debug("Scope is world with capability name $perm->{capability_name}, so level is now $level.");
+
 				last PERM;
+			} else {
+				die "Unknown permission scope '$perm->{scope}'!";
 			}
 		}
 	}
 
-	return { SEC_LEVEL_WORLD() => $level }; 
+	return { SEC_SCOPE_WORLD() => $level }; 
 }
 
 =item $test = $obj->is_superuser
@@ -269,10 +304,9 @@ Returns the object representing the current user if such an object can be found 
 =cut
 
 sub global_current_user {
-	defined $Contentment::context or return undef;
-	my $session = $Contentment::context->session or return undef;
-	my $session_data = $session->{session_data} or return undef;
-	my $user = $session_data->{current_user} or return undef;
+	defined Contentment->context or return undef;
+	my $session = Contentment->context->session or return undef;
+	my $user = $session->{current_user} or return undef;
 	return $user;
 }
 
@@ -283,10 +317,9 @@ Returns the a reference to an array of objects representing the current groups i
 =cut
 
 sub global_current_group {
-	defined $Contentment::context or return undef;
-	my $session = $Contentment::context->session or return undef;
-	my $session_data = $session->{session_data} or return undef;
-	my $user = $session_data->{current_user} or return undef;
+	defined Contentment->context or return undef;
+	my $session = Contentment->context->session or return undef;
+	my $user = $session->{current_user} or return undef;
 	defined $user and return $user->group;
 	return undef;
 }

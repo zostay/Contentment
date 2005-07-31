@@ -24,14 +24,13 @@ $ERROR = $@;
 <%init>
 use Contentment;
 use Contentment::Context;
-use Contentment::Session;
 use File::Temp;
 
 Contentment->call_hooks('request/initialize');
 
 my $ERROR;
 
-$context = Contentment->context(@__processed_uuid__);
+$context = Contentment->context({ last_processed => \@__processed_uuid__ });
 
 my $q = $m->cgi_object;
 $url = $q->url;

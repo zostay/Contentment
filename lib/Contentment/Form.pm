@@ -3,7 +3,7 @@ package Contentment::Form;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 use Contentment;
 use Contentment::SPOPS;
@@ -176,7 +176,7 @@ sub Contentment::Form::Submission::create_from_args {
 			next;
 		}
 
-		if ($submission->{session_id} ne $Contentment::context->session_id) {
+		if ($submission->{session_id} ne Contentment->context->session_id) {
 			warn "Form Submission with UUID $uuid doesn't match this session, ignoring.";
 			next;
 		}
@@ -212,13 +212,13 @@ sub Contentment::Form::Submission::process {
 		$self->{ptime} = DateTime->now;
 		$self->{ftime} = DateTime->now if $result->{finished};
 		$self->save;
-		push @{ $Contentment::context->last_processed }, $self->{uuid};
+		push @{ Contentment->context->last_processed }, $self->{uuid};
 	} else {
 		$self->{ptime} = DateTime->now;
 		$self->save;
 	}
 
-	return Contentment->run_plugin($self->{map}, $Contentment::context);
+	return Contentment->run_plugin($self->{map}, Contentment->context);
 }
 
 =item $widget = Contentment::Form::Widget->build(%args)

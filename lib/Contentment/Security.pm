@@ -3,7 +3,7 @@ package Contentment::Security;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use Contentment::SPOPS;
 use SPOPS::Initialize;
@@ -195,10 +195,10 @@ my %spops = (
 		id_field        => [ qw/ pid / ],
 		increment_field => 1,
 		no_insert       => [ qw/ pid / ],
-		skip_undef      => [ qw/ scope_id / ],
-		no_update       => [ qw/ pid url_pattern scope scope_id / ],
+		skip_undef      => [ qw/ object_id scope_id compatibility_name / ],
+		no_update       => [ qw/ pid / ],
 		base_table      => 'general_permission',
-		sql_defaults    => [ qw/ scope_id / ],
+		sql_defaults    => [ qw/ object_id scope_id capability_name / ],
 		skip_object_key => 1,
 		fetch_by        => [ qw/ class / ],
 	},

@@ -15,7 +15,7 @@ use Log::Log4perl ':easy';
 use Symbol;
 use YAML 'LoadFile';
 
-our $VERSION = '0.009_017';
+our $VERSION = '0.009_018';
 
 BEGIN {
 	Log::Log4perl::easy_init($DEBUG);
@@ -30,7 +30,7 @@ sub scream {
 	}
 	return $str;
 }
-$SIG{__WARN__} = sub { Log::Log4perl::get_logger->warn(dc(caller(1)),"@_")  };
+$SIG{__WARN__} = sub { Log::Log4perl::get_logger->warn(dc(caller(1)), @_) };
 $SIG{__DIE__}  = sub { eval { Log::Log4perl::get_logger->error("An error prevented Contentment from serving this request: @_\n ",scream) }; confess @_; };
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
@@ -102,8 +102,10 @@ sub context {
 	Contentment->configuration;
 
 	require Contentment::Context;
+	require Contentment::Session;
 
 	my $self = shift;
+	my $args = shift || {};
 	my @last_processed = @_;
 
 	my $m = HTML::Mason::Request->instance;
@@ -114,8 +116,10 @@ sub context {
 		url            => eval { $m->cgi_object->url } || undef,
 		m              => $m,
 		r              => $r,
-		last_processed => \@last_processed,
+		%$args,
 	});
+
+	Contentment::Session->open_session;
 
 	return $context;
 }
