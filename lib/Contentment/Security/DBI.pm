@@ -9,7 +9,7 @@ use Scalar::Util 'looks_like_number';
 use SPOPS::Initialize;
 use SPOPS::Secure qw/ :level :scope /;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
@@ -279,22 +279,17 @@ sub _ug_update {
 	sub get_security {
 		my ($self, $p) = @_;
 
-		my $item;
-		if (defined $p->{object_id}) {
-			$item = $self->fetch($p->{object_id}, { skip_security => 1 });
-		} else {
-			$item = $self;
-		}
+		my $id = ref($self) ? $self->id : $p->{object_id};
 
 		my $current_user = $self->global_current_user;
 
 		if ($self->is_superuser || $self->is_supergroup) {
 			$log->is_debug &&
-				$log->debug("Current user is super, granting SEC_LEVEL_WRITE to user ", $item->id);
+				$log->debug("Current user is super, granting SEC_LEVEL_WRITE to user ", $id);
 			return { SEC_SCOPE_WORLD() => SEC_LEVEL_WRITE };
 		}
 
-		if (defined($current_user) && $item->id == $current_user->id) {
+		if (defined($current_user) && $id == $current_user->id) {
 			# it's me!
 			my $default_level = $self->SUPER::get_security($p);
 
@@ -303,16 +298,16 @@ sub _ug_update {
 
 			if ($default_level->{SEC_SCOPE_WORLD()} > SEC_LEVEL_READ) {
 				$log->is_debug &&
-					$log->debug("Current user ", $current_user->id, " is this user, but default perms give better than SEC_LEVEL_READ to user ", $item->id);
+					$log->debug("Current user ", $current_user->id, " is this user, but default perms give better than SEC_LEVEL_READ to user ", $id);
 				return $default_level;
 			} else {
 				$log->is_debug &&
-					$log->debug("Current user ", $current_user->id, " is this user, granting SEC_LEVEL_READ to user ", $item->id);
+					$log->debug("Current user ", $current_user->id, " is this user, granting SEC_LEVEL_READ to user ", $id);
 				return { SEC_SCOPE_WORLD() => SEC_LEVEL_READ };
 			}
 		} else {
 			$log->is_debug &&
-				$log->debug("Current user ",(defined($current_user)?$current_user->id:"(none)")," and this user don't match, falling back to default perms for user ", $item->id);
+				$log->debug("Current user ",(defined($current_user)?$current_user->id:"(none)")," and this user don't match, falling back to default perms for user ", $id);
 
 			return $self->SUPER::get_security($p);
 		}
@@ -333,36 +328,37 @@ sub _ug_update {
 	sub get_security {
 		my ($self, $p) = @_;
 
-		my $item;
-		if (defined $p->{object_id}) {
-			$item = $self->fetch($p->{object_id}, { security_level => SEC_LEVEL_READ, skip_security => 1 });
-		} else {
-			$item = $self;
-		}
+		my $id = ref($self) ? $self->id : $p->{object_id};
 
 		my $current_user = $self->global_current_user;
 
 		if ($self->is_superuser || $self->is_supergroup) {
 			$log->is_debug &&
-				$log->debug("Current user is super, granting SEC_LEVEL_WRITE to user ", $item->id);
+				$log->debug("Current user is super, granting SEC_LEVEL_WRITE to user ", $id);
 			return { SEC_SCOPE_WORLD() => SEC_LEVEL_WRITE };
 		}
 
 		if (defined $current_user) {
-			for my $user (@{ $item->user }) {
-				if ($user->id == $current_user->id) {
-					# it's my group!
-					my $default_level = $self->SUPER::get_security($p);
+			my $count = $self->db_select({
+				select => [ 'count(*)' ],
+				from   => [ 'group_user' ],
+				where  => 'group_id = ? AND user_id = ?',
+				value  => [ $id, $current_user->id ],
+				return => 'single'
+			});
 
-					if ($default_level->{SEC_SCOPE_WORLD()} > SEC_LEVEL_READ) {
-						$log->is_debug &&
-							$log->debug("Current user is in this group, but default perms give better than SEC_LEVEL_READ to group ", $item->id);
-						return $default_level;
-					} else {
-						$log->is_debug &&
-							$log->debug("Current user is in this group, granting SEC_LEVEL_READ to group ", $item->id);
-						return { SEC_SCOPE_WORLD() => SEC_LEVEL_READ };
-					}
+			if ($count->[0] > 0) {
+				# it's my group!
+				my $default_level = $self->SUPER::get_security($p);
+
+				if ($default_level->{SEC_SCOPE_WORLD()} > SEC_LEVEL_READ) {
+					$log->is_debug &&
+						$log->debug("Current user is in this group, but default perms give better than SEC_LEVEL_READ to group ", $id);
+					return $default_level;
+				} else {
+					$log->is_debug &&
+						$log->debug("Current user is in this group, granting SEC_LEVEL_READ to group ", $id);
+					return { SEC_SCOPE_WORLD() => SEC_LEVEL_READ };
 				}
 			}
 		}

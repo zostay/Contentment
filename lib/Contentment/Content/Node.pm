@@ -3,7 +3,7 @@ package Contentment::Content::Node;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 use Carp;
 use DateTime;
@@ -156,10 +156,10 @@ sub _node_update {
 	
 	if ($self->{enabled}) {
 		$self->{mtime} = $now;
-		$self->{updater} = $Contentment::Context->current_user->id;
+		$self->{updater} = Contentment->context->current_user->id;
 	} else {
 		$self->{dtime} = $now;
-		$self->{deleter} = $Contentment::Context->current_user->id;
+		$self->{deleter} = Contentment->context->current_user->id;
 	}
 
 	return __PACKAGE__;
@@ -225,10 +225,10 @@ sub _node_update {
 	
 	if ($self->{enabled}) {
 		$self->{mtime} = $now;
-		$self->{updater} = $Contentment::Context->current_user->id;
+		$self->{updater} = Contentment->context->current_user->id;
 	} else {
 		$self->{dtime} = $now;
-		$self->{deleter} = $Contentment::Context->current_user->id;
+		$self->{deleter} = Contentment->context->current_user->id;
 	}
 
 	return __PACKAGE__;

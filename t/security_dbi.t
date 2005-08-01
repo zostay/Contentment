@@ -6,7 +6,7 @@ use lib 'buildlib';
 use Contentment;
 use Contentment::Test;
 use DateTime;
-use Test::More tests => 54;
+use Test::More tests => 55;
 
 my $now = DateTime->now;
 
@@ -94,7 +94,7 @@ $group->{groupname}   = 'testus';
 $group->{description} = 'Test the Monkeys';
 ok($group->save);
 # 35
-ok($group->add_user($user));
+ok($group->user_add($user));
 # 36
 ok($group->id);
 is($group->{groupname}, 'testus');
@@ -104,7 +104,8 @@ ok($group->{mtime} >= $now);
 is($group->{dtime}, undef);
 is($group->{enabled}, 1);
 is_deeply($group->{group_data}, {});
-# 44
+is($group->user->[0]->id, $user->id);
+# 45
 $perm = Contentment::Security::Permission->new;
 $perm->{class} = "Contentment::Security::DBI::Group";
 $perm->{object_id} = $group->id;
@@ -122,9 +123,9 @@ ok($lookup_group->{mtime} >= $now);
 is($lookup_group->{dtime}, undef);
 is($lookup_group->{enabled}, 1);
 is_deeply($lookup_group->{group_data}, {});
-# 52
+# 53
 $group->{enabled} = 0;
 ok($group->save);
-# 53
-ok($group->{dtime} >= $now);
 # 54
+ok($group->{dtime} >= $now);
+# 55

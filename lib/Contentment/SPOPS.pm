@@ -3,7 +3,7 @@ package Contentment::SPOPS;
 use strict;
 use warnings;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use Contentment;
 use Data::Dumper;
@@ -212,7 +212,7 @@ sub get_security {
 		$log->debug("Found ", scalar(@$perms), " permission records for ", (ref($self) || $self));
 
 	my $user   = $self->global_current_user;
-	my $groups = $self->global_current_group || [];
+	my $groups = $self->global_current_group({ skip_security => 1 }) || [];
 
 	my $id = ref($self) ? $self->id : $p->{object_id};
 
@@ -317,10 +317,12 @@ Returns the a reference to an array of objects representing the current groups i
 =cut
 
 sub global_current_group {
+	my ($self, $p) = @_;
+
 	defined Contentment->context or return undef;
 	my $session = Contentment->context->session or return undef;
 	my $user = $session->{current_user} or return undef;
-	defined $user and return $user->group;
+	defined $user and return $user->group($p);
 	return undef;
 }
 
