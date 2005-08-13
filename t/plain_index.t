@@ -15,7 +15,7 @@ SKIP: {
 		use Apache::Test ':withtestmore';
 		use Apache::TestRequest;
 	";
-	skip "Apache::Test is not installed.", 1 if $@;
+	skip "Apache::Test is not installed.", 10 if $@;
 
 	my $data = GET_BODY('/list/plain_index.html');
 	like ($data, qr(<title>\s*Index Test\s*-\s*$conf->{site_title}\s*</title>));

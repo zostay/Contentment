@@ -1,0 +1,8 @@
+<& /content/util/generate, 
+	rootname => "generate_to_pod.pod",
+	to       => "text/html" &>
+
+<%attr>
+title => "Testing Generate To"
+abstract => "A test to test generate with the to argument."
+</%attr>
