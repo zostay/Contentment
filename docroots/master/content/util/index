@@ -45,6 +45,9 @@ sub smart_cmp {
 
 my @files = $vfs->find(sub {
 	my $file = local $_ = shift;
+
+	return 0 if $file eq $vfs->lookup($dir);
+
 	if (/$conf{non_indexed_files}/) {
 		$file->is_container and $File::System::prune = 1;
 		return 0;

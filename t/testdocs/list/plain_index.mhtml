@@ -1,0 +1,6 @@
+<%attr>
+title => "Index Test"
+abstract => "Test of indexing."
+</%attr>
+
+<& /content/util/index &>

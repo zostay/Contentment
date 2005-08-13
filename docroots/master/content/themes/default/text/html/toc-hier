@@ -1,20 +1,22 @@
 <%args>
-	@files
+@files
 </%args>
 
+% if (@files) {
 <ul class="toc">
-% my $last_num = scalar(split '/', $file->path);
+% my $last_num = scalar(my @x = split '/', $files[0]->path);
+% my $num;
 % for my $file (@files) {
-% 	my $url  = $file->path;
+% 	my $url  = $file->lookup_source->path;
 % 	$url =~ s/\.\w+$/\.html/;
 %
-% 	my $num = scalar(split '/', $file->path);
+% 	my $num = scalar(@x = split '/', $file->path);
 % 	while ($num > $last_num) {
-%		print q(<ul class="toc">);
+<ul class="toc">
 %		$last_num++;
 %	}
-%	while ($num < $last_num) {
-%		print q(</ul>);
+%	while ($num <= $last_num) {
+</ul>
 %		$last_num--;
 %	}
 
@@ -23,3 +25,8 @@
 	</li>
 % }
 </ul>
+% 	while ($num <= $last_num) {
+</ul>
+%		$last_num--;
+% 	}
+% }
