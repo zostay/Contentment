@@ -20,7 +20,7 @@ Contentment::Content::Node - Handy module for storing common data
 
 Borrowing from so many other content management systems (esp. Drupal and Everything), the node concept is that most content can be treated similarly. All content records are associated with the node. When creating content in other modules, content modules should create a node object and refer to it for generic content information.
 
-Overall this module is a bit primitive and doesn't offer much. I'm still building it up to the pinacle of glory it should eventually assume.
+This module isn't a good starting place. The first document you should examine is L<Contentment::Content::Nodelet>, which is the convenience class utilizing the C<Contentment::Content::Node> and C<Contentment::Content::Revision> classes defined here. This module doesn't function on its own, but only in the context of a nodelet object.
 
 =head1 NODE DATA
 
@@ -32,16 +32,13 @@ my %spops = (
 	node => {
 		class			=> 'Contentment::Content::Node',
 		isa				=> [ qw/ Contentment::SPOPS / ],
-		ruleset_from	=> [ qw/ SPOPSx::Tool::DateTime / ],
+		rules_from		=> [ qw/ SPOPSx::Tool::DateTime Contentment::Security / ],
 		base_table		=> 'node',
 		field			=> [ qw/
 			node_id
-			head_node_rev_id
+			head_revision_id
 			module
-			path
 			enabled
-			node_owner
-			node_group
 			ctime
 			creator
 			mtime
@@ -56,17 +53,18 @@ my %spops = (
 			mtime => 'DateTime::Format::MySQL',
 			ctime => 'DateTime::Format::MySQL',
 		},
-		has_a			=> { 'Contentment::Content::Revision' => 'head_node_rev_id' },
+		user_fields     => [ qw/ creator updater deleter / ],
+		has_a			=> { 'Contentment::Content::Revision' => { head_revision => 'head_revision_id' } },
 		links_to		=> { 'Contentment::Content::Revision' => 'revision' },
 	},
 	revision => {
 		class			=> 'Contentment::Content::Revision',
 		isa				=> [ qw/ Contentment::SPOPS / ],
-		ruleset_from	=> [ qw/ SPOPSx::Tool::DateTime / ],
+		rules_from		=> [ qw/ SPOPSx::Tool::DateTime Contentment::Security / ],
 		base_table		=> 'revision',
 		field			=> [ qw/
-			node_rev_id
 			revision_id
+			version_number
 			node_id
 			ctime
 			creator
@@ -75,13 +73,14 @@ my %spops = (
 			dtime
 			deleter
 		/ ],
-		id_field		=> 'node_rev_id',
+		id_field		=> 'revision_id',
 		increment_field	=> 1,
 		datetime_format	=> {
 			ctime => 'DateTime::Format::MySQL',
 			mtime => 'DateTime::Format::MySQL',
 			ctime => 'DateTime::Format::MySQL',
 		},
+		user_fields     => [ qw/ creator updater deleter / ],
 		has_a			=> { 'Contentment::Content::Node' => 'node_id' },
 	},
 );
@@ -91,35 +90,32 @@ SPOPS::Initialize->process({ config => \%spops });
 __PACKAGE__->_create_table('MySQL', 'node', q(
 	CREATE TABLE node (
 		node_id			INT(11) NOT NULL AUTO_INCREMENT,
-		current_node_rev_id	INT(11),
+		head_revision_id INT(11) NOT NULL,
 		module			VARCHAR(100) NOT NULL,
-		path			VARCHAR(255),
 		enabled			INT(1) NOT NULL,
-		node_owner		VARCHAR(150) NOT NULL,
-		node_group		VARCHAR(150) NOT NULL,
 		ctime			DATETIME NOT NULL,
 		creator			VARCHAR(150) NOT NULL,
 		mtime			DATETIME NOT NULL,
 		updater			VARCHAR(150) NOT NULL,
 		dtime			DATETIME,
 		deleter			VARCHAR(150),
-		PRIMARY KEY (node_id), 
-		UNIQUE (path));
+		PRIMARY KEY (node_id),
+		UNIQUE (head_revision_id));
 ));
 
 __PACKAGE__->_create_table('MySQL', 'revision', q(
 	CREATE TABLE revision (
-		node_rev_id		INT(11) NOT NULL AUTO_INCREMENT,
-		node_id			INT(11) NOT NULL,
-		revision_id		INT(11) NOT NULL,
+		revision_id		INT(11) NOT NULL AUTO_INCREMENT,
+		node_id			INT(11),
+		version_number	INT(11) NOT NULL,
 		ctime			DATETIME NOT NULL,
 		creator			VARCHAR(150) NOT NULL,
 		mtime			DATETIME NOT NULL,
 		updater			VARCHAR(150) NOT NULL,
 		dtime			DATETIME,
 		deleter			VARCHAR(150),
-		PRIMARY KEY (node_rev_id),
-		UNIQUE (node_id, revision_id));
+		PRIMARY KEY (revision_id),
+		UNIQUE (node_id, version_number));
 ));
 
 =head1 NODE/REVISION FEATURES
@@ -138,7 +134,18 @@ Also notably absent are titles and other data. I'd like to keep anything beyond 
 
 sub get_security {
 	my $self = shift;
-	$self->module_object->get_security(@_);
+	my ($p) = @_;
+
+	my $item;
+	if (ref($self)) {
+		$item = $self;
+	} else {
+		my $id = ref($self) ? $self->id : $p->{object_id};
+		$item = $self->fetch($id, { skip_security => 1 });
+	}
+
+	my $module_object = $item->module_object({ skip_security => 1 });
+	return $module_object->get_security(@_);
 }
 
 sub _node_update {
@@ -149,17 +156,17 @@ sub _node_update {
 
 	if ($p->{is_add}) {
 		$self->{ctime} = $now;
-		$self->{creator} = Contentment->context->current_user->id;
+		$self->{creator} = Contentment->context->current_user;
 		$self->{mtime} = $now;
-		$self->{updater} = Contentment->context->current_user->id;
+		$self->{updater} = Contentment->context->current_user;
 	}
 	
 	if ($self->{enabled}) {
 		$self->{mtime} = $now;
-		$self->{updater} = Contentment->context->current_user->id;
+		$self->{updater} = Contentment->context->current_user;
 	} else {
 		$self->{dtime} = $now;
-		$self->{deleter} = Contentment->context->current_user->id;
+		$self->{deleter} = Contentment->context->current_user;
 	}
 
 	return __PACKAGE__;
@@ -167,8 +174,17 @@ sub _node_update {
 
 sub ruleset_factory {
 	my ($class, $rs_table) = @_;
-	push @{ $rs_table->{pre_save_action} }, \&_node_update;
+	unshift @{ $rs_table->{pre_save_action} }, \&_node_update;
 	return __PACKAGE__;
+}
+
+sub fetch_by_revision_id {
+	my $class = shift;
+	my $revision_id = shift;
+
+	my $rev = Contentment::Content::Revision->fetch($revision_id, @_);
+	my $node = $class->fetch($rev->node_id, @_);
+	return $node;
 }
 
 =head1 NODE METHODS
@@ -179,13 +195,19 @@ In order to make this API a little more usable, several features have been added
 
 =item $obj = $node-E<gt>module_object
 
-This method returns the object represented by the node's module field. This method will call the module's C<load_node_revision()> method to retrieve the object for the head revision.
+This method returns the object represented by the node's module field. This method will call the module's C<fetch()> method to retrieve the object for the head revision.
 
 =cut
 
 sub module_object {
 	my $self = shift;
-	$self->{module}->load_node_revision($self->{head_node_rev_id});
+	my $p = shift;
+
+	if (defined $self->head_revision) {
+		return $self->{module}->fetch($self->head_revision->id, $p);
+	} else {
+		return undef;
+	}
 }
 
 =item $node-E<gt>touch
@@ -196,7 +218,9 @@ This method should not be called directly as it is called the C<Contentment::Con
 
 sub touch {
 	my $self = shift;
-	$self->save;
+	my $p    = shift;
+
+	$self->save($p);
 }
 
 =back
@@ -207,10 +231,23 @@ package Contentment::Content::Revision;
 
 sub get_security {
 	my $self = shift;
-	$self->module_object->get_security(@_);
+	my ($p) = @_;
+
+	my $item;
+	if (ref($self)) {
+		$item = $self;
+	} else {
+		my $id = ref($self) ? $self->id : $p->{object_id};
+		$item = $self->fetch($id, { skip_security => 1 });
+	}
+
+	my $module_object = $item->module_object({ skip_security => 1 });
+	use Carp;
+	confess "Your code is fucked." unless $module_object;
+	return $module_object->get_security(@_);
 }
 
-sub _node_update {
+sub _revision_update {
 	my $self = shift;
 	my $p    = shift;
 
@@ -218,17 +255,19 @@ sub _node_update {
 
 	if ($p->{is_add}) {
 		$self->{ctime} = $now;
-		$self->{creator} = Contentment->context->current_user->id;
+		$self->{creator} = Contentment->context->current_user;
 		$self->{mtime} = $now;
-		$self->{updater} = Contentment->context->current_user->id;
+		$self->{updater} = Contentment->context->current_user;
 	}
-	
-	if ($self->{enabled}) {
-		$self->{mtime} = $now;
-		$self->{updater} = Contentment->context->current_user->id;
-	} else {
+
+	my $node = Contentment::Content::Node->fetch($self->{node_id}, { skip_security => 1 });
+
+	if (!$p->{is_add} && ($p->{disable} || $node->{head_revision_id} != $self->id)) {
 		$self->{dtime} = $now;
-		$self->{deleter} = Contentment->context->current_user->id;
+		$self->{deleter} = Contentment->context->current_user;
+	} else {
+		$self->{mtime} = $now;
+		$self->{updater} = Contentment->context->current_user;
 	}
 
 	return __PACKAGE__;
@@ -236,7 +275,7 @@ sub _node_update {
 
 sub ruleset_factory {
 	my ($class, $rs_table) = @_;
-	push @{ $rs_table->{pre_save_action} }, \&_node_update;
+	unshift @{ $rs_table->{pre_save_action} }, \&_revision_update;
 	return __PACKAGE__;
 }
 
@@ -251,13 +290,15 @@ TODO Add documentation for the Revision schema.
 
 =item $obj = $revision-E<gt>module_object
 
-This method returns the object represented byt he node's module field. This method will call the module's C<load_node_revision()> method to retrieve the object for this revision.
+This method returns the object represented byt he node's module field. This method will call the module's C<fetch()> method to retrieve the object for this revision.
 
 =cut
 
 sub module_object {
 	my $self = shift;
-	$self->node->{module}->load_node_revision($self->{node_rev_id});
+	my $p = shift;
+	my $node = $self->node($p);
+	return $node->{module}->fetch($self->id, $p);
 }
 
 =item $revision-E<gt>touch
@@ -267,9 +308,12 @@ This method should be called whenever a node module calls save. This should be p
 =cut
 
 sub touch {
-	my $self =shift;
-	$self->node->touch;
-	$self->save;
+	my $self = shift;
+	my $p    = shift;
+
+	my $node = $self->node($p);
+	$node->touch($p);
+	$self->save($p);
 }
 
 =item $revision-E<gt>revive
@@ -284,7 +328,7 @@ sub revive {
 	$self->global_datasource_handle->begin_work;
 
 	my $node = $self->node;
-	$node->{current_node_rev_id} = $self->id;
+	$node->{head_revision_id} = $self->id;
 	$node->save;
 	$self->save;
 

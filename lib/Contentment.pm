@@ -15,13 +15,13 @@ use Log::Log4perl ':easy';
 use Symbol;
 use YAML 'LoadFile';
 
-our $VERSION = '0.009_019';
+our $VERSION = '0.009_020';
 
 BEGIN {
 	Log::Log4perl::easy_init($DEBUG);
 }
 
-sub dc { sprintf "(package %s) (file %s:line %d) (called %s)", @_ }
+sub dc { scalar(@_) ? sprintf("(package %s) (file %s:line %d) (called %s)", @_) : '(no caller info)' }
 sub scream {
 	my $i = 2;
 	my $str;

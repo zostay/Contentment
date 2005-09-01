@@ -265,4 +265,46 @@ Contentment::SPOPS->_create_table('MySQL', 'general_permission', q(
 #		UNIQUE (url_pattern, scope, scope_id));
 #));
 
+sub ruleset_factory {
+	my ($class, $rstab) = @_;
+	push @{ $rstab->{post_fetch_action} }, \&convert_to_security_object;
+	push @{ $rstab->{pre_save_action} }, \&convert_to_security_object_id;
+	push @{ $rstab->{post_save_action} }, \&convert_to_security_object;
+	return __PACKAGE__;
+}
+
+sub convert_to_security_object {
+	my $self = shift;
+	my $config = $self->CONFIG;
+
+	for my $field (@{ $config->{user_fields} }) {
+		defined $self->{$field} or next;
+		$self->{$field} = Contentment->security->fetch_user($self->{$field});
+	}
+
+	for my $field (@{ $config->{group_fields} }) {
+		defined $self->{$field} or next;
+		$self->{$field} = Contentment->security->fetch_group($self->{$field});
+	}
+
+	return __PACKAGE__;
+}
+
+sub convert_to_security_object_id {
+	my $self = shift;
+	my $config = $self->CONFIG;
+
+	for my $field (@{ $config->{user_fields} }) {
+		defined $self->{$field} or next;
+		$self->{$field} = $self->{$field}->id;
+	}
+
+	for my $field (@{ $config->{group_fields} }) {
+		defined $self->{$field} or next;
+		$self->{$field} = $self->{$field}->id;
+	}
+
+	return __PACKAGE__;
+}
+
 1

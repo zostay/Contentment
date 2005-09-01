@@ -6,6 +6,12 @@ use warnings;
 our $VERSION ='0.02';
 
 use Carp;
+use Contentment::Content::Node;
+use Log::Log4perl;
+use SPOPS::ClassFactory qw/ DONE /;
+use SPOPS::Initialize;
+use SPOPS::Secure qw/ :level :scope /;
+
 use base 'Contentment::SPOPS';
 
 my $log = Log::Log4perl->get_logger(__PACKAGE__);
@@ -24,11 +30,11 @@ By using this class, most of the work of making your class into a node module is
 
 The primary key/ID-field for nodelet objects is the node_id from the node record.
 
-=item 1.
+=item 2.
 
 Node creation involes the creation of two related records other than the main object: the node and the revision.
 
-=item 2.
+=item 3.
 
 There are two ways to update a node record:
 
@@ -44,15 +50,15 @@ The alternative is to create a new revision of the object. This causes the objec
 
 =back
 
-=item 3.
+=item 4.
 
 Deletion of a record can also happen in two ways. One is to disable all revisions associated with the record. The other is to actually remove the records from the database altogether. Both are possible.
 
-=item 4.
+=item 5.
 
 Searching for records has to be done a bit more carefully to ensure that only the current revision of each record is returned on a normal search. Records that have been "deleted" but are still stored in the database should also be ignored.
 
-=item 4.
+=item 6.
 
 However, it wouldn't be of much value if there wasn't some way to search for old revisions and "deleted" records.
 
@@ -68,7 +74,7 @@ In general, a nodelet is configured in exactly the same way as a regular SPOPS D
 
 =item id_field
 
-The nodelet must define a field that can link back to the numeric ID of the revision table. This is the "node_rev_id" field of the revision table. This configuration setting should be set to the primary key of the nodelet table, which will be used as the foreign key to node_rev_id in revision. The identifier stored here is unique for each revision of all nodelets stored in the database.
+The nodelet must define a field that can link back to the numeric ID of the revision table. This is the "revision_id" field of the revision table. And just to keep you on your toes, this is not the value returned by the C<id()> method. Rather, the "node_id" is returned as the ID value. To get this value, you can use C<$nodelet->revision->id> or as a short-hand C<$nodelet->revision_id>.
 
 =item create_revision (default: 0)
 
@@ -98,13 +104,42 @@ Fetches the record associated with the given C<$id>. By default, this will retur
 
 If this is set to a true value, then a disabled record can be returned. Without this option, C<undef> would be returned if the current record associated with a nodelet is disabled.
 
-=item revision_id
+=item version_number
 
 If this parameter is set, then the "include_disabled" option is implied. This allows you to retrieve a different revision for the nodelet than the head revision.
 
 =back
 
 =cut
+
+sub revision_id {
+	my $self = shift;
+	my $id_field = $self->id_field;
+	return $self->{$id_field};
+}
+
+sub revision {
+	my $self = shift;
+	my $id_field = $self->id_field;
+	return Contentment::Content::Revision->fetch(
+		$self->{$id_field}, { skip_security => 1 }
+	);
+}
+
+sub node {
+	my $self = shift;
+	my $id_field = $self->id_field;
+	return Contentment::Content::Node->fetch_by_revision_id(
+		$self->{$id_field}, { skip_security => 1 }
+	);
+}
+
+
+sub version_number {
+	my $self = shift;
+	my $rev = $self->revision;
+	return $rev->version_number;
+}
 
 sub id_clause {
 	my $self = shift;
@@ -114,24 +149,47 @@ sub id_clause {
 
 	my $id_field = $self->id_field;
 
-	# select ID and link revisions to nodelets
-	my $base = "node.node_id = $id".
-	      " AND revision.node_rev_id = nodelet.$id_field";
+	my $clause;
+	if (ref $self) {
+		# Fetch this record from the database. We'll use revision_id instead
+		# since it works with SELECT, UPDATE, and DELETE. Doesn't matter if
+		# 'noqualify' is set or not. We don't need to qualify anyway. Duh.
+		if (!defined $id || $id == $self->id) {
+			$clause = "$id_field = ".$self->id;
 
-	# either link nodes to revisions and select by revision_id
-	# or select only head revisions
-	if ($p->{revision_id}) {
-		$base .= " AND revision.node_id = node.node_id".
-		         " AND revision.revision_id = $p->{revision_id}";
+		# Fetch this record from the database, but the current ID has been
+		# changed. This is bad news. First, I don't know a good way to hack this
+		# in. Second, changing node IDs is just a plain no-no. "You are the
+		# weakest link. Good-bye." We just don't do it.
+		} else {
+			croak "Cannot generate an ID clause to change IDs. Please, don't change node IDs.";
+		}
+
+	# We're performing an initial fetch. We need to gather up our various selves
+	# across different tables and figure out who we are. Fetches of this sort
+	# **MUST** include node and revision tables in the list.
 	} else {
-		$base .= " AND revision.node_rev_id = node.head_node_rev_id";
+		my $table_name = $self->table_name;
+
+		# select ID and link revisions to nodelets
+		$clause = "node.node_id = $id".
+			 " AND revision.revision_id = $table_name.$id_field";
+
+		# either link nodes to revisions and select by version_number
+		# or select only head revisions
+		if ($p->{version_number}) {
+			$clause .= " AND revision.node_id = node.node_id".
+					   " AND revision.version_number = $p->{version_number}";
+		} else {
+			$clause .= " AND revision.revision_id = node.head_revision_id";
+		}
+
+		unless ($p->{include_disabled}) {
+			$clause .= " AND node.enabled = 1";
+		}
 	}
 
-	unless ($p->{include_disabled}) {
-		$base .= " AND node.enabled = 1";
-	}
-
-	return $base;
+	return $clause;
 }
 
 # This is, as my sister would say, Fan Freaking Tastic. There should be hooks
@@ -184,10 +242,7 @@ sub fetch {
         # later) and grab the record
 
         my %args = (
-            from   => [ 
-				"node", "revision",
-				$class->table_name." nodelet",
-		   	],
+            from   => [ "node", "revision", $class->table_name ],
             select => $select_fields,
             where  => $class->id_clause( $id, undef, $p ),
             db     => $p->{db},
@@ -210,11 +265,165 @@ sub fetch {
         # method (e.g., the optional 'field_alter') is not the same as
         # a parameter of an object -- THAT would be fun to debug...
 
-        $obj = $class->new({ id => $id, skip_default_values => 1, %{ $p } });
+		# Note that I DO NOT pass id => ... here because that will cause a bad
+		# call to id(), which isn't stored in the record anyway. :-P
+        $obj = $class->new({ skip_default_values => 1, %{ $p } });
         $obj->_fetch_assign_row( $raw_fields, $row, $p );
     }
     return $obj->_fetch_post_process( $p, $level );
 }
+
+sub _execute_multiple_record_query {
+	my $class = shift;
+	my $p     = shift;
+
+	my $table_name = $class->table_name;
+	my $id_field   = $class->id_field;
+
+	$p->{from} ||= [ $table_name, 'node', 'revision' ];
+	push @{ $p->{from} }, 'node' unless grep /^node$/, $p->{from};
+	push @{ $p->{from} }, 'revision' unless grep /^revision$/, $p->{from};
+
+	my $where;
+	if ($p->{all_revisions}) {
+		$where = "node.node_id = revision.node_id";
+	} else {
+		$where = "node.head_revision_id = revision.revision_id";
+	}
+
+	$where .= " AND revision.revision_id = $table_name.$id_field";
+
+	unless ($p->{include_disabled}) {
+		$where .= " AND node.enabled <> 0"
+	}
+
+	$p->{where} = $p->{where} ? "($where) AND ($p->{where})" : $where;
+
+	return $class->SUPER::_execute_multiple_record_query($p);
+}
+
+sub save {
+	my $self = shift;
+	my $p    = shift;
+
+	# Check to see if this is an insert
+	my $is_add = $p->{is_add} || !$self->saved;
+
+	# Check to see if we want to create a new revision
+	my $create_revision = defined($p->{create_revision}) ? $p->{create_revision} : ($self->{config}{create_revision} || 0);
+
+	# Make sure we're allowed to do this
+    unless ( $p->{skip_security} ) {
+        $self->check_action_security({ required => SEC_LEVEL_WRITE,
+                                       is_add   => $is_add });
+    }
+
+	# Start our transaction unless they warn us of nesting
+	my $dbh = $self->global_datasource_handle;
+	$dbh->begin_work unless $p->{no_transaction};
+
+	# Get the name of the id_field
+	my $id_field = $self->id_field;
+
+	eval {
+		my ($node, $rev);
+		if ($is_add) {
+			# Create a new revision
+			$rev = Contentment::Content::Revision->new;
+			$rev->{version_number} = 1;
+			$rev->save({ skip_security => 1 });
+
+			# The real ID should be the revision ID
+			$self->{$id_field} = $rev->id;
+
+			# Create a new node with this revision at the head
+			$node = Contentment::Content::Node->new;
+			$node->{head_revision_id} = $rev->id;
+			$node->{module}           = ref($self);
+			$node->{enabled}          = $p->{enabled} || 1;
+			$node->save({ skip_security => 1 });
+
+			# Set the revision's node and re-save
+			$rev->{node_id} = $node->id;
+			$rev->save({ skip_security => 1 });
+	
+			# Insert, don't check seucrity again
+			$p->{skip_security} = 1;
+			$self->SUPER::save($p);
+		} else {
+			if ($create_revision) {
+				# Get the current node and revision
+				$node = $self->node;
+				$rev  = $self->revision;
+
+				# Create a new revision
+				my $new_rev = Contentment::Content::Revision->new;
+				$new_rev->{node_id}        = $node->id;
+				$new_rev->{version_number} = $rev->version_number + 1;
+				$new_rev->save({ skip_security => 1 });
+
+				# Change the head to the new me
+				$node->{head_revision_id} = $new_rev->id;
+				$node->save({ skip_security => 1 });
+
+				# Touch the old revision to set the dtime/deleter
+				$rev->touch({ skip_security => 1 });
+		
+				# Update my ID
+				$self->{$id_field} = $new_rev->id;
+
+				# Third, SUPER::save to get the other fields
+				$p->{skip_security} = 1;
+				$p->{is_add} = 1;
+				$self->SUPER::save($p);
+			} else {
+				# Just touch the revision and node to set the dates
+				$rev = $self->revision;
+				$rev->touch({ skip_security => 1 });
+			}
+		}
+	};
+
+	# On error, rollback and croak. On success, commit and return result.
+	if ($@) {
+		my $ERROR = $@;
+		eval { $dbh->rollback unless $p->{no_transaction}; };
+		croak "Nodelet creation failed and rolled back: $ERROR",
+			($@ ? " ($@)" : '');
+	} else {
+		$dbh->commit unless $p->{no_transaction};
+		return 1;
+	}
+}
+
+sub touch {
+	my $self = shift;
+	$self->save;
+}
+
+sub behavior_factory {
+	my $class = shift;
+
+	return { id_method => \&_nodelet_conf_id_method };
+}
+
+sub _nodelet_conf_id_method {
+	my $class = shift;
+	my $CONFIG = $class->CONFIG;
+	my $id_field = $CONFIG->{id_field};
+
+	eval qq(
+		sub $class\::id {
+			my \$self = shift;
+			my \$node = Contentment::Content::Node->fetch_by_revision_id(\$self->{$id_field}, { skip_security => 1 });
+			confess "id() method called while $class (\$self->{$id_field}) in weird state" unless \$node;
+			return \$node->id(\@_);
+		}
+	);
+
+	return ( DONE, undef );
+}
+
 =item $nodelets = Nodelet-E<gt>fetch_group(\%params)
 
 This method returns all of the nodelet records for enabled head revisions. That is, only currently enabled records are returned and only the head revision of the nodelet is returned (under normal circumstances).
@@ -225,7 +434,7 @@ The behavior of this method can be altered by through the use of parameters in C
 
 =item all_revisions
 
-This option implies "include_disabled". This causes every revision matching the given criteria to be returned in the query, so multiple records with the same node_id can be returned (use revision_id to differentiate them).
+This option implies "include_disabled". This causes every revision matching the given criteria to be returned in the query, so multiple records with the same node_id can be returned (use version_number to differentiate them).
 
 =item include_disabled
 
@@ -299,7 +508,7 @@ This method will delete or disable a nodelet record. The operation performed dep
 
 Some of the behavior of this method varies depending on the state of the database. If "disable" is false and this nodelet record represents the only revision in the database for this node_id, then the nodelet, revision, and node records are all deleted. 
 
-If "disable" is false and there are multiple revisions for this node_id besides this one, only this nodelet and associated revision are deleted (see "cascade_delete" for a slightly different behavior). If this nodelet also happens to be the head revision, then the nodelet with the highest revision_id is then selected to replace this one as head (i.e., the record is now effectively disabled, with this particular nodelet revision completely purged from the table). If this behavior doesn't suit your needs (i.e., a different revision should become the head), then you should change the head before deleting the revision.
+If "disable" is false and there are multiple revisions for this node_id besides this one, only this nodelet and associated revision are deleted (see "cascade_delete" for a slightly different behavior). If this nodelet also happens to be the head revision, then the nodelet with the highest version_number is then selected to replace this one as head (i.e., the record is now effectively disabled, with this particular nodelet revision completely purged from the table). If this behavior doesn't suit your needs (i.e., a different revision should become the head), then you should change the head before deleting the revision.
 
 The behavior of the behavior of this method is further determined by other parameters:
 
