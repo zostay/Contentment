@@ -51,6 +51,7 @@ my $build = Contentment::Build->new(
 		'DateTime::Format::DBI'   => '0.031',
 		'File::System'            => '1.13',
 		'HTML::Mason'		      => '1.23',
+		'IO::NestedCapture'       => '1.01',
 		'Log::Log4perl'		      => '0.47',
 		'MIME::Types'             => '1.13',
 		'perl'				      => '5.6.1',

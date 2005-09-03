@@ -20,7 +20,7 @@ if ($file) {
 	if ($top) {
 		my $original_kind = $file->generated_kind;
 		$context->original_kind($original_kind);
-		$log->debug("File type ",$file->filetype," says $file->{path} generates original kind of $original_kind");
+		$log->debug("File type ",$file->filetype," says ",$file->path," generates original kind of $original_kind");
 	}
 
 	my $headers = $file->generate_headers($m->request_args);

@@ -67,7 +67,7 @@ sub generated_kind {
 	my $file  = shift;
 	
 	my $generated_kind;
-	unless ($generated_kind = $file->get_property($file, 'kind')) {
+	unless ($generated_kind = $class->get_property($file, 'kind')) {
 		if ($file->path =~ /\.m?html$/) {
 			$generated_kind = 'text/html';
 		} elsif ($file->path =~ /\.mason$/) {
@@ -188,6 +188,7 @@ sub generate {
 		);
 
 		print $buf;
+		$log->debug($buf);
 
 		return $result;
 	} else {

@@ -23,10 +23,10 @@ if ($file->get_property('cache') && $top) {
 		$log->debug("Loaded content from cache for $url");
 	}
 
-	print $content;
+	$m->print($content);
 } else {
 	$log->debug("Caching disabled for $url");
-	print $m->content;
+	$m->print($m->content);
 }
 
 return;

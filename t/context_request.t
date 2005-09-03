@@ -19,5 +19,5 @@ SKIP: {
 
 	print $body;
 
-	diag($body) if $body =~ /^not ok/m;
+	diag($body) if $body =~ /^not ok/m || $body =~ /500 Internal Server Error/;
 }

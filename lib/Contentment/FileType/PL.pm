@@ -65,7 +65,7 @@ sub generated_kind {
 	my $file  = shift;
 
 	my $generated_kind;
-	unless ($generated_kind = $file->get_property($file, 'kind')) {
+	unless ($generated_kind = $class->get_property($file, 'kind')) {
 		my $path = $file->path;
 		$path =~ s/\.pl$//;
 

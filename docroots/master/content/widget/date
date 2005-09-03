@@ -9,7 +9,6 @@ $context->add_widget(
 	name      => $name);
 
 my $value = !$override && defined $ARGS{$name} ? $ARGS{$name} : $default;
-print STDERR "VALUE: $value\n";
 
 $name = $context->form_id.".$name";
 </%init>

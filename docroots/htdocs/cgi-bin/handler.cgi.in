@@ -9,6 +9,7 @@ use Contentment;
 use Contentment::VFS;
 use Contentment::VFSResolver;
 use HTML::Mason::CGIHandler;
+use IO::NestedCapture;
 use Log::Log4perl;
 
 my $conf = Contentment::configuration;

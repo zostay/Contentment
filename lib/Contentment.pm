@@ -11,11 +11,12 @@ use Contentment::Config;
 use Contentment::VFS;
 use File::Temp;
 use HTML::Mason::Request;
+use IO::NestedCapture 'CAPTURE_IN_OUT';
 use Log::Log4perl ':easy';
 use Symbol;
 use YAML 'LoadFile';
 
-our $VERSION = '0.009_020';
+our $VERSION = '0.009_021';
 
 BEGIN {
 	Log::Log4perl::easy_init($DEBUG);
@@ -165,43 +166,12 @@ sub capture_streams {
 	$log->is_debug &&
 		$log->debug("Redirecting STDIN and STDOUT for capture.");
 
-	my $tie_in  = UNIVERSAL::can($in,  'TIEHANDLE');
-	my $tie_out = UNIVERSAL::can($out, 'TIEHANDLE');
+	# setup the capture
+	IO::NestedCapture->set_next_in($in);
+	IO::NestedCapture->set_next_out($out);
 
-	my ($save_in, $save_out);
-	my ($save_in_fd, $save_out_fd);
-
-	# Save/capture STDIN
-	if ($tie_in) {
-		$save_in = tied *STDIN;
-		tie *STDIN, $in;
-	} else {
-		if (tied *STDIN) {
-			$save_in = tied *STDIN;
-			no warnings 'untie';
-			untie *STDIN;
-		}
-		$save_in_fd = gensym;
-		open($save_in_fd, '<&STDIN');
-		open(STDIN, '<&='.fileno($in));
-	}
-
-	# Save/capture STDOUT
-	if ($tie_out) {
-		$save_out = tied *STDOUT;
-		tie *STDOUT, $out;
-	} else {
-		if (tied *STDOUT) {
-			$save_out = tied *STDOUT;
-			no warnings 'untie';
-			untie *STDOUT;
-		}
-		$save_out_fd = gensym;
-		open($save_out_fd, '>&STDOUT');
-		open(STDOUT, '>&='.fileno($out));
-	}
-
-	my $ofh = select STDOUT;
+	# start the capture
+	IO::NestedCapture->start(CAPTURE_IN_OUT);
 
 	# Run code within captured handles
 	my $result;
@@ -214,44 +184,10 @@ sub capture_streams {
 			$result = $code->(@_);
 		}
 	};
-
 	my $ERROR = $@;
 
-	select $ofh;
-
-	# Restore STDOUT
-	if ($tie_out) {
-		if (defined $save_out) {
-			tie *STDOUT, $save_out;
-		} else {
-			no warnings 'untie';
-			untie *STDOUT;
-		}
-	} else {
-		open(STDOUT, '>&='.fileno($save_out_fd));
-		close($save_out_fd);
-		
-		if (defined $save_out) {
-			tie *STDOUT, $save_out;
-		}
-	}
-
-	# Restore STDIN
-	if ($tie_in) {
-		if (defined $save_in) {
-			tie *STDIN, $save_in;
-		} else {
-			no warnings 'untie';
-			untie *STDIN;
-		}
-	} else {
-		open(STDIN, '<&='.fileno($save_in_fd));
-		close($save_in_fd);
-
-		if (defined $save_in) {
-			tie *STDIN, $save_in;
-		}
-	}
+	# stop the capture
+	IO::NestedCapture->stop(CAPTURE_IN_OUT);
 
 	if ($ERROR) {
 		die $ERROR;
