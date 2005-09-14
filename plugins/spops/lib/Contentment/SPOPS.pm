@@ -10,7 +10,6 @@ use Data::Dumper;
 use DBI;
 use Log::Log4perl;
 use SPOPS::Secure qw/ :level :scope /;
-use SQL::Translator;
 use UNIVERSAL;
 
 my $log = Log::Log4perl->get_logger("Contentment::SPOPS");
@@ -51,43 +50,6 @@ sub global_datasource_handle {
 	}
 
 	return $DB;
-}
-
-=item Contentment::SPOPS->_create_table($format, $table_name, $sql)
-
-This is a helper method for creating tables on the fly. This first checks to see if C<$table_name> exists in the database and does nothing if it does. Otherwise, this method will attempt to create the named table. The C<$format> variable is used to state which RDBMS the given SQL was written for. If the format given differs from the database in use, then L<SQL::Translator> is used to get the C<$sql> into the appropriate format. Finally, the C<$sql> is run in the database to create the table.
-
-This is handy, but it's not very well tested. It is meant to give Contentment the ability to move to another database with very little overhead, but I haven't used it on anything but MySQL yet, so this is still all speculation.
-
-=cut
-
-sub _create_table {
-	my ($class, $format, $table_name, $sql) = @_;
-
-	my $dbh = global_datasource_handle;
-	unless (grep m/\b$table_name\b/, $dbh->tables(undef, undef, $table_name)) {
-		$log->info("Table $table_name does not exist, will attempt to create");
-		my $conf = Contentment->configuration;
-
-		my $output;
-		if ($format ne $conf->{sql_type}) {
-			$log->is_debug &&
-				$log->debug("Format is '$format', sql_type is '$conf->{sql_type}'");
-			my $t = SQL::Translator->new;
-			$t->parser($format);
-			$t->producer($conf->{sql_type});
-			$output = $t->translate(\$sql)
-				or die "Translator error: ", $t->error; 
-		} else {
-			$output = $sql;
-		}
-		$log->info("Creating table $table_name: '$output'");
-
-		$dbh->do($output);
-	} else {
-		$log->is_debug
-			&& $log->debug("Table $table_name already exists");
-	}
 }
 
 =item $test = $obj->check_create($p)

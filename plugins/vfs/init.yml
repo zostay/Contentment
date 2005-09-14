@@ -1,0 +1,17 @@
+name: VFS
+description: Used to find files. Required by Contentment.
+version: 0.06
+required: 1
+order: -90
+
+use_lib:
+ - lib
+
+use:
+ - Contentment::VFS
+
+hooks:
+  Contentment::install: 
+    order: -100
+    sub: Contentment::VFS::install
+  Contentment::Response::resolve: Contentment::VFS::resolve

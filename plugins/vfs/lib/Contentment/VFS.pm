@@ -312,6 +312,20 @@ sub ancestors {
 
 =back
 
+=cut
+
+sub install {
+	my $settings = Contentment::Settings->new;
+	$settings->{namespace} = 'Contentment::VFS';
+	$settings->{data}{
+}
+
+sub upgrads {
+}
+
+sub remove {
+}
+
 =head1 SEE ALSO
 
 L<File::System>, L<File::System::Other>, L<File::System::Passthrough>, L<Contentment::FileType::Other>, L<Contentment::FileType::Mason>, L<Contentment::FileType::POD>

@@ -1,0 +1,11 @@
+name: SPOPS
+description: Standard SPOPS library for Contentment.
+version: 0.06
+required: 1
+order: -100
+
+use_lib:
+ - lib
+
+use:
+ - Contentment::SPOPS
