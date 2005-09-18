@@ -3,7 +3,9 @@ package Contentment::Hooks;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
+
+use Carp;
 
 =head1 NAME
 
@@ -14,10 +16,15 @@ Contentment::Hooks - Runs the Contentment hook system
   use Contentment::Hooks;
 
   # register Foo:bar() for hook 'foo' with order weight 50.
-  Contentment::Hooks->register('foo', \&Foo::bar, 50);
+  Contentment::Hooks->register(
+	  hook  => 'foo', 
+	  name  => 'Foo',
+	  code  => \&Foo::bar, 
+	  order => 50,
+  );
 
   # register Foo::baz() for hook 'foo' with default priority
-  Contentment::Hooks->register('foo', \&Foo::baz);
+  Contentment::Hooks->register(hook => 'foo', code => \&Foo::baz);
 
   # run the 'foo' hook with the given arguments
   Contentment::Hooks->call('foo', 0, foo => 7);
@@ -43,30 +50,110 @@ sub instance {
 	return $instance = bless {}, shift;
 }
 
-=item Contentment::Hook-E<gt>register($name, $code, $weight)
+=item Contentment::Hook-E<gt>register(%args)
 
-Register the code reference C<$code> to run with hook C<$name> with a order weight of C<$weight>. The order weight is optional and defaults to 0 if not given. Code registered with a lower weight will run before code registered with a higher weight.
+This registers a handler for a hook. All arguments are passed in a hash:
+
+=over
+
+=item hook (required)
+
+The name of the hook the handler is registering for.
+
+=item code (required)
+
+The subroutine that will handle the hook.
+
+=item order (optional: defaults to 0)
+
+The order weight the handler should have. Lower numbers will be run first and higher numbers will be run last. It's recommended that these values be kept between -99 and 99.
+
+=item name (optional)
+
+Some hooks require names to be used so that each name can be handled differently. How the names are used will depend upon the hook, so see the documentation for the hook for details.
+
+=item id (optional)
+
+In some cases, it is desirable to unregister a hook handler. By passing this id, it can be passed to the C<unregister> method to remove this hook. If no id is given, one will be assigned.
 
 =cut
 
+my $ids = 0;
 sub register {
-	my $self   = shift->instance;
-	my $name   = shift;
-	my $code   = shift;
-	my $weight = shift || 0;
+	my $self = shift->instance;
+	my %args = (
+		order => 0,
+		@_,
+	);
+
+	croak "Missing required argument 'hook'." unless $args{hook};
+	croak "Missing required argument 'code'." unless $args{code};
+
+	unless ($args{id}) {
+		do {
+			$args{id} = ++$ids;
+		} while (grep { $_->{id} eq $args{id} } @{ $self->{$args{hook}} || [] });
+	} elsif (grep { $_->{id} eq $args{id} } @{ $self->{$args{hook}} || [] }) {
+		croak "Hook handler id '$args{id}' is not unique for hook '$args{hook}'.";
+	}
 
 	my @code = 
-		sort { $a->[0] <=> $b->[1] }
-		     (@{ $self->{$name} || [] }, [ $code, $weight ]);	
+		sort { $a->{order} <=> $b->{order} }
+		     (@{ $self->{$args{hook}} || [] }, \%args);	
 
-	$self->{$name} = \@code;
+	$self->{$args{hook}} = \@code;
 
 	return;
 }
 
-=item Contentment::Hook-E<gt>call($name, @args)
+=item Contentment::Hook-E<gt>unregister($hook, $id)
 
-Call the hook named C<$name> and pass arguments C<@args>. The arguments are optional.
+Removed the hook handler for hook C<$hook> registered with id C<$id>.
+
+=cut
+
+sub unregister {
+	my $self = shift->instance;
+	my $hook = shift;
+	my $id   = shift;
+
+	$self->{$hook}= [ grep { $_->{id} ne $id } @{ $self->{$hook} || [] } ];
+
+	return;
+}
+
+=item Contentment::Hook-E<gt>count($hook)
+
+Count the number of registered hooks for the hook C<$hook>.
+
+=cut
+
+sub count {
+	my $self = shift->instance;
+	my $hook = shift;
+
+	return scalar(@{ $self->{$hook} || [] });
+}
+
+=item Contentment::Hook-E<gt>count_named($hook, $name)
+
+Count the number of registered hooks for the hook C<$hook> named C<$name>.
+
+=cut
+
+sub count_named {
+	my $self = shift->instance;
+	my $hook = shift;
+	my $name = shift;
+
+	my @named_hooks = grep { $_->{name} eq $name } @{ $self->{$hook} || [] };
+
+	return scalar(@named_hooks);
+}
+
+=item Contentment::Hook-E<gt>call($hook, @args)
+
+Call the hook named C<$hook> and pass arguments C<@args>. The arguments are optional.
 
 Each subroutine registered for the hook is executed in order. The return value of the final hook is returned.
 
@@ -81,9 +168,36 @@ sub call {
 	my $result;
 	for my $hook (@hooks) {
 		if (wantarray) {
-			$result = [ $hook->[0]->(@_) ];
+			$result = [ $hook->{code}->(@_) ];
 		} else {
-			$result = $hook->[0]->(@_);
+			$result = $hook->{code}->(@_);
+		}
+	}
+
+	return wantarray ? @$result : $result;
+}
+
+=item Contentment::Hook-E<gt>call_named($hook, $name, @args)
+
+Call only handlers for C<$name> registered for the hook named C<$hook> and pass arguments C<@args>. The arguments are optional.
+
+Each subroutine registered for the hook is executed in order. The return value of the final hook is returned.
+
+=cut
+
+sub call_named {
+	my $self = shift->instance;
+	my $name = shift;
+	my $handler_name = shift;
+
+	my @hooks = grep { $_->{name} eq $handler_name } @{ $self->{$name} || [] };
+	
+	my $result;
+	for my $hook (@hooks) {
+		if (wantarray) {
+			$result = [ $hook->{code}->(@_) ];
+		} else {
+			$result = $hook->{code}->(@_);
 		}
 	}
 
@@ -116,37 +230,57 @@ package Contentment::Hooks::Iterator;
 Using a call iterator (via the C<call_iterator> method), you can run each hook subroutine one at a time.
 
   my $iter = Contentment::Hooks->call_iterator('foo');
-  while ($iter->has_next) {
-	  $iter->call_next(@args);
+  while ($iter->next) {
+	  # Pass a handler it's data associated by name
+	  $iter->call($data{$iter->name});
   }
 
 =over
 
-=item $test = $iter-E<gt>has_next
+=item $test = $iter-E<gt>next
 
-Returns a true value when there is another subroutine left to call in the iterator. Returns a false value otherwise.
-
-=cut
-
-sub has_next {
-	my $self = shift;
-	return @{ $self->{hooks} };
-}
-
-=item $iter-E<gt>call_next(@args)
-
-Calls the next subroutine for the hook with the given arguments. If this is called when C<has_next> returns false, an exception will be thrown. This method returns the value returned by the nested subroutine.
+Moves the iterator to point to the next hook handler. This method returns a true value if there is another handler to run and false if there are no more.
 
 =cut
 
-sub call_next {
+sub next {
 	my $self = shift;
 	
-	die "No more hook subroutines left to run." unless $self->has_next;
-
-	my $hook = shift @{ $self->{hooks} };
-	return $hook->[0]->(@_);
+	if (@{ $self->{hooks} }) {
+		$self->{current} = pop @{ $self->{hooks} };
+		return 1;
+	} else {
+		return '';
+	}
 }
+
+=item $iter-E<gt>call(@args)
+
+Calls the current handler for the hook with the given arguments. This method returns the value returned by the nested subroutine.
+
+=cut
+
+sub call {
+	my $self = shift;
+	
+	return $self->{current}{code}->(@_);
+}
+
+=item $name = $iter-E<gt>name
+
+Returns the name that was associated with the handler according to the "name" argument when the handler was registered. Returns C<undef> if no such argument was given.
+
+=cut
+
+sub name { return shift->{current}{name} }
+
+=item $name = $iter-E<gt>order
+
+Returns the order weight that the handler was registered with. Returns 0 if none was given.
+
+=cut
+
+sub order { return shift->{current}{order} }
 
 =back
 

@@ -3,9 +3,12 @@ package Contentment;
 use strict;
 use warnings;
 
-our $VERSION = 0.011_001;
+our $VERSION = 0.011_002;
 
 use Contentment::Hooks;
+use Contentment::Log;
+use Contentment::Response;
+use Contentment::Request;
 use Cwd ();
 use File::Spec;
 use YAML ();
@@ -52,6 +55,7 @@ sub begin {
 	# every sub-directory and load the plugin initializer files.
 	my $plugins_dir = $global_init->{plugins_dir};
 	my @plugins;
+	my %plugins;
 	opendir PLUGINS, $plugins_dir;
 	while (my $plugin_dir = readdir PLUGINS) {
 		# Ignore superfluous crap we find
@@ -70,20 +74,60 @@ sub begin {
 
 	# Now that we have the plugin initializers, we need to sort them by the
 	# "order" variable in the file and load each plugin.
-	my @plugins = sort { $a->[1]{order} <=> $b->[1]{order} } @plugins;
+	@plugins = sort { $a->[1]{order} <=> $b->[1]{order} } @plugins;
 
 	# Load each plugin in order
 	for my $plugin (@plugins) {
 		eval { Contentment->load_plugin(@$_) };
-		Contentment::Log->error("Failed loading plugin $plugin: $@");
+		Contentment::Log->error("Failed loading plugin %s: %s", [$plugin,$@]);
 	}
 
-	# Install/upgrade plugins and then "begin". The difference between these two
-	# hooks is semantic. Put stuff that installs your plugin permanently in
-	# "Contentment::install" but put stuff that runs every time at system
-	# startup in "Contentment::begin". These might be split and made a little
-	# smarter in the future, but I don't foresee such a thing at this time.
-	Contentment::Hooks->call('Contentment::install');
+	# Check each plugin to see if it is installed. If not, install it.
+	my $installed;
+	my $iter = Contentment::Hooks->call_iterator('Contentment::install');
+	while ($iter->next) {
+		# Since we store information in Contentment::Setting and it might not be
+		# installed yet, check for installation and load the settings if it is.
+		if (Contentment::Setting->installed && !$installed) {
+			$installed = Contentment::Setting->fetch('Contentment::install');
+
+			# Create the installation settings if they don't already exist
+			unless ($installed) {
+				$installed = Contentment::Setting->new;
+				$installed->{namespace} = 'Contentment::install';
+			}
+		}
+	
+		# If Contentment::Setting is installed, check the version. If it's
+		# installed, skip this handler.
+		next if $installed && $installed->{data}{$iter->name};
+
+		# Run the handler.
+		my $plugin = Contentment->loaded_plugin($iter->name);	
+		$iter->call($plugin);
+
+		# Note that it's now installed and record the version.
+		$installed->{$iter->name} = $plugin->{version};
+	}
+
+	# Now check for needed upgrades. We assume Contentment::Setting is now
+	# loaded and $installed is set to the right thing.
+	$iter = Contentment::Hooks->call_iterator('Contentment::upgrade');
+	while ($iter->next) {
+		my $plugin = Contentment->loaded_plugin($iter->name);	
+		
+		# If the installed version is the same as this version, skip this
+		# handler.
+		next if $installed->{data}{$iter->name} == $plugin->{version};
+
+		# Run the handler.
+		$iter->call($plugin);
+
+		# Note that it's now installed and record the version.
+		$installed->{$iter->name} = $plugin->{version};
+	}
+
+	# Now that all is installed, initialize all the begin handlers
 	Contentment::Hooks->call('Contentment::begin');
 }
 
@@ -102,7 +146,7 @@ sub load_plugin {
 		@use_libs = ( $plugin_init->{use_lib} );
 	}
 	push @INC, 
-		map { Contentment::Log->debug("$plugin_dir: use lib $_") }
+		map { Contentment::Log->debug("%s: use lib %s", [$plugin_dir,$_]) }
 		map { File::Spec->file_name_is_absolute($_) ? 
 				$_ : 
 				File::Spec->catdir($plugin_dir, $_) }
@@ -115,9 +159,9 @@ sub load_plugin {
 	} else {
 		@uses = ( $plugin_init->{use} );
 	}
-	foreach (@uses) {
-		Contentment::Log->debug("$plugin_dir: use $_");
-		eval "use $_";
+	for my $use (@uses) {
+		Contentment::Log->debug("%s: use %s", [$plugin_dir,$use]);
+		eval "use $use";
 		die $@ if $@;
 	}
 
@@ -165,7 +209,21 @@ See L<Contentment::Request> and L<Contentment::Response> for more information.
 
 =cut
 
+sub handle_cgi {
+	Contentment::Request->begin_cgi;
+	Contentment::Response->handle_cgi;
+	Contentment::Request->end_cgi;
+}
+
 =item Contentment-E<gt>handle_fcgi
+
+Not yet implemented.
+
+=item Contentment-E<gt>handle_lwp
+
+Not yet implemented.
+
+=item Contentment-E<gt>handle_mod_perl
 
 Not yet implemented.
 
@@ -187,15 +245,17 @@ sub end {
 
 =item Contentment::install
 
-These hooks are passed no arguments, no special input, and should not output anything.
+This is a named hook. The name is used to determine which plugin configuration to pass the install handler. It should match the "name" setting in F<init.yml> for the plugin.
+
+These handlers are passed a single argument, but no special input, and should not output anything. The special argument is the data loaded from F<init.yml>.
 
 =item Contentment::begin
 
-These hooks are passed no arguments, no special input, and should not output anything.
+These handlers are passed no arguments, no special input, and should not output anything.
 
 =item Contentment::end
 
-These hooks are passed no arguments, no special input, and should not output anything.
+These handlers are passed no arguments, no special input, and should not output anything.
 
 =back
 

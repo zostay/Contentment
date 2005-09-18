@@ -3,12 +3,10 @@ package Contentment::Setting;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
-use Log::Log4perl;
-use SPOPS::Initialize;
-
-my $log = Log::Log4perl->get_logger(__PACKAGE__);
+use Contentment::ClassDBI;
+use YAML;
 
 =head1 NAME
 
@@ -20,39 +18,33 @@ This module is required by the Contentment core and is used to store settings an
 
 =cut
 
-my %spops = (
-	setting => {
-		class             => 'Contentment::Setting',
-		isa               => [ qw/ Contentment::SPOPS / ],
-		rules_from        => [ qw/ SPOPSx::Tool::YAML / ],
-		base_table        => 'setting',
-		field             => [ qw/ namespace data / ],
-		id_field          => 'namespace',
-		yaml_fields       => [ 'data' ],
-		no_update         => [ qw/ setting_id namespace / ],
-		no_security       => 1,
-	},
+__PACKAGE__->table('setting');
+__PACKAGE__->columns(All => qw/ namespace data /);
+__PACKAGE__->columns(Primary => 'namespace');
+
+__PACKAGE__->has_a(
+	data    => 'HASH',
+	inflate => sub { Load(shift) },
+	deflate => sub { Dump(shift) },
 );
 
-SPOPS::Initialize->process({ config => \%spops });
+__PACKAGE__->column_definitions([
+	[ namespace => 'varchar(50)', 'not null' ],
+	[ data      => 'text', 'not null' ],
+]);
 
-sub install {
-	my $dbh = __PACKAGE__->global_database_handle;
-	$dbh->do(q(
-		CREATE TABLE setting (
-			namespace		CHAR(255),
-			data			TEXT,
-			PRIMARY KEY (namespace));
-	));
+sub installed {
+	my $dbh = __PACKAGE__->global_database_handler;
+	my $test = grep /\bsetting\b/, $dbh->tables(undef, undef, 'setting')
+	return $test;
 }
 
-sub upgrade { }
+sub install {
+	__PACKAGE__->create_table;
+}
 
 sub remove {
-	my $dbh = __PACKAGE__->global_database_handle;
-	$dbh->do(q(
-		DROP TABLE setting;
-	));
+	__PACKAGE__->drop_table;
 }
 
 =head1 AUTHOR
@@ -68,4 +60,3 @@ Contentment is distributed and licensed under the same terms as Perl itself.
 =cut
 
 1
-

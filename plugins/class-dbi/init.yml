@@ -1,0 +1,11 @@
+name: Class-DBI
+description: Standard Class:DBI library for Contentment.
+version: 0.01
+required: 1
+order: -95
+
+use_lib:
+ - lib
+
+use:
+ - Contentment::DBI
