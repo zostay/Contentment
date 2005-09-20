@@ -3,7 +3,7 @@ package Contentment::Response;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use Contentment::Hooks;
 use Contentment::Log;
@@ -93,6 +93,7 @@ sub handle_cgi {
 
 	# Did we find anything?
 	if ($component) {
+		Contentment::Log->debug("Resolution found component %s", [$component]);
 
 		# If it's a container and the URL doesn't end in '/', we need to fix it
 		# so that relative URLs are handled as expected.
@@ -104,6 +105,7 @@ sub handle_cgi {
 		} else {
 
 			# Call the begin hook for any pre-response output.
+			Contentment::Log->debug("Calling hook Contentment::Response::begin");
 			capture_in_out {
 				Contentment::Hooks->call('Contentment::Response::begin');
 			};
@@ -112,6 +114,7 @@ sub handle_cgi {
 			IO::NestedCapture->set_next_in(IO::NestedCapture->get_last_out);
 
 			# Capture the output and check for errors.
+			Contentment::Log->debug("Generating response for component %s", [$component]);
 			eval {
 				capture_in_out {
 					$component->generate(%{ $q->Vars });
@@ -131,29 +134,38 @@ sub handle_cgi {
 
 	# No file to render. Show an error.
 	} else {
+		Contentment::Log->error("No component found for %s", [$q->path_info]);
 		capture_in_out {
 			Contentment::Response->error_page("404 Not Found");
 		};
 	}
 
 	# Give the post-process response hooks their chance to fileter the output
-	# from the top file component.
-	IO::NestedCapture->set_next_in(IO::NestedCapture->get_last_out);
-	eval {
-		capture_in_out {
-			Contentment::Hooks->call('Contentment::Response::end');
+	# from the top file component. These hooks MUST move the input to the output
+	# or the output of the original generated file will be lost. As such, we
+	# don't bother to run these if there are no hooks.
+	if (Contentment::Hooks->count('Contentment::Response::end')) {
+		Contentment::Log->debug("Calling hook Contentment::Response::end");
+		IO::NestedCapture->set_next_in(IO::NestedCapture->get_last_out);
+		eval {
+			capture_in_out {
+				Contentment::Hooks->call('Contentment::Response::end');
+			};
 		};
-	};
-
-	# Bad stuff. Generate an error page.
-	if ($@) {
-		Contentment::Log->error("Response post-process handler failure: %s", [$@]);
-		capture_in_out {
-			Contentment::Response->error_page($@);
-		};
+	
+		# Bad stuff. Generate an error page.
+		if ($@) {
+			Contentment::Log->error("Response post-process handler failure: %s", [$@]);
+			capture_in_out {
+				Contentment::Response->error_page($@);
+			};
+		}
+	} else {
+		Contentment::Log->debug("Skipping hook Contentment::Response::end, no handlers registered.");
 	}
 
 	# Take the final captured output and print out the response
+	Contentment::Log->debug("Sending response to standard output");
 	my $final_output = IO::NestedCapture->get_last_out;
 	unless (Contentment::Response->header_sent) {
 		print $q->header(%{ Contentment::Response->header });

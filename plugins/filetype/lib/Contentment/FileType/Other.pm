@@ -5,12 +5,9 @@ use warnings;
 
 use Cache::FileCache;
 use DateTime;
-use Log::Log4perl;
 use MIME::Types;
 
-my $log = Log::Log4perl->get_logger(__PACKAGE__);
-
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 =head1 NAME
 
@@ -36,14 +33,6 @@ sub mimetypes {
 
 	return $mimetypes;
 }
-
-=item $test = Contentment::FileType::Other-E<gt>filetype_match($file)
-
-Always returns true.
-
-=cut
-
-sub filetype_match { 1 }
 
 =item $kind = Contentment::FileType::Other-E<gt>real_kind($file)
 
@@ -131,6 +120,20 @@ sub generate {
 
 	return 1;
 }
+
+=back
+
+=head2 HOOK HANDLERS
+
+=over
+
+=item Contentment::FileType::Other::match
+
+Used to handle the "Contentment::FileType::match" hook.
+
+=cut
+
+sub match { 'Contentment::FileType::Other' }
 
 =back
 

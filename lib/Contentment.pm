@@ -3,7 +3,7 @@ package Contentment;
 use strict;
 use warnings;
 
-our $VERSION = 0.011_003;
+our $VERSION = 0.011_004;
 
 use Carp;
 use Contentment::Hooks;
@@ -70,7 +70,12 @@ sub begin {
 		# for some reason).
 		my $init_config = File::Spec->catfile($full_plugin_dir, 'init.yml');
 		next unless -f $init_config;
-		my $init        = YAML::LoadFile($init_config);
+		Contentment::Log->info("Loading plugin configuration $init_config");
+		my $init        = eval { YAML::LoadFile($init_config); };
+		if ($@) {
+			Contentment::Log->error("Failed loading plugin configuration $init_config: $@");
+			next;
+		}
 
 		push @plugins, [ $full_plugin_dir, $init ];
 	}

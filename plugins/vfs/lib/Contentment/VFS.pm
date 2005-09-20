@@ -11,7 +11,7 @@ use Contentment::Request;
 use File::Spec;
 use File::System;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 use base 'File::System::Passthrough';
 
@@ -99,12 +99,12 @@ sub lookup_source {
 
 	my $result;
 
-	Contentment::Log->debug("searching for a source for $path");
+	Contentment::Log->debug("searching for a source for %s", [$path]);
 	my $file = $self->lookup($path);
 	if (defined $file && $file->has_content) {
 		$result = $file;
 	} elsif (defined $file && $file->is_container) {
-		Contentment::Log->debug("searching for directory index $path/index.*");
+		Contentment::Log->debug("searching for directory index %s", ["$path/index.*"]);
 		my @files = $self->glob("$path/index.*");
 		for my $index_file (@files) {
 			if ($file = $self->lookup($index_file) and $file->has_content) {
@@ -116,7 +116,7 @@ sub lookup_source {
 		my $copy = $path;
 		$copy =~ s/\.[\w\.]+$//;
 
-		Contentment::Log->debug("searching for alternate file $copy.*");
+		Contentment::Log->debug("searching for alternate file %s", ["$copy.*"]);
 
 		my @files = $self->glob("$copy.*");
 		for my $source_file (@files) {
@@ -268,16 +268,16 @@ sub filetype {
 	defined $self->{filetype} and
 		return $self->{filetype};
 
-	my $iter = Contentment::Hooks->call_iterator('Contentment::VFS::filetype');
+	my $iter = Contentment::Hooks->call_iterator('Contentment::FileType::match');
 	while ($iter->next) {
 		my $plugin = $iter->call($self);
 		if ($plugin) {
-			Contentment::Log->debug("Matched file $self with filetype $plugin");
+			Contentment::Log->debug("Matched file %s with filetype %s", [$self,$plugin]);
 			return $self->{filetype} = $plugin;
 		}
 	}
 
-	Contentment::Log->warning("Couldn't match $self with any filetype");
+	Contentment::Log->warning("Couldn't match %s with any filetype", [$self]);
 
 	return;
 }
