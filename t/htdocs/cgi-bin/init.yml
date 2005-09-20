@@ -1,3 +1,8 @@
 dbi_database: dbi:SQLite:dbname=testdb
 
 plugins_dir: ../../../plugins
+
+vfs:
+ - Real
+ - root
+ - .. 

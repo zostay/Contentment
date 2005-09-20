@@ -1,6 +1,6 @@
 name: Settings
 description: Used to store configuration. Required by Contentment.
-version: 0.03
+version: 0.05
 required: 1
 order: -90
 
@@ -8,9 +8,9 @@ use_lib:
  - lib
 
 use:
- - Contentment::Settings
+ - Contentment::Setting
 
 hooks:
   Contentment::install: 
     order: -95
-    sub: Contentment::Settings::install
+    sub: Contentment::Setting::install

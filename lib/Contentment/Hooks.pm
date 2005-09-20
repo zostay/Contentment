@@ -3,7 +3,7 @@ package Contentment::Hooks;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use Carp;
 
@@ -81,10 +81,7 @@ In some cases, it is desirable to unregister a hook handler. By passing this id,
 my $ids = 0;
 sub register {
 	my $self = shift->instance;
-	my %args = (
-		order => 0,
-		@_,
-	);
+	my %args = @_;
 
 	croak "Missing required argument 'hook'." unless $args{hook};
 	croak "Missing required argument 'code'." unless $args{code};
@@ -96,6 +93,8 @@ sub register {
 	} elsif (grep { $_->{id} eq $args{id} } @{ $self->{$args{hook}} || [] }) {
 		croak "Hook handler id '$args{id}' is not unique for hook '$args{hook}'.";
 	}
+
+	$args{order} ||= 0;
 
 	my @code = 
 		sort { $a->{order} <=> $b->{order} }
@@ -247,7 +246,7 @@ sub next {
 	my $self = shift;
 	
 	if (@{ $self->{hooks} }) {
-		$self->{current} = pop @{ $self->{hooks} };
+		$self->{current} = shift @{ $self->{hooks} };
 		return 1;
 	} else {
 		return '';

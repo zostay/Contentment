@@ -3,7 +3,7 @@ package Contentment::Response;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use Contentment::Hooks;
 use Contentment::Log;
@@ -109,7 +109,7 @@ sub handle_cgi {
 			};
 
 			# Pipe the output from ::begin into the input for generation.
-			IO::NsetedCapture->set_next_in(IO::NestedCapture->get_last_out);
+			IO::NestedCapture->set_next_in(IO::NestedCapture->get_last_out);
 
 			# Capture the output and check for errors.
 			eval {

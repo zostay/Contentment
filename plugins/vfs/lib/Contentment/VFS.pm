@@ -5,15 +5,15 @@ use warnings;
 
 use Carp;
 use Contentment;
+use Contentment::Hooks;
+use Contentment::Log;
+use Contentment::Request;
 use File::Spec;
 use File::System;
-use Log::Log4perl;
 
-our $VERSION = '0.05';
+our $VERSION = '0.07';
 
 use base 'File::System::Passthrough';
-
-my $log = Log::Log4perl->get_logger(__PACKAGE__);
 
 =head1 NAME
 
@@ -37,21 +37,32 @@ Once you have a C<$vfs> object, you can use it to lookup files and directories. 
 
 =over
 
-=item $vfs = Contentment::VFS-E<gt>new
+=item $vfs = Contentment::VFS-E<gt>instance
 
 Returns a reference to the VFS singleton object.
 
 =cut
 
 my $vfs;
-sub new {
+sub instance {
 	return $vfs if defined $vfs;
 
 	my $class = shift;
 
-	my $conf = Contentment->configuration;
+	my $conf = Contentment->global_configuration;
 
 	return $class->SUPER::new($conf->{vfs});
+}
+
+=item $vfs = Contentment::VFS-E<gt>new
+
+I<Deprecated.> Use C<instance> instead.
+
+=cut
+
+sub new {
+	carp "The Contentment::VFS::new method is deprecated. Use Contentment::VFS::instance instead.";
+	return shift->instance;
 }
 
 =item $source_obj = $obj-E<gt>lookup_source($path)
@@ -88,14 +99,12 @@ sub lookup_source {
 
 	my $result;
 
-	$log->is_debug &&
-		$log->debug("searching for a source for $path");
+	Contentment::Log->debug("searching for a source for $path");
 	my $file = $self->lookup($path);
 	if (defined $file && $file->has_content) {
 		$result = $file;
 	} elsif (defined $file && $file->is_container) {
-		$log->is_debug &&
-			$log->debug("searching for directory index $path/index.*");
+		Contentment::Log->debug("searching for directory index $path/index.*");
 		my @files = $self->glob("$path/index.*");
 		for my $index_file (@files) {
 			if ($file = $self->lookup($index_file) and $file->has_content) {
@@ -107,8 +116,7 @@ sub lookup_source {
 		my $copy = $path;
 		$copy =~ s/\.[\w\.]+$//;
 
-		$log->is_debug &&
-			$log->debug("searching for alternate file $copy.*");
+		Contentment::Log->debug("searching for alternate file $copy.*");
 
 		my @files = $self->glob("$copy.*");
 		for my $source_file (@files) {
@@ -260,20 +268,16 @@ sub filetype {
 	defined $self->{filetype} and
 		return $self->{filetype};
 
-	my $conf = Contentment->configuration;
-
-	for my $plugin (@{ $conf->{filetype_plugins} }) {
-		eval "require $plugin";
-		warn "Failed to load $plugin: $@" if $@;
-
-		if ($plugin->can('filetype_match') && $plugin->filetype_match($self)) {
-			$log->is_debug &&
-				$log->debug("Matched file $self with filetype $plugin");
+	my $iter = Contentment::Hooks->call_iterator('Contentment::VFS::filetype');
+	while ($iter->next) {
+		my $plugin = $iter->call($self);
+		if ($plugin) {
+			Contentment::Log->debug("Matched file $self with filetype $plugin");
 			return $self->{filetype} = $plugin;
 		}
 	}
 
-	warn("Couldn't match $self with any filetype");
+	Contentment::Log->warning("Couldn't match $self with any filetype");
 
 	return;
 }
@@ -315,15 +319,15 @@ sub ancestors {
 =cut
 
 sub install {
-	my $settings = Contentment::Settings->new;
-	$settings->{namespace} = 'Contentment::VFS';
-	$settings->{data}{
+	my $plugin_dir = shift;
+	my $init       = shift;
 }
 
-sub upgrads {
-}
+sub resolve {
+	my $q = Contentment::Request->cgi;
+	my $vfs = Contentment::VFS->instance;
 
-sub remove {
+	return $vfs->lookup($q->path_info);
 }
 
 =head1 SEE ALSO

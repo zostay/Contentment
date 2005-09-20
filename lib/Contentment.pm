@@ -3,8 +3,9 @@ package Contentment;
 use strict;
 use warnings;
 
-our $VERSION = 0.011_002;
+our $VERSION = 0.011_003;
 
+use Carp;
 use Contentment::Hooks;
 use Contentment::Log;
 use Contentment::Response;
@@ -58,17 +59,20 @@ sub begin {
 	my %plugins;
 	opendir PLUGINS, $plugins_dir;
 	while (my $plugin_dir = readdir PLUGINS) {
+		my $full_plugin_dir = File::Spec->catdir($plugins_dir, $plugin_dir);
+
 		# Ignore superfluous crap we find
-		next unless -d $plugin_dir;
+		next unless -d $full_plugin_dir;
+		next if $plugin_dir =~ /^\./;
 
 		# Load the initial configuration that is supposed to be in every plugin or
 		# we just won't load it (assuming another non-plugin directory got in here
 		# for some reason).
-		my $init_config = File::Spec->catfile($plugin_dir, 'init.yml');
+		my $init_config = File::Spec->catfile($full_plugin_dir, 'init.yml');
 		next unless -f $init_config;
 		my $init        = YAML::LoadFile($init_config);
 
-		push @plugins, [ File::Spec->catdir($plugins_dir, $plugin_dir), $init ];
+		push @plugins, [ $full_plugin_dir, $init ];
 	}
 	closedir PLUGINS;
 
@@ -78,53 +82,56 @@ sub begin {
 
 	# Load each plugin in order
 	for my $plugin (@plugins) {
-		eval { Contentment->load_plugin(@$_) };
-		Contentment::Log->error("Failed loading plugin %s: %s", [$plugin,$@]);
+		Contentment::Log->info("Loading plugin %s %s", [$plugin->[1]{name}, $plugin->[1]{version}]);
+		eval { Contentment->load_plugin(@$plugin) };
+		Contentment::Log->error("Failed loading plugin %s: %s", [$plugin->[0],$@]) if $@;
 	}
 
 	# Check each plugin to see if it is installed. If not, install it.
-	my $installed;
+	my $settings = Contentment::Setting->instance;
 	my $iter = Contentment::Hooks->call_iterator('Contentment::install');
 	while ($iter->next) {
 		# Since we store information in Contentment::Setting and it might not be
 		# installed yet, check for installation and load the settings if it is.
-		if (Contentment::Setting->installed && !$installed) {
-			$installed = Contentment::Setting->fetch('Contentment::install');
-
-			# Create the installation settings if they don't already exist
-			unless ($installed) {
-				$installed = Contentment::Setting->new;
-				$installed->{namespace} = 'Contentment::install';
-			}
+		my $installed_version;
+		if (Contentment::Setting->installed) {
+			$installed_version = $settings->{'Contentment::installed::'.$iter->name} || 0;
 		}
 	
 		# If Contentment::Setting is installed, check the version. If it's
 		# installed, skip this handler.
-		next if $installed && $installed->{data}{$iter->name};
+		next if $installed_version;
 
 		# Run the handler.
 		my $plugin = Contentment->loaded_plugin($iter->name);	
 		$iter->call($plugin);
 
 		# Note that it's now installed and record the version.
-		$installed->{$iter->name} = $plugin->{version};
+		if (Contentment::Setting->installed) {
+			Contentment::Log->info("Installed plugin ",$iter->name," $plugin->{version}");
+			$settings->{'Contentment::installed::'.$iter->name} = $plugin->{version}
+		} else {
+			Contentment::Log->warning("Installed plugin ",$iter->name," $plugin->{version}. Settings not yet available for recording. Installation will probably run twice.");
+		}
 	}
 
 	# Now check for needed upgrades. We assume Contentment::Setting is now
 	# loaded and $installed is set to the right thing.
 	$iter = Contentment::Hooks->call_iterator('Contentment::upgrade');
 	while ($iter->next) {
-		my $plugin = Contentment->loaded_plugin($iter->name);	
+		my $plugin = Contentment->loaded_plugin($iter->name);
+		my $installed_version = $settings->{'Contentment::installed::'.$iter->name} || 0;
 		
 		# If the installed version is the same as this version, skip this
 		# handler.
-		next if $installed->{data}{$iter->name} == $plugin->{version};
+		next if $installed_version == $plugin->{version};
 
 		# Run the handler.
 		$iter->call($plugin);
 
 		# Note that it's now installed and record the version.
-		$installed->{$iter->name} = $plugin->{version};
+		Contentment::Log->info("Upgraded plugin ",$iter->name," from $installed_version to $plugin->{version}");
+		$settings->{'Contentment::installed::'.$iter->name} = $plugin->{version};
 	}
 
 	# Now that all is installed, initialize all the begin handlers
@@ -146,7 +153,7 @@ sub load_plugin {
 		@use_libs = ( $plugin_init->{use_lib} );
 	}
 	push @INC, 
-		map { Contentment::Log->debug("%s: use lib %s", [$plugin_dir,$_]) }
+		map { Contentment::Log->debug("%s: use lib %s", [$plugin_dir,$_]); $_ }
 		map { File::Spec->file_name_is_absolute($_) ? 
 				$_ : 
 				File::Spec->catdir($plugin_dir, $_) }
@@ -168,12 +175,49 @@ sub load_plugin {
 	# Check for a variable named "hooks" and setup each hook.
 	if ($plugin_init->{hooks}) {
 		while (my ($hook, $arg) = each %{ $plugin_init->{hooks} }) {
+			no strict 'refs';
 			if (ref $arg) {
-				Contentment::Hooks->register($hook, *{$arg->{sub}}, $arg->{order});
+				Contentment::Hooks->register(
+					hook  => $hook, 
+					code  => \&{$arg->{sub}}, 
+					order => $arg->{order},
+					name  => $arg->{name} || $plugin_init->{name},
+				);
 			} else {
-				Contentment::Hooks->register($hook, $arg);
+				Contentment::Hooks->register(
+					hook => $hook, 
+					code => \&{$arg},
+					name => $plugin_init->{name},
+				);
 			}
 		}
+	}
+
+	# Create empty install hook so installation works properly
+	unless ($plugin_init->{hooks}{'Contentment::install'}) {
+		Contentment::Hooks->register(
+			hook => 'Contentment::install',
+			code => sub {},
+			name => $plugin_init->{name},
+		);
+	}
+
+	# Create empty upgrade hook so upgrades work properly
+	unless ($plugin_init->{hooks}{'Contentment::upgrade'}) {
+		Contentment::Hooks->register(
+			hook => 'Contentment::upgrade',
+			code => sub {},
+			name => $plugin_init->{name},
+		);
+	}
+
+	# Create empty remove hook so removals work properly
+	unless ($plugin_init->{hooks}{'Contentment::remove'}) {
+		Contentment::Hooks->register(
+			hook => 'Contentment::remove',
+			code => sub {},
+			name => $plugin_init->{name},
+		);
 	}
 
 	$plugins{$plugin_init->{name}} = $plugin_init;
@@ -198,6 +242,7 @@ Returns the initializer configuration for the plugin named C<$name>. The return 
 sub loaded_plugin {
 	my $class = shift;
 	my $name  = shift;
+	confess "Missing required argument 'name'." unless $name;
 	return $plugins{$name};
 }
 
