@@ -3,7 +3,7 @@ package Contentment::Setting;
 use strict;
 use warnings;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 use base 'Contentment::DBI';
 
@@ -46,6 +46,37 @@ sub remove {
 
 Returns a reference to a hash containing all the settings. Settings are permanently saved to the database when changed.
 
+This hash can be used to store most complex types. It uses L<YAML> to encode all the values, which can encode just about anything.
+
+However, there are a few caveats to be creaful about:
+
+=over
+
+=item *
+
+References to blessed items or types other than scalars, hashes, or arrays might not store and load again quite as you expect. In particular, objects can be blessed into classes that aren't even loaded.
+
+=item *
+
+Be careful modifying deep parts of the code without tellings the settings. For example:
+
+  my $settings = Contentment::Setting->instance;
+  my %hash = ( foo => 1, bar => 2 );
+
+  # Works great!
+  $settings->{blah} = \%hash;
+
+  $hash{baz} = 3;
+
+  # Bad stuff! Outputs: foo, bar
+  # $settings doesn't know about baz!
+  print(join(', ', keys %$settings),"\n");
+
+  # Make sure you always notify the hash of deep changes:
+  $settings->{blah} = \%hash;
+
+=back
+
 =cut
 
 sub instance {
@@ -55,6 +86,8 @@ sub instance {
 }
 
 package Contentment::Setting::Tie;
+
+use YAML;
 
 sub TIEHASH {
 	my $class = shift;
@@ -66,7 +99,7 @@ sub FETCH {
 	my $key  = shift;
 
 	my $setting = Contentment::Setting->retrieve($key);
-	return $setting ? $setting->setting_value : undef;
+	return $setting ? Load($setting->setting_value) : undef;
 }
 
 sub STORE {
@@ -76,15 +109,15 @@ sub STORE {
 
 	my $setting = Contentment::Setting->retrieve($key);
 	if ($setting) {
-		$setting->setting_value($value);
+		$setting->setting_value(Dump($value));
 		$setting->update;
 	} else {
 		$setting = Contentment::Setting->create({
 			setting_name  => $key,
-			setting_value => $value,
+			setting_value => Dump($value),
 		});
 	}
-	return $setting->setting_value;
+	return $value;
 }
 
 sub DELETE {
@@ -93,7 +126,7 @@ sub DELETE {
 
 	my $setting = Contentment::Setting->retrieve($key);
 	if ($setting) {
-		my $value = $setting->setting_value;
+		my $value = Load($setting->setting_value);
 		$setting->delete;
 		return $value;
 	} else {

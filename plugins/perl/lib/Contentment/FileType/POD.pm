@@ -5,13 +5,10 @@ use warnings;
 
 use base 'Contentment::FileType::Other';
 
-use Log::Log4perl;
 use MIME::Types;
 use Text::Balanced qw/ extract_quotelike /;
 
-my $log = Log::Log4perl->get_logger(__PACKAGE__);
-
-our $VERSION = '0.03';
+our $VERSION = '0.05';
 
 =head1 NAME
 
@@ -22,19 +19,6 @@ Contentment::FileType::POD - A file type plugin for handling Plain Old Documenta
 This is a generated specifically geared for use with Perl's POD, or Plain Old Documentation, format. This class inherits from L<Contentment::FileType::Other>.
 
 =over
-
-=item $test = Contentment::FileType::POD-E<gt>filetype_match($file)
-
-Returns true if the file name ends with "C<.pod>" or "C<.pm>". Returns false otherwise.
-
-=cut
-
-sub filetype_match { 
-	my $class = shift;
-	my $file  = shift;
-
-	return $file->path =~ /\.pod$|\.pm$/;
-}
 
 =item $kind = Contentment::FileType::POD-E<gt>real_kind($file)
 

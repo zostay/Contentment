@@ -6,11 +6,8 @@ use warnings;
 use base 'Contentment::FileType::POD';
 
 use Carp;
-use Log::Log4perl;
 
-my $log = Log::Log4perl->get_logger(__PACKAGE__);
-
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 =head1 NAME
 
@@ -23,19 +20,6 @@ This will run an external Perl script within the current interpreter (i.e., no f
 These Perl scripts can expect a certain set of calling conventions. The Perl script is called within the same interpreter as the rest of Contentment. Basically, the script can be treated as if it were the body of a subroutine (which isn't far from the truth). Arguments are stored in C<@_> and the global variables available in Mason objects are also made available here.
 
 =over
-
-=item $test = Contentment::FileType::PL-E<gt>filetype_match($file)
-
-Returns true if the file name ends with C<.pl>. Returns false otherwise.
-
-=cut
-
-sub filetype_match {
-	my $class = shift;
-	my $file  = shift;
-
-	return $file->path =~ /\.pl$/;
-}
 
 =item $kind = Contentment::FileType::PL-E<gt>real_kind($file)
 
@@ -94,13 +78,6 @@ sub generate {
 	my $file  = shift;
 
 	my $sub = sub {
-		# Prepare the "global" vars
-		my %conf      = %{ Contentment->configuration };
-		my $base      = $conf{base};
-		my $log       = Log::Log4perl->get_logger($file->path);
-		my $url       = Contentment->context->m->cgi_object->url;
-		my $full_base = Contentment->context->m->cgi_object->url(-base => 1).$base;
-		my $vfs       = Contentment::VFS->new;
 		my $_____code = $file->content;
 		
 		# Clear variables out so they aren't closed here.
@@ -112,13 +89,30 @@ sub generate {
 		croak $@ if $@ 
 	};
 
-	$log->is_debug &&
-		$log->debug("Running code in '$file'");
+	Contentment::Log->debug("Running code in '$file'");
 
 #	Carp::cluck("Running code in '$file'");
 
 	return $sub->(@_);
 }
+
+=head2 HOOK HANDLERS
+
+=over
+
+=item Contentment::FileType::PL::match
+
+Handles the "Contentment::FileType::match" hook for L<Contentment::FileType::PL> and L<Contentment::FileType::POD>.
+
+=cut
+
+sub match {
+	local $_ = shift;
+	return 'Contentment::FileType::PL'  if /\.pl$/;
+	return 'Contentment::FileType::POD' if /\.pod$|\.pm$/;
+}
+
+=back
 
 =head1 SEE ALSO
 
