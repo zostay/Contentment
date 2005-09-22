@@ -11,7 +11,7 @@ use Contentment::Request;
 use File::Spec;
 use File::System;
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 use base 'File::System::Passthrough';
 
@@ -323,11 +323,21 @@ sub install {
 	my $init       = shift;
 }
 
+=head2 HOOK HANDLERS
+
+=over
+
+=item Contentment::VFS::resolve
+
+Handles the "Contentment::Response::resolve" handler. Looks for a file in the VFS to return as a component for rendering.
+
+=cut
+
 sub resolve {
 	my $q = Contentment::Request->cgi;
 	my $vfs = Contentment::VFS->instance;
 
-	return $vfs->lookup($q->path_info);
+	return $vfs->lookup($q->path_info) || $vfs->lookup_source($q->path_info);
 }
 
 =head1 SEE ALSO

@@ -1,7 +1,7 @@
 name: Perl
 description: Plugin for handling Perl components.
-version: 0.05
-order: 0
+version: 0.06
+order: 10
 
 use_lib:
  - lib
@@ -11,6 +11,6 @@ use:
  - Contentment::FileType::POD
 
 hooks:
-  Contentment::FileType::match
+  Contentment::FileType::match:
     order: 0
     sub: Contentment::FileType::PL::match
