@@ -1,6 +1,6 @@
 name: Filetype
 description: Basic filetype plugin used with static files.
-version: 0.05
+version: 0.06
 order: 0
 
 use_lib:
@@ -13,3 +13,6 @@ hooks:
   Contentment::FileType::match:
     order: 95
     sub: Contentment::FileType::Other::match
+  Contentment::Request::final_kind:
+    order: 95
+    sub: Contentment::FileType::Other::final_kind

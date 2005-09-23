@@ -7,7 +7,7 @@ use Cache::FileCache;
 use DateTime;
 use MIME::Types;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 =head1 NAME
 
@@ -134,6 +134,17 @@ Used to handle the "Contentment::FileType::match" hook.
 =cut
 
 sub match { 'Contentment::FileType::Other' }
+
+=item Contentment::FileType::Other::final_kind
+
+Used to handle the "Contentment::Request::final_kind" hook.
+
+=cut
+
+sub final_kind {
+	my $cgi = shift;
+	return Contentment::FileType::Other->mimetypes->mimeTypeOf($cgi->path_info);
+}
 
 =back
 

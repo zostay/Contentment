@@ -11,7 +11,7 @@ use Contentment::Request;
 use File::Spec;
 use File::System;
 
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 use base 'File::System::Passthrough';
 
@@ -334,10 +334,15 @@ Handles the "Contentment::Response::resolve" handler. Looks for a file in the VF
 =cut
 
 sub resolve {
-	my $q = Contentment::Request->cgi;
+	my $path = shift;
 	my $vfs = Contentment::VFS->instance;
 
-	return $vfs->lookup($q->path_info) || $vfs->lookup_source($q->path_info);
+	unless ($path) {
+		my $q = Contentment::Request->cgi;
+		$path = $q->path_info;
+	}	
+
+	return $vfs->lookup($path) || $vfs->lookup_source($path);
 }
 
 =head1 SEE ALSO

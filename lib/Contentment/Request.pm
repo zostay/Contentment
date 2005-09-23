@@ -3,7 +3,7 @@ package Contentment::Request;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use CGI;
 use Contentment::Hooks;
@@ -32,6 +32,26 @@ Retrieves a copy of the CGI object or undef if the request hasn't be initialized
 my $cgi;
 sub cgi {
 	return $cgi;
+}
+
+=item $kind = Contentment::Request-E<gt>final_kind
+
+This method may be called to ask what kind of file the request wants returned. This involves calling the "Contentment::Request::final_kind" hook. The hook will be called at most once per request and the result will be cached here if this method is called more than once. If no handlers are set or none of the called handlers can identify the final kind, then the empty string (C<"">) will be returned.
+
+=cut
+
+my $final_kind;
+sub final_kind {
+	return $final_kind if defined $final_kind;
+
+	my $cgi = Contentment::Request->cgi;
+	my $iter = Contentment::Hooks->call_iterator('Contentment::Request::final_kind');
+	while ($iter->next) {
+		$final_kind = $iter->call($cgi);
+		last if defined $final_kind;
+	}
+
+	return $final_kind ||= '';
 }
 
 =item Contentment::Request-E<gt>begin_cgi
@@ -73,6 +93,10 @@ These handlers are passed a single argument. This will be a copy of the just ini
 =item Contentment::Request::end
 
 These handlers are passed a single argument. This will be a copy of the L<CGI> object for the request.
+
+=item Contentment::Request::final_kind
+
+These handlers are passed a single argument. This will be a copy of the L<CGI> object for the request. These handlers should try to identify the kind of file the request wants rendered. The file "kind" is a bit of a nebulous idea, but is often a MIME Type or something similar and can be used by various plugins to figure out how to render the page. The first handler that returns a value other than C<undef> forms the result of the hook. The rest of the handlers will not be called.
 
 =back
 

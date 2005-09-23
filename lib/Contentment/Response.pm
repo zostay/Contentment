@@ -3,7 +3,7 @@ package Contentment::Response;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 use Contentment::Hooks;
 use Contentment::Log;
@@ -74,7 +74,26 @@ sub error_page {
 		print "<p>An error occurred finding or generating the content: $ERROR</p>\n";
 		print "<p>You may wish to contact the webmaster about this problem.</p>\n";
 		print "</body></html>\n";
+		Contentment::Response->top_kind('text/html');
 #	}
+}
+
+=item $component = Contentment::Response->response($path)
+
+This returns the $component that would be used to give a response for the given path, C<$path>. If no C<$path> is given, it will default to the C<path_info> of the L<CGI> object.
+
+=cut
+
+sub resolve {
+	my $class = shift;
+	my $path  = shift;
+	
+	my $iter = Contentment::Hooks->call_iterator('Contentment::Response::resolve');
+	while ($iter->next) {
+		$path = $iter->call($path);
+	}
+
+	return $path;
 }
 
 =item Contentment::Response->handle_cgi
@@ -89,7 +108,7 @@ sub handle_cgi {
 	Contentment::Log->info("Handling request %s", [$q->path_info]);
 
 	# Find the component responsible for rendering output
-	my $component = Contentment::Hooks->call('Contentment::Response::resolve');
+	my $component = Contentment::Response->resolve;
 
 	# Did we find anything?
 	if ($component) {
@@ -118,6 +137,7 @@ sub handle_cgi {
 			eval {
 				capture_in_out {
 					$component->generate(%{ $q->Vars });
+					Contentment::Response->top_kind($component->generated_kind(%{ $q->Vars }));
 				};
 			};
 
@@ -176,6 +196,14 @@ sub handle_cgi {
 	# Done.
 }
 
+=item $test = Contentment::Response-E<gt>header_sent
+
+=item Contentment::Response-E<gt>header_sent($header_sent)
+
+Returns a true value if the headers were already printed as part of the request. Set to a true value if you send headers.
+
+=cut
+
 my $header_sent = 0;
 sub header_sent {
 	my $class = shift;
@@ -184,8 +212,48 @@ sub header_sent {
 	$header_sent = defined($new_sent) ? $new_sent : $header_sent;
 }
 
+=item $header = Contentment::Response-E<gt>header
+
+Returns a reference to a hash to store header information in. This hash will be passed to the L<CGI> C<header> function.
+
+=cut
+
 my $header = {};
 sub header { return $header }
+
+=item $top_kind = Contentment::Response-E<gt>top_kind
+
+=item Contentment::Response-E<gt>top_kind($kind)
+
+Used to reflect the current file kind of the top level response. This should be initially set during content generation by a call to the C<generated_kind> method of the file type plugin generating the output. It, then, may be modified further by later filters. It starts with an initial value of the empty string C<"">.
+
+=cut
+
+my $top_kind = '';
+sub top_kind {
+	my $class = shift;
+	my $kind  = shift;
+
+	return $top_kind = defined($kind) ? $kind : $top_kind;
+}
+
+=back
+
+=head2 HOOKS
+
+=over
+
+=item Contentment::Resposne::begin
+
+Handlers of this hook can expect no arguments, but their output will be captured and passed on to the component generator. It runs right before component generator.
+
+=item Contentment::Response:end
+
+Handlers of this hook can expect the input from the generated output or the previous handler's output. The output will be captured for output to the client.
+
+=item Contentment::Response::resolve
+
+These handlers take a path argument and should ultimately result in in a component capable of generating content. The result of the previous handler is passed as the argument to the next.
 
 =back
 

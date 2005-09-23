@@ -1,16 +1,14 @@
-package Contentment::Transform::Pod2Html;
+package Contentment::Transform::POD2HTML;
 
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.07';
 
 use Contentment;
+use Contentment::Setting;
 
 use base qw/ Pod::Simple /;
-
-my $conf = Contentment::configuration;
-my $vfs  = Contentment::VFS->new;
 
 =head1 NAME
 
@@ -77,9 +75,10 @@ sub _handle_element_start {
 				if (defined $attr->{to}) {
 					my $file = $attr->{to};
 					$file =~ s/::/\//g;
-
-					for my $pod_base (@{ $conf->{pod_bases} }) {
-						if ($vfs->lookup_source("$pod_base/$file.html")) {
+						
+					my $settings = Contentment::Setting->instance;
+					for my $pod_base (@{ $settings->{'Contentment::Transform::POD2HTML::pod_bases'} }) {
+						if (Contentment::Response->resolve("$pod_base/$file.html")) {
 							$link = "$pod_base/$file.html";
 							last;
 						}
@@ -87,7 +86,7 @@ sub _handle_element_start {
 
 					unless (defined $link) {
 						$target = "_blank";
-						$link   = "$conf->{pod_fallback}$attr->{to}";
+						$link   = "$settings->{'Contentment::Transform::POD2HTML::pod_fallback'}$attr->{to}";
 					}
 				}
 				if (defined $attr->{section}) {
@@ -249,6 +248,28 @@ sub _handle_text {
 
 	print {$self->{output_fh}} $_;
 }
+
+=head2 HOOK HANDLERS
+
+=over
+
+=item Contentment::Transform::POD2HTML::begin
+
+Handles the "Contentment::Transform::begin" hook and registers the transformations from "text/x-perl" and "text/x-pod" to "text/html".
+
+=cut
+
+sub begin {
+	my $transform = shift;
+	$transform->add_transformation(
+		\&Contentment::Transform::POD2HTML::transform,
+		'text/x-perl' => 'text/html' => 0);
+	$transform->add_transformation(
+		\&Contentment::Transform::POD2HTML::transform,
+		'text/x-pod' => 'text/html' => 0);
+}
+
+=back
 
 =head1 SEE ALSO
 
