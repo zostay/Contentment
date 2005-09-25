@@ -3,7 +3,7 @@ package Contentment::Response;
 use strict;
 use warnings;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use Contentment::Hooks;
 use Contentment::Log;
@@ -160,25 +160,29 @@ sub handle_cgi {
 		};
 	}
 
-	# Give the post-process response hooks their chance to fileter the output
+	# Give the post-process response hooks their chance to filter the output
 	# from the top file component. These hooks MUST move the input to the output
 	# or the output of the original generated file will be lost. As such, we
 	# don't bother to run these if there are no hooks.
 	if (Contentment::Hooks->count('Contentment::Response::end')) {
 		Contentment::Log->debug("Calling hook Contentment::Response::end");
-		IO::NestedCapture->set_next_in(IO::NestedCapture->get_last_out);
-		eval {
-			capture_in_out {
-				Contentment::Hooks->call('Contentment::Response::end');
+		
+		my $iter = Contentment::Hooks->call_iterator('Contentment::Response::end');
+		while ($iter->next) {
+			IO::NestedCapture->set_next_in(IO::NestedCapture->get_last_out);
+			eval {
+				capture_in_out {
+					$iter->call;
+				};
 			};
-		};
 	
-		# Bad stuff. Generate an error page.
-		if ($@) {
-			Contentment::Log->error("Response post-process handler failure: %s", [$@]);
-			capture_in_out {
-				Contentment::Response->error_page($@);
-			};
+			# Bad stuff. Generate an error page.
+			if ($@) {
+				Contentment::Log->error("Response post-process handler failure: %s", [$@]);
+				capture_in_out {
+					Contentment::Response->error_page($@);
+				};
+			}
 		}
 	} else {
 		Contentment::Log->debug("Skipping hook Contentment::Response::end, no handlers registered.");

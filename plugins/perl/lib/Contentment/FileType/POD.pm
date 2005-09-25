@@ -8,7 +8,7 @@ use base 'Contentment::FileType::Other';
 use MIME::Types;
 use Text::Balanced qw/ extract_quotelike /;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 =head1 NAME
 

@@ -3,7 +3,7 @@ package Contentment::Transform;
 use strict;
 use warnings;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use Contentment;
 use Contentment::Hooks;
@@ -166,8 +166,13 @@ sub apply_transformation {
 	Contentment::Log->debug("Transformation #2: final kind is %s", [$final_kind]);
 
 	if ($final_kind eq '') {
-		Contentment::Log->debug("Transformation #2: treating unknown kind as original kind %s", [$original_kind]);
+		Contentment::Log->debug("Transformation #2: treating unknown final kind as original kind %s", [$original_kind]);
 		$final_kind = $original_kind;
+	}
+
+	if ($original_kind eq '') {
+		Contentment::Log->debug("Transformation #2: treating unknown original kind as final kind %s", [$final_kind]);
+		$original_kind = $final_kind;
 	}
 
 	# Step 3: Do we need to perform any transformations?
@@ -189,13 +194,22 @@ sub apply_transformation {
 	} else {
 		Contentment::Log->debug("Transformation #4: transformation from original to final in %d steps.",[scalar(@$transforms)]);
 
+		# Setup input
+		my $in = IO::NestedCapture->get_next_in;
+		while (<STDIN>) {
+			print $in $_;
+		}
+
 		# Step 5: Use the transforms to get us there.
-		my $output = \*STDIN;
+		my $pass = 0;
+		my $output;
 		for my $transform (@$transforms) {
 			Contentment::Log->debug("Transformation #5: Applying transformation %s", [$transform]);
 
+			IO::NestedCapture->set_next_in($output)
+				if $pass++ > 0;
+
 			# Generate each file with the correct input and capture the output.
-			IO::NestedCapture->set_next_in($output);
 			capture_in_out {
 				$transform->();
 			};

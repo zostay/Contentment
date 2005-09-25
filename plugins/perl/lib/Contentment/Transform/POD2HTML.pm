@@ -3,7 +3,7 @@ package Contentment::Transform::POD2HTML;
 use strict;
 use warnings;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 use Contentment;
 use Contentment::Setting;
@@ -247,6 +247,11 @@ sub _handle_text {
 	s/>/&gt;/g;
 
 	print {$self->{output_fh}} $_;
+}
+
+sub transform {
+	my $parser = Contentment::Transform::POD2HTML->new;
+	$parser->filter(\*STDIN);
 }
 
 =head2 HOOK HANDLERS

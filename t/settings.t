@@ -5,7 +5,7 @@ use Test::More tests => 10;
 
 SKIP: {
 	eval "use Apache::TestRequest 'GET_BODY'";
-	skip "Apache::Test is not installed.", 1 if $@;
+	skip "Apache::Test is not installed.", 10 if $@;
 
 	my $body = GET_BODY('/settings.txt');
 	my @body = split /[\n\r]+/, $body;

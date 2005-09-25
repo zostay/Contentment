@@ -1,5 +1,5 @@
 name: Transform
-version: 0.04
+version: 0.05
 description: The transformation plugin translates documents of one kind to another.
 order: 0
 
