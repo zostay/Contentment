@@ -1,6 +1,6 @@
 name: VFS
 description: Used to find files. Required by Contentment.
-version: 0.10
+version: 0.11
 required: 1
 order: -50
 
@@ -11,7 +11,4 @@ use:
  - Contentment::VFS
 
 hooks:
-  Contentment::install: 
-    order: -50
-    sub: Contentment::VFS::install
   Contentment::Response::resolve: Contentment::VFS::resolve

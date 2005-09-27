@@ -3,7 +3,7 @@ package Contentment::Response;
 use strict;
 use warnings;
 
-our $VERSION = '0.05';
+our $VERSION = '0.04';
 
 use Contentment::Hooks;
 use Contentment::Log;
@@ -136,8 +136,14 @@ sub handle_cgi {
 			Contentment::Log->debug("Generating response for component %s", [$component]);
 			eval {
 				capture_in_out {
+					Contentment::Response->properties({
+						map { ($_ => $component->get_property($_)) }
+						$component->properties 
+					});
+
 					$component->generate(%{ $q->Vars });
-					Contentment::Response->top_kind($component->generated_kind(%{ $q->Vars }));
+					Contentment::Response->top_kind ||
+						Contentment::Response->top_kind($component->generated_kind(%{ $q->Vars }));
 				};
 			};
 
@@ -239,6 +245,28 @@ sub top_kind {
 	my $kind  = shift;
 
 	return $top_kind = defined($kind) ? $kind : $top_kind;
+}
+
+=item $properties = Contentment::Response-E<gt>properties
+
+=item Contentment::Response-E<gt>properties(\%properties)
+
+Used to set certain bits of information about the generated file. This is most useful for theming or otherwise learning information about a request after generation.
+
+This method is called an the properties are initialized just prior to generation from the component's properties. After that they may be read or modified by calling the method to return a reference to a hash.
+
+=cut
+
+my %properties;
+sub properties {
+	my $class = shift;
+	my $properties = shift;
+
+	if ($properties) {
+		%properties = %$properties;
+	}
+
+	return \%properties;
 }
 
 =back

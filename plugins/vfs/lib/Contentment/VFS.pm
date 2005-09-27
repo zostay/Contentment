@@ -11,7 +11,7 @@ use Contentment::Request;
 use File::Spec;
 use File::System;
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 use base 'File::System::Passthrough';
 
@@ -51,7 +51,7 @@ sub instance {
 
 	my $conf = Contentment->global_configuration;
 
-	return $class->SUPER::new($conf->{vfs});
+	return $vfs = $class->SUPER::new($conf->{vfs});
 }
 
 =item $vfs = Contentment::VFS-E<gt>new
@@ -139,13 +139,13 @@ When C<$obj-E<gt>has_content> returns true, this method will attempt to lookup t
 sub properties {
 	my $self = shift;
 
-	my @properties = $self->SUPER::properties;
+	my %properties = map { ($_ => 1) } $self->SUPER::properties;
 
 	if ($self->has_content && $self->filetype) {
-		push @properties, $self->filetype->properties($self);
+		$properties{$_}++ foreach ($self->filetype->properties($self));
 	}
 
-	return @properties;
+	return keys %properties;
 }
 
 =item $value = $obj-E<gt>get_property($key)
@@ -314,14 +314,83 @@ sub ancestors {
 	return @ancestors;
 }
 
-=back
+=item $vfs-E<gt>add_layer($index, $filesystem)
+
+Layers another file system object over the current file system. If you want to make the new layer top priority set C<$index> to 0. If you want it the lowest priority, set C<$index> to -1.
+
+If the file system wrapped is not a L<File::System::Layered> object, it is made such an object with the current file system object made the only internal layer.
 
 =cut
 
-sub install {
-	my $plugin_dir = shift;
-	my $init       = shift;
+sub add_layer {
+	my $self       = shift;
+	my $index      = shift;
+	my $filesystem = shift;
+
+	unless ($self->{fs}->isa('File::System::Layered')) {
+		Contentment::Log->debug("Switching VFS to a layered file system.");
+		$self->{fs} = File::System->new('Layered',
+			$self->{fs},
+		);
+	} 
+
+	my $fsname;
+	if (ref $filesystem eq 'ARRAY') {
+		$fsname = "$filesystem->[0](".join(', ', @{$filesystem}[1 .. $#$filesystem]).")";
+	} else {
+		$fsname = ref $filesystem;
+	}
+
+	my @layers = $self->{fs}->get_layers;
+	
+	if ($index < 0) {
+		$index = @layers + $index + 1;
+	}
+
+	Contentment::Log->debug("Adding new file system %s to index %d", [$fsname,$index]);
+
+	splice @layers, $index, 0, $filesystem;
+	$self->{fs}->set_layers(@layers);
 }
+
+=item $vfs-E<gt>get_layers
+
+Lists the layers in the file system.
+
+=cut
+
+sub get_layers {
+	my $self = shift;
+	if ($self->{fs}->isa('File::System::Layered')) {
+		$self->{fs}->get_layers;
+	} else {
+		($self->{fs});
+	}
+}
+
+=item $vfs-E<gt>remove_layer($index)
+
+Removes the layer found at the given C<$index>. Throws an exception if the file system isn't layered or there is only one layer left.
+
+=cut
+
+sub remove_layer {
+	my $self = shift;
+	my $index = shift;
+
+	if ($self->{fs}->isa('File::System::Layered')) {
+		my @layers = $self->{fs}->get_layers;
+		croak "Cannot remove the last layer of the file system." if @layers == 1;
+
+		splice @layers, $index, 1;
+
+		$self->{fs}->set_layers(@layers);
+	} else {
+		croak "Cannot remove layers from an unlayered file system.";
+	}
+}
+
+=back
 
 =head2 HOOK HANDLERS
 

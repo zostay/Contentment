@@ -1,0 +1,16 @@
+name: Theme
+version: 0.01
+description: The theme plugin attempts to wrap content in pretty themes.
+order: 0
+
+use_lib:
+ - lib
+
+use:
+ - Contentment::Theme
+
+hooks:
+  Contentment::Response::end:
+    order: 70
+    sub: Contentment::Theme::theme
+  Contentment::begin: Contentment::Theme::begin

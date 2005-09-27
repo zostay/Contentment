@@ -3,12 +3,9 @@ package Contentment::FileType::HTML;
 use strict;
 use warnings;
 
-use Log::Log4perl;
 use base 'Contentment::FileType::Other';
 
-my $log = Log::Log4perl->get_logger(__PACKAGE__);
-
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 =head1 NAME
 
@@ -122,12 +119,16 @@ sub generate {
 
 	my $fh = $file->open("r");
 	my $state = 'head';
+	my $other_text;
+	my $printed = 0;
 	while (<$fh>) {
 		if ($state eq 'head') {
+			$other_text .= $_;
 			if (m[<body]i) {
 				if (m{<body.*?>(.*)$}si) {
 					print $1;
 					$state = 'body';
+					$printed++;
 				} else {
 					$state = 'limbo';
 				}
@@ -136,19 +137,43 @@ sub generate {
 			if (m{>(.*)$}si) {
 				print $1;
 				$state = 'body';
+				$printed++;
 			}
 		} else {
 			if (m[^(.*?)</body>]) {
 				print $1;
+				$printed++;
 				last;
 			} else {
 				print;
+				$printed++;
 			}
 		}
 	}
 	close $fh;
 
+	unless ($printed) {
+		print $other_text;
+	}
+
 	return 1;
+}
+
+=back
+
+=head2 HOOK HANDLERS
+
+=over
+
+=item Contentment::FileType::HTML::match
+
+Handles the "Contentment::FileType::match" hook.
+
+=cut
+
+sub match {
+	local $_ = shift;
+	/\.html?$/ && return 'Contentment::FileType::HTML';
 }
 
 =back

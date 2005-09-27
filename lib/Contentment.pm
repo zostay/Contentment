@@ -3,7 +3,7 @@ package Contentment;
 use strict;
 use warnings;
 
-our $VERSION = 0.011_008;
+our $VERSION = 0.011_009;
 
 use Carp;
 use Contentment::Hooks;
@@ -189,6 +189,7 @@ sub begin {
 	$settings->{'Contentment::installed'} = $installed;
 
 	# Now that all is installed, initialize all the begin handlers
+	Contentment::Log->debug("Calling hook Contentment::begin");
 	Contentment::Hooks->call('Contentment::begin');
 }
 
