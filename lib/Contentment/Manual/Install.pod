@@ -11,137 +11,63 @@ Contentment::Manual::Install - The installation guide for Contentment
 
 =head1 DESCRIPTION
 
-The synopsis is pretty bare and you will almost certainly need to be a little more particular with out F<Build.PL> is run. After installation you will also need to create the configuration files and may also need to create an additional CGI script to help you set things up. You may also need to modify your Apache web server configuration or F<.htaccess> files in the installation directories.
+The procedure given in the L</"SYNOPSIS"> will give you the base install. If you're using CPAN, you can also:
 
-=head2 Build.PL OPTIONS
+  cpan Contentment
 
-Contentment is not a standard CPAN install. However, it is meant to be relatively easy to install. Obviously, we're not there yet if writing an additional CGI script and F<.htaccess> file are still necessary, but as of version 0.9.0, great strides have been made to improve the install process.
+or:
 
-=head3 Install Base
+  perl -MCPAN 'install Contentment'
 
-Without any options, Contentment will be installed to F</usr/local/Contentment> which is a reasonable default location, but probably not a good place for most production environments. If you want this to go to a different location, you merely need to specify the C<install_base> option to F<Build.PL>:
+depending on the availability of the F<cpan> script.
 
-  perl Build.PL install_base=/var/www/Contentment
+After the base is installed, you will need to configure your Contentment installation. As of this writing, this is a non-trivial process, but I'm curently working on a script to automate it.
 
-=head3 Relocation
+B<WARNING:> I<I am serious. These instructions are not for the faint of heart! Older individuals, pregnant women, and anyone who might be at risk for heart related problems should stop here.>
 
-This is probably not enough if you are installing on a hosted environment or a server where the policies can't be altered. Typically, I've found that I need to relocate two specific directories depending upon the policies of the host. For example, if you scripts are going to be running within F<suexec>, you'll need the CGI scripts to be moved under the Apache document root. To make relocations, you use the C<--install_path> option:
+=head2 CONFIGURING APACHE
 
-  perl Build.PL install_base=/web/support  \
-      --install_path cgi-bin=/var/www/localhost/cgi-bin
+These instructions assume you are using Apache web server (the version matters very little), but any CGI capable web server is sufficient, assuming you can adapt these instructions to those web servers.
 
-If you are installing into a home directory, you might need to be even more particular:
+The files you need to get started with are in the F<htdocs> folder. You need to copy these files somewhere Apache will find them. You can either copy these files into your web root or you can tweak the F<httpd.conf> of your web server.
 
-  perl Build.PL install_base=/home/sterling \
-      --install_path docroots/master=/home/sterling/contentment.org \
-      --install_path cgi-bin=/home/sterling/contentment.org/cgi-bin
+Finally, you need something like the following in a file named F<.htaccess> within the directory where you copied F<htdocs>, or the equivalent information inside of your F<httpd.conf>:
 
-You should be able to relocate any directory within the Contentment installation this way.
+  Options FollowSymLinks
 
-=head2 EDIT CONFIGURATION
+  RewriteEngine on
+  RewriteRule "^$"    "cgi-bin/contentment.cgi/index.html" [L]
+  RewriteRule "(.*)$" "cgi-bin/contentment.cgi/$1"         [L]
 
-The configuration is stored in three files, all stored in F<etc>: F<Contentment.conf>, F<Contentment.defaults.conf>, and F<log4perl.conf>. The F<Contentment.defaults.conf> file is created automatically and shouldn't overwritten. This file is updated and replaced when installing updated versions of Contentment.
+and in the F<.htaccess> file for F<htdocs/cgi-bin>:
 
-The F<Contentment.conf> file specifies local settings and overrides the settings placed in F<Contentment.defaults.conf>. A partial file is generated for you named F<Contentment.conf.sample>. This will contain as much configuration that the build script is able to provide for you. You will still need to file in the details of database access and then save the file as F<Contentment.conf>. Read F<Contentment.defaults.conf> for a description of each of the options.
+  RewriteEngine off
 
-The F<log4perl.conf> configuration file is for L<Log::Log4perl>, so you should see that documentation for information on how to customize this configuraiton. Two different configurations are provided for you: F<log4perl.conf.screen> and F<log4perl.conf.file>. The F<log4perl.conf.screen> version causes all log information to be dumped to the "STDERR" file handle. Under the Apache web server, this generally means that this will be dumped to the F<error_log>. The F<log4perl.conf.file> configuration is set to dump to the log file F<logs/contentment.log> in the Contentment installation directory. This is my preference because the error_logs are too cluttered with Apache information already. 
+  Options ExecCGI
+  AddHandler cgi-script .cgi
 
-=head2 CGI CONFIGURATION
+=head2 CONTENTMENT INIT CONFIGURATION
 
-As of this release, Contentment is used via a CGI script only. In the future, there may also be other targets (the most likely target to be added is one for mod_perl). However, the CGI script may not be sufficient for your installation. For example, if you have your Perl libraries stored in a non-standard directory (as may be the case if you're running on a host that didn't have the module you needed so you installed it into your home directory), then you'll need to add extra directories to the Perl library search path.
+Before running Contentment, you need to create a file named F<init.yml> in the same directory as F<contentment.cgi>. This file should contain at least three directives in L<YAML> format: "dbi_database", "plugins_dir", and "vfs". Depending on your setup, you'll probably also want "dbi_username" and "dbi_password".
 
-Another reason you might want to do this is if Perl has been installed to a non-standard location. The CGI script assumes Perl can be found at F</usr/bin/perl>. However, Perl might actually be installed at F</usr/local/bin/perl>.
+  dbi_database: dbi:mysql:exampledb
+  dbi_username: example
+  dbi_password: secret
 
-You may do this by either modifying F<handler.cgi> directly (not recommended) or by creating a secondary script (recommended). The reason the latter is recommended is that if you choose to upgrade Contentment in the future, the install script will obliterate any custom changes to F<handler.cgi>. Keeping them in a separate file will keep your changes safe.
+  plugins_dir: /var/www/localhost/plugins
 
-An example script is provided in the F<cgi-bin> directory named F<handler-path.cgi.sample>. You may customize that file and rename it to F<handler-path.cgi>. If you need custom library paths, replace the sample paths with yours. If you need to modify the location of Perl, you should change the very first line (the sh-bang line starting with "#!") to contain the name of the appropriate Perl program file.
+  vfs:
+   - Real
+   - root
+   - /var/www/localhost/htdocs
 
-You may also add to this file any additonal initialization or Perl code you want performed before the CGI handler is run. Do I<not> run anything after the C<require "handler.cgi"> line though. The CGI handler quits with a call to C<exit>, so any code placed there will I<never run>.
+=head2 READY TO ROLL
 
-Finally, you'll need to adjust your web server configuration to use F<handler-path.cgi> rather than F<handler.cgi>.
-
-=head1 WEB SERVER CONFIGURATION
-
-This configuration is specific to Apache web server, the only web server this service has yet been tested upon. Here is an example configuration that should work. If you use Contentment with another web server, please let me know!
-
-First, you will need to place an F<.htaccess> file in the F<docroots/htdocs> directory. A sample file has been included named F<htaccess.sample>. For most installations, this file is fine as is and can just be renamed to F<.htaccess>. 
-Yet, you will need to edit it under at least the following two circumstances:
-
-=over
-
-=item 1.
-
-You have created a custom CGI wrapper for F<handler.cgi> (described in the previous section). 
-
-=item 2.
-
-The F<cgi-bin> directory is not installed within F<docroots/htdocs>.
-
-=item 3.
-
-You've installed Contentment outside of your Apache documentation root directory. (E.g., in a home directory for F</~foo/>)
-
-=back
-
-In either case (and certainly others), you may wish to customize the F<.htaccess> file. 
-
-=head2 CUSTOM HANDLER
-
-If you are using a custom handler, the important lines are:
-
-  RewriteRule "^$"    "cgi-bin/handler.cgi/index.html" [L]
-  RewriteRule "(.*)$" "cgi-bin/handler.cgi/$1"         [L]
-
-You'll want to replace the C<handler.cgi> on both lines with the name of your handler (C<handler-path.cgi> if you name it as suggested in the previous section).
-
-=head2 RELOCATED CGI-BIN
-
-If you've relocated F<cgi-bin>, then you need to make sure the rewrite engine locates it properly. Here, the same two lines as above are important:
-
-  RewriteRule "^$"    "cgi-bin/handler.cgi/index.html" [L]
-  RewriteRule "(.*)$" "cgi-bin/handler.cgi/$1"         [L]
-
-For example, if the URL to your Contentment site is:
-
-  http://www.yourhost.com/contentment/
-
-and the CGI script is at:
-
-  http://www.yourhost.com/cgi-bin/handler.cgi
-
-You want to add a "C</>" to the front of each of the two rules starting with "C<cgi-bin>".
-
-As another example, if the URL to your Contentment site is:
-
-  http://www.yourhost.com/~foo/bar/Contentment/
-
-and the CGI script is at:
-
-  http://www.yourhost.com/~foo/htbin/Contentment/handler.cgi
-
-You can replace "C<cgi-bin>" in each line with "C</~foo/htbin/Contentment>".
-
-=head2 RELOCATED HTDOCS
-
-If the F<cgi-bin> is still within the C<htdocs> folder, but you've moved the C<htdocs> folder to a place in a UserDir or an alias, then you can uncomment and modify the line:
-
-  RewriteBase "/~foo/Contentment"
-
-The replacement for F</~foo/Contentment> will be the URL needed to reach your installation.
-
-It's installed in my UserDir at work, for example. The URL is:
-
-  http://www.cis.ksu.edu/~sterling/
-
-Thus, my C<RewriteBase> line reads:
-
-  RewriteBase "/~sterling"
-
-That covers most of the basic situations. It's probable that someone will come up with something a bit more complicated. If you need help you can contact me at the email address below.
+Assuming these instructions are at all correct and useful. You should now be able to open your Contentment F<index.html>.
 
 =head1 AUTHOR
 
-Andrew Sterling Hanenkamp, E<lt>sterling@users.sourceforge.netE<gt>
+Andrew Sterling Hanenkamp, E<lt>hanenkamp@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

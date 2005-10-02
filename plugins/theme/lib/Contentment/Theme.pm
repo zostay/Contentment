@@ -3,7 +3,7 @@ package Contentment::Theme;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use Contentment::Log;
 use Contentment::Response;
@@ -28,16 +28,25 @@ Handles the "Contentment::Response::end" hook by attempting to wrap the generate
 =cut
 
 sub theme {
-	my $kind = Contentment::Response->top_kind;
-	my $comp = Contentment::Response->resolve(
-		"/themes/default/$kind/top"
-	);
+	if (my $kind = Contentment::Response->top_kind) {
 
-	if ($comp) {
-		Contentment::Log->debug("Theme found for kind '%s', generating %s", [$kind,$comp]);
-		$comp->generate;
+		# See if there's a theme for this kind
+		my $gen  = Contentment::Response->resolve("/themes/default/$kind/top");
+		if ($gen->get_property('error')) {
+
+			# Nope, no theme. Skip it.
+			Contentment::Log->debug("No theme found for kind '%s'", [$kind]);
+			print <STDIN>;
+		} else {
+
+			# We have a theme, do it.
+			Contentment::Log->debug("Theme found for kind '%s', generating %s", [$kind,$gen]);
+			$gen->generate;
+		}
 	} else {
-		Contentment::Log->debug("No theme found for kind '%s'", [$kind]);
+
+		# No kind, no theme.
+		Contentment::Log->debug("Kind is unknown, so no theming.");
 		print <STDIN>;
 	}
 }

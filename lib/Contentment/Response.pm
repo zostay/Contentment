@@ -3,8 +3,9 @@ package Contentment::Response;
 use strict;
 use warnings;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
+use Contentment::Generator;
 use Contentment::Hooks;
 use Contentment::Log;
 use Contentment::Request;
@@ -20,77 +21,99 @@ This is the class responsible for outputting the responses to a request. It prov
 
 =over
 
-=item Contentment::Response->error_page($message)
+=item $generator = Contentment::Response->error($exception)
 
-On error, this tries to find or generate a suitable error page for the given error message C<$message>.
+=item $generator = Contentment::Response->error($status, $message, $description, $detail)
+
+When called, it will use the "Contentment::Response::error" hook to attempt to locate a handler capable of handling the error message. The first form simply names an error message, C<$exception>, to print. This method will always return a generator object (i.e., if none of the hook handlers return one or there aren't any handlers, the method will create one).
+
+The second form allows for more fine grained control. The C<$status> is the numeric HTTP error code to return and the C<$message> is a short named description of the error. The C<$description> is a longer descriptive text and C<$detail> is debug information that probably ought not be displayed to the user (or not directly).
+
+All arguments are optional.
 
 =cut
 
-sub error_page {
+sub error {
 	my $class = shift;
-	my $ERROR = shift;
 
-#	# If they've given an error document, use it.
-#	my $very_bad_stuff = 0;
-#	if ($conf->{'error_page'}) {
-#		my $vfs = Contentment::VFS->new;
-#		my $error_file = $vfs->lookup_source($conf->{'error_page'});
-#		eval {
-#			$error_file->generate(
-#				error => $ERROR,
-#			);
-#		};
-#
-#		# Very bad stuff. We'll fall back to the stupid and boring default. 
-#		if ($@) {
-#			$log->error("error generating error page $error_file: $@");
-#			$very_bad_stuff = 1;
-#		}
-#	}
+	my ($status, $message, $description, $detail);	
+	if (@_ > 1) {
+		($status, $message, $description, $detail) = 
+			map { defined($_) ? $_ : '' } @_;
+	} else {
+		$status      = 400;
+		$message     = 'Error';
+		$description = shift;
+		$detail      = '';
+	}
 
-	# Don't use an else in case of an error above. We use this stupid and
-	# boring default if there's no error_page or if very bad stuff happened
-	# generating the error page.
-	#
-	# This is hard-coded to make sure this works as much as possible.
-#	unless ($conf->{'error_page'} || $very_bad_stuff) {
-#		my $context = Contentment->context;
-#		$context->header->{'-type'} = 'text/html';
-#		$context->header->{'-status'} = 404;
-#		$context->original_kind('text/html');
+	my $error = Contentment::Hooks->call('Contentment::Response::error');
 
-		my $q = Contentment::Request->cgi;
-		print $q->header(
-			-type => 'text/html',
-			-status => '404',
-		);
-		print "<?xml version=\"1.0\"?>\n";
-		print "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n";
-		print "    \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n";
-		print "<html xmlns=\"http://www.w3.org/1999/html\">\n";
-		print "<head><title>404 Not Found</title></head>\n";
-		print "<body>\n";
-		print "<h1>Not Found</h1>\n";
-		print "<p>An error occurred finding or generating the content: $ERROR</p>\n";
-		print "<p>You may wish to contact the webmaster about this problem.</p>\n";
-		print "</body></html>\n";
-		Contentment::Response->top_kind('text/html');
-#	}
+	unless ($error) {
+		$error = Contentment::Generator->new;
+		$error->set_property(error       => 1);
+		$error->set_property(status      => $status);
+		$error->set_property(message     => $message);
+		$error->set_property(description => $description);
+		$error->set_property(detail      => $detail);
+
+		$error->set_generated_kind('text/html');
+
+		$error->set_generator(sub {
+			Contentment::Response->header->{'-status'} = "$status $message";
+			print "<?xml version=\"1.0\"?>\n";
+			print "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n";
+			print "    \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n";
+			print "<html xmlns=\"http://www.w3.org/1999/html\">\n";
+			print "<head><title>$status $message</title></head>\n";
+			print "<body>\n";
+			print "<h1>$message</h1>\n";
+			print "<p>An error occurred finding or generating the content: $description</p>\n";
+			print "<p>You may wish to contact the webmaster about this problem.</p>\n";
+			print "<!-- $detail -->\n";
+			print "</body></html>\n";
+		});
+	}
+		
+	return $error;
 }
 
-=item $component = Contentment::Response->response($path)
+=item $generator = Contentment::Response->resolve($path)
 
-This returns the $component that would be used to give a response for the given path, C<$path>. If no C<$path> is given, it will default to the C<path_info> of the L<CGI> object.
+This returns the generator that would be used to give a response for the given path, C<$path>. If no C<$path> is given, it will default to the C<path_info> of the L<CGI> object.
+
+This method always returns a generator. If no generator is found using the "Contentment::Response::resolve" hook or an error occurs during the process, then the C<error> method is called to return a "Not Found" document. You can check for that circumstance as follows:
+
+  my $generator = Contentment::Response->resolve($some_path);
+  if ($generator->get_property('error')) {
+      # It's an error document
+  } else {
+	  # It's the document we requested
+  }
 
 =cut
 
 sub resolve {
 	my $class = shift;
 	my $path  = shift;
-	
-	my $iter = Contentment::Hooks->call_iterator('Contentment::Response::resolve');
-	while ($iter->next) {
-		$path = $iter->call($path);
+	my $orig  = $path;
+
+	eval {	
+		my $iter = Contentment::Hooks->call_iterator('Contentment::Response::resolve');
+		while ($iter->next) {
+			$path = $iter->call($path);
+		}
+	};
+
+	if ($@) {
+		Contentment::Log->error("Contentment::Response::resolve experienced an error while searching for %s: %s", [$orig,$@]);
+		$path = Contentment::Response->error($@);
+	} elsif (!$path) {
+		Contentment::Log->warning("Contentment::Response::resolve found no match for %s.", [$orig]);
+		$path = Contentment::Response->error(
+			404, 'Not Found', 
+			"Could not find anything for the given path: $orig"
+		);
 	}
 
 	return $path;
@@ -110,41 +133,38 @@ sub handle_cgi {
 	# Find the component responsible for rendering output
 	my $component = Contentment::Response->resolve;
 
-	# Did we find anything?
-	if ($component) {
-		Contentment::Log->debug("Resolution found component %s", [$component]);
+	Contentment::Log->debug("Resolution found component %s", [$component]);
 
-		# If it's a container and the URL doesn't end in '/', we need to fix it
-		# so that relative URLs are handled as expected.
-		if ($component->is_container && $q->path_info !~ /\/$/) {
-			Contentment::Log->debug("Redirecting directory %s", [$q->path_info]);
-			Contentment::Response->redirect($q->path_info."/", %{ $q->Vars });
+	# If it's a container and the URL doesn't end in '/', we need to fix it
+	# so that relative URLs are handled as expected.
+	if ($component->is_container && $q->path_info !~ /\/$/) {
+		Contentment::Log->debug("Redirecting directory %s", [$q->path_info]);
+		Contentment::Response->redirect($q->path_info."/", %{ $q->Vars });
 
-		# Otherwise, generate it!
-		} else {
+	# Otherwise, generate it!
+	} else {
 
-			# Call the begin hook for any pre-response output.
-			Contentment::Log->debug("Calling hook Contentment::Response::begin");
-			capture_in_out {
-				Contentment::Hooks->call('Contentment::Response::begin');
-			};
+		# Call the begin hook for any pre-response output.
+		Contentment::Log->debug("Calling hook Contentment::Response::begin");
+		capture_in_out {
+			Contentment::Hooks->call('Contentment::Response::begin');
+		};
 
-			# Pipe the output from ::begin into the input for generation.
-			IO::NestedCapture->set_next_in(IO::NestedCapture->get_last_out);
+		# Pipe the output from ::begin into the input for generation.
+		IO::NestedCapture->set_next_in(IO::NestedCapture->get_last_out);
 
-			# Capture the output and check for errors.
-			Contentment::Log->debug("Generating response for component %s", [$component]);
+		# Capture the output and check for errors.
+		Contentment::Log->debug("Generating response for component %s", [$component]);
+		capture_in_out {
 			eval {
-				capture_in_out {
-					Contentment::Response->properties({
-						map { ($_ => $component->get_property($_)) }
-						$component->properties 
-					});
+				Contentment::Response->properties({
+					map { ($_ => $component->get_property($_)) }
+					$component->properties 
+				});
 
-					$component->generate(%{ $q->Vars });
-					Contentment::Response->top_kind ||
-						Contentment::Response->top_kind($component->generated_kind(%{ $q->Vars }));
-				};
+				Contentment::Response->top_kind ||
+					Contentment::Response->top_kind($component->generated_kind(%{ $q->Vars }));
+				$component->generate(%{ $q->Vars });
 			};
 
 			# Bad stuff. Generate an error page. Throw away input captured thus
@@ -152,18 +172,20 @@ sub handle_cgi {
 			if ($@) {
 				Contentment::Log->error("Error generating %s: %s", [$component, $@]);
 
+				my $error = Contentment::Response->error(
+					500, 'Script Error', $@
+				);
+
 				capture_in_out {
-					Contentment::Response->error_page($@);
+					Contentment::Response->properties({
+						map { ($_ => $component->get_property($_)) }
+						$component->properties 
+					});
+					$error->generate;
 				};
 			}
-		}
-
-	# No file to render. Show an error.
-	} else {
-		Contentment::Log->error("No component found for %s", [$q->path_info]);
-		capture_in_out {
-			Contentment::Response->error_page("404 Not Found");
 		};
+
 	}
 
 	# Give the post-process response hooks their chance to filter the output
@@ -186,7 +208,7 @@ sub handle_cgi {
 			if ($@) {
 				Contentment::Log->error("Response post-process handler failure: %s", [$@]);
 				capture_in_out {
-					Contentment::Response->error_page($@);
+					Contentment::Response->error($@)->generate;
 				};
 			}
 		}
@@ -285,7 +307,11 @@ Handlers of this hook can expect the input from the generated output or the prev
 
 =item Contentment::Response::resolve
 
-These handlers take a path argument and should ultimately result in in a component capable of generating content. The result of the previous handler is passed as the argument to the next.
+These handlers take a path argument and should ultimately result in in a generator object (see L<Contentment::Generator>). The result of the previous handler is passed as the argument to the next.
+
+=item Contentment::Response::error
+
+These handlers take the four arguments that the C<error> method accepts and should return either C<undef> or a generator object (see L<Contentment::Generator>) capable of returning an error page.
 
 =back
 

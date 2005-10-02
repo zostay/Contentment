@@ -6,21 +6,27 @@ Contentment::Manual - Table of Contents
 
 =head2 MANUAL
 
-L<Contentment::Manual::Introduction> - Introduction to Contentment
-
 L<Contentment::Manual::Install> - Installation instructions
 
-L<Contentment::Manual::Features> - Overview of the features of Contentment
+=head2 CORE API DOCUMENTATION
 
-L<Contentment::Manual::Bugs> - An overview of the stuff needed doing
+Plan on reading this if you want to do any development with Contentment.
 
-=head2 PERL API
+L<Contentment> - Contentment is a Perl-based web content management system.
 
-@@PERL_API_INDEX@@
+L<Contentment::FileType> - Contract all filetype plugins must adhere to
 
-=head2 MASON API
+L<Contentment::Hooks> - Runs the Contentment hook system
 
-@@MASON_API_INDEX@@
+L<Contentment::Log> - Handles logging for Contentment
+
+L<Contentment::Request> - Class responsible for managing incoming requests
+
+L<Contentment::Response> - Handles Contentment response handling
+
+=head1 PLUGIN DOCUMENTATION
+
+TODO I need to put together links to documentation for each plugin.
 
 =head1 COPYRIGHT
 

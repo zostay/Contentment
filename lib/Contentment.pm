@@ -3,7 +3,7 @@ package Contentment;
 use strict;
 use warnings;
 
-our $VERSION = 0.011_010;
+our $VERSION = 0.011_011;
 
 use Carp;
 use Contentment::Hooks;
@@ -16,7 +16,7 @@ use YAML ();
 
 =head1 NAME
 
-Contentment - Contentment is a Perl-based web contentment management system
+Contentment - Contentment is a Perl-based web content management system
 
 =head1 DESCRIPTION
 

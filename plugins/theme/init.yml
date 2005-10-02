@@ -1,5 +1,5 @@
 name: Theme
-version: 0.01
+version: 0.02
 description: The theme plugin attempts to wrap content in pretty themes.
 order: 0
 
