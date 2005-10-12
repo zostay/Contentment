@@ -3,7 +3,7 @@ package Contentment::Response;
 use strict;
 use warnings;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 use Contentment::Generator;
 use Contentment::Hooks;
@@ -38,6 +38,7 @@ sub error {
 
 	my ($status, $message, $description, $detail);	
 	if (@_ > 1) {
+		push @_, '' until @_ >= 4; # pad to prevent uninitialized warnings
 		($status, $message, $description, $detail) = 
 			map { defined($_) ? $_ : '' } @_;
 	} else {
@@ -130,66 +131,46 @@ sub handle_cgi {
 	my $q = Contentment::Request->cgi;
 	Contentment::Log->info("Handling request %s", [$q->path_info]);
 
-	# Find the component responsible for rendering output
-	my $component = Contentment::Response->resolve;
+	# Find the generator responsible for rendering output
+	my $generator = Contentment::Response->resolve;
 
-	Contentment::Log->debug("Resolution found component %s", [$component]);
+	Contentment::Log->debug("Resolution found generator %s", [$generator]);
 
-	# If it's a container and the URL doesn't end in '/', we need to fix it
-	# so that relative URLs are handled as expected.
-	if ($component->is_container && $q->path_info !~ /\/$/) {
-		Contentment::Log->debug("Redirecting directory %s", [$q->path_info]);
-		Contentment::Response->redirect($q->path_info."/", %{ $q->Vars });
+	# Call the begin hook for any pre-response output.
+	Contentment::Log->debug("Calling hook Contentment::Response::begin");
+	capture_in_out {
+		Contentment::Hooks->call('Contentment::Response::begin');
+	};
 
-	# Otherwise, generate it!
-	} else {
+	# Pipe the output from ::begin into the input for generation.
+	IO::NestedCapture->set_next_in(IO::NestedCapture->get_last_out);
 
-		# Call the begin hook for any pre-response output.
-		Contentment::Log->debug("Calling hook Contentment::Response::begin");
-		capture_in_out {
-			Contentment::Hooks->call('Contentment::Response::begin');
+	# Capture the output and check for errors.
+	Contentment::Log->debug("Generating response for generator %s", [$generator]);
+	capture_in_out {
+		eval {
+			Contentment::Response->generator($generator);
+
+			Contentment::Response->top_kind ||
+				Contentment::Response->top_kind($generator->generated_kind(%{ $q->Vars }));
+			$generator->generate(%{ $q->Vars });
 		};
 
-		# Pipe the output from ::begin into the input for generation.
-		IO::NestedCapture->set_next_in(IO::NestedCapture->get_last_out);
+		# Bad stuff. Generate an error page. Throw away input captured thus
+		# far.
+		if ($@) {
+			Contentment::Log->error("Error generating %s: %s", [$generator, $@]);
 
-		# Capture the output and check for errors.
-		Contentment::Log->debug("Generating response for component %s", [$component]);
-		capture_in_out {
-			eval {
-				Contentment::Response->properties({
-					map { ($_ => $component->get_property($_)) }
-					$component->properties 
-				});
+			my $error = Contentment::Response->error(
+				500, 'Script Error', $@
+			);
 
-				Contentment::Response->top_kind ||
-					Contentment::Response->top_kind($component->generated_kind(%{ $q->Vars }));
-				$component->generate(%{ $q->Vars });
-			};
-
-			# Bad stuff. Generate an error page. Throw away input captured thus
-			# far.
-			if ($@) {
-				Contentment::Log->error("Error generating %s: %s", [$component, $@]);
-
-				my $error = Contentment::Response->error(
-					500, 'Script Error', $@
-				);
-
-				capture_in_out {
-					Contentment::Response->properties({
-						map { ($_ => $component->get_property($_)) }
-						$component->properties 
-					});
-					$error->generate;
-				};
-			}
-		};
-
-	}
+			$error->generate;
+		}
+	};
 
 	# Give the post-process response hooks their chance to filter the output
-	# from the top file component. These hooks MUST move the input to the output
+	# from the top file generator. These hooks MUST move the input to the output
 	# or the output of the original generated file will be lost. As such, we
 	# don't bother to run these if there are no hooks.
 	if (Contentment::Hooks->count('Contentment::Response::end')) {
@@ -269,26 +250,18 @@ sub top_kind {
 	return $top_kind = defined($kind) ? $kind : $top_kind;
 }
 
-=item $properties = Contentment::Response-E<gt>properties
+=item $generator = Contentment::Response-E<gt>generator
 
-=item Contentment::Response-E<gt>properties(\%properties)
-
-Used to set certain bits of information about the generated file. This is most useful for theming or otherwise learning information about a request after generation.
-
-This method is called an the properties are initialized just prior to generation from the component's properties. After that they may be read or modified by calling the method to return a reference to a hash.
+This is used to fetch the top-most generator for the request.
 
 =cut
 
-my %properties;
-sub properties {
+my $generator;
+sub generator {
 	my $class = shift;
-	my $properties = shift;
-
-	if ($properties) {
-		%properties = %$properties;
-	}
-
-	return \%properties;
+	my $gen   = shift;
+	$generator = $gen if $gen;
+	return $generator;
 }
 
 =back
@@ -299,7 +272,7 @@ sub properties {
 
 =item Contentment::Resposne::begin
 
-Handlers of this hook can expect no arguments, but their output will be captured and passed on to the component generator. It runs right before component generator.
+Handlers of this hook can expect no arguments, but their output will be captured and passed on to the generator. It runs right before generator.
 
 =item Contentment::Response:end
 

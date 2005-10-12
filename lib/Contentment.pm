@@ -3,7 +3,7 @@ package Contentment;
 use strict;
 use warnings;
 
-our $VERSION = 0.011_011;
+our $VERSION = 0.011_012;
 
 use Carp;
 use Contentment::Hooks;
@@ -138,7 +138,7 @@ sub begin {
 
 	# Get ready to figure out what's installed and not
 	my $settings = Contentment::Setting->instance;
-	my $installed;
+	my $installed = $settings->{'Contentment::installed'};
 
 	# Check each plugin to see if it is installed. If not, install it.
 	my $iter = Contentment::Hooks->call_iterator('Contentment::install');
@@ -151,21 +151,19 @@ sub begin {
 
 		# Run the handler.
 		my $plugin = $plugins{$iter->name};
-		$iter->call($plugin);
-		
-		# Load the installation settings when we can
-		if (Contentment::Setting->installed && !$installed) {
-			$installed = $settings->{'Contentment::installed'} || {};
+		eval {
+			$iter->call($plugin);
+		};
+
+		# Check for errors
+		if ($@) {
+			Contentment::Log->error("Error installing plugin %s %s: %s", [$iter->name,$plugin->{version},$@]);
 		}
 
 		# Record the installed version, if we can.
-		if ($installed) {
-			Contentment::Log->info("Installed plugin %s %s",[$iter->name,$plugin->{version}]);
-			$installed->{$iter->name} = $plugin->{version};
-			$settings->{'Contentment::Plugin::'.$iter->name} = $plugin;
-		} else {
-			Contentment::Log->warning("Installed plugin %s %s. Settings not yet available for recording. Installation will probably run twice.", [$iter->name, $plugin->{version}]);
-		}
+		Contentment::Log->info("Installed plugin %s %s",[$iter->name,$plugin->{version}]);
+		$installed->{$iter->name} = $plugin->{version};
+		$settings->{'Contentment::Plugin::'.$iter->name} = $plugin;
 	}
 
 	# Now check for upgrades.

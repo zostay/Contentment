@@ -17,6 +17,6 @@ my $html = $vfs->lookup('/themes/default/text/html');
 print "/themes/default/text/html is a directory\n" 
 	if $html && $html->is_container;
 
-my $top = $vfs->lookup('/themes/default/text/html/top.pl');
-print "/themes/default/text/html/top.pl is a file\n" 
+my $top = $vfs->lookup('/themes/default/text/html/top.tt2');
+print "/themes/default/text/html/top.tt2 is a file\n" 
 	if $top && $top->has_content;

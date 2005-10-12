@@ -3,13 +3,12 @@ package Contentment::Session;
 use strict;
 use warnings;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 use Contentment;
 use Data::UUID;
-use YAML;
 
-use base 'Contentment::DBI';
+use base 'Oryx::Class';
 
 =head1 NAME
 
@@ -21,21 +20,26 @@ This is a session management module specifically designed for Contentment.
 
 =cut
 
-__PACKAGE__->table('session');
-__PACKAGE__->columns(Primary => 'session_id');
-__PACKAGE__->columns(Essential => qw/ session_id session_data /);
-
-__PACKAGE__->column_definitions([
-	[ session_id   => 'varchar(36)', 'not null' ],
-	[ session_data => 'text', 'null' ],
-]);
+our $schema = {
+	attributes => [
+		{
+			name => 'session_id',
+			type => 'String',
+			size => 36,
+		},
+		{
+			name => 'session_data',
+			type => 'Complex',
+		},
+	],
+};
 
 sub install {
-	__PACKAGE__->create_table;
+	__PACKAGE__->storage->deployClass(__PACKAGE__);
 }
 
 sub remove {
-	__PACKAGE__->drop_table;
+	__PACKAGE__->storage->util->dropTable(__PACKAGE__->table);
 }
 
 my $session_id;
@@ -56,21 +60,22 @@ sub open_session {
 
 	my $session;
 	if ($session_id) {
-		$session = Contentment::Session->retrieve($session_id);
+		($session) = Contentment::Session->search({ session_id => $session_id });
 		if ($session) {
 			Contentment::Log->debug("Reusing existing SESSIONID $session_id");
-			$session_data = Load($session->session_data);
+			$session_data = $session->session_data;
 		}
 	}
 
 	unless ($session) {
 		my $uuid = Data::UUID->new;
 		$session_id = $uuid->create_str;
-		Contentment::Session->create({
+		$session = Contentment::Session->create({
 			session_id   => $session_id,
-			session_data => Dump({}),
 		});
-		$session_data = {};
+		$session->session_data($session_data = {});
+		$session->update;
+		$session->commit;
 
 		Contentment::Log->debug("Creating a new SESSIONID $session_id");
 	}
@@ -85,15 +90,17 @@ sub open_session {
 }
 
 sub close_session {
-	my $session = Contentment::Session->retrieve($session_id);
+	my ($session) = Contentment::Session->search({ session_id => $session_id });
 
 	if ($session) {
 		Contentment::Log->debug("Saving session data to session $session_id");
-		$session->session_data(Dump($session_data));
+		$session->session_data($session_data);
 		$session->update;
+		$session->commit;
 	} else {
 		Contentment::Log->error("Lost session $session_id during request.");
 	}
+
 }
 
 =head1 SEE ALSO

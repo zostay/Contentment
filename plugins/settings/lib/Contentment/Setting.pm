@@ -3,9 +3,10 @@ package Contentment::Setting;
 use strict;
 use warnings;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
-use base 'Contentment::DBI';
+use Oryx auto_deploy => 1;
+use base 'Oryx::Class';
 
 =head1 NAME
 
@@ -17,27 +18,23 @@ This module is required by the Contentment core and is used to store settings an
 
 =cut
 
-__PACKAGE__->table('setting');
-__PACKAGE__->columns(Primary => 'setting_name');
-__PACKAGE__->columns(Essential => qw/ setting_name setting_value /);
+our $schema = {
+	attributes => [
+		{
+			name => 'setting_name',
+			type => 'String',
+		},
+		{
+			name => 'setting_value',
+			type => 'Complex',
+		},
+	],
+};
 
-__PACKAGE__->column_definitions([
-	[ setting_name  => 'varchar(150)', 'not null' ],
-	[ setting_value => 'text', 'null' ],
-]);
-
-sub installed {
-	my $dbh = __PACKAGE__->db_Main;
-	my $test = grep /\bsetting\b/, $dbh->tables(undef, undef, 'setting');
-	return $test;
-}
-
-sub install {
-	__PACKAGE__->create_table;
-}
+__PACKAGE__->auto_deploy(1);
 
 sub remove {
-	__PACKAGE__->drop_table;
+	__PACKAGE__->storage->util->dropTable(__PACKAGE__->table);
 }
 
 =over
@@ -87,8 +84,6 @@ sub instance {
 
 package Contentment::Setting::Tie;
 
-use YAML;
-
 sub TIEHASH {
 	my $class = shift;
 	return bless {}, $class;
@@ -98,8 +93,8 @@ sub FETCH {
 	my $self = shift;
 	my $key  = shift;
 
-	my $setting = Contentment::Setting->retrieve($key);
-	return $setting ? Load($setting->setting_value) : undef;
+	my ($setting) = Contentment::Setting->search({ setting_name => $key });
+	return $setting ? $setting->setting_value : undef;
 }
 
 sub STORE {
@@ -107,15 +102,18 @@ sub STORE {
 	my $key   = shift;
 	my $value = shift;
 
-	my $setting = Contentment::Setting->retrieve($key);
+	my ($setting) = Contentment::Setting->search({ setting_name => $key });
 	if ($setting) {
-		$setting->setting_value(Dump($value));
+		$setting->setting_value($value);
 		$setting->update;
+		$setting->commit;
 	} else {
 		$setting = Contentment::Setting->create({
 			setting_name  => $key,
-			setting_value => Dump($value),
 		});
+		$setting->setting_value($value);
+		$setting->update;
+		$setting->commit;
 	}
 	return $value;
 }
@@ -124,10 +122,11 @@ sub DELETE {
 	my $self = shift;
 	my $key  = shift;
 
-	my $setting = Contentment::Setting->retrieve($key);
+	my ($setting) = Contentment::Setting->search({ setting_name => $key });
 	if ($setting) {
-		my $value = Load($setting->setting_value);
+		my $value = $setting->setting_value;
 		$setting->delete;
+		$setting->commit;
 		return $value;
 	} else {
 		return undef;
@@ -144,14 +143,14 @@ sub EXISTS {
 	my $self = shift;
 	my $key  = shift;
 
-	my $setting = Contentment::Setting->retrieve($key);
+	my ($setting) = Contentment::Setting->search({ setting_name => $key });
 	return $setting ? 1 : '';
 }
 
 sub FIRSTKEY {
 	my $self = shift;
 
-	$self->{iter} = Contentment::Setting->retrieve_all;
+	$self->{iter} = Contentment::Setting->search;
 	if (my $setting = $self->{iter}->next) {
 		return $setting->setting_name;
 	} else {
@@ -171,7 +170,7 @@ sub NEXTKEY {
 
 sub SCALAR {
 	my $self = shift;
-	return Contentment::Setting->count_all;
+	return scalar(Contentment::Setting->search);
 }
 
 =back

@@ -2,7 +2,7 @@
 
 use strict;
 use Contentment::Generator;
-use Test::More tests => 13;
+use Test::More tests => 11;
 
 my $generator;
 ok($generator = Contentment::Generator->new, 'new');
@@ -18,9 +18,6 @@ is($generator->set_property(foo => 1), 1, 'set_property');
 is($generator->set_property(bar => 'baz'), 'baz', 'set_property');
 is($generator->get_property('foo'), 1, 'get_property');
 is($generator->get_property('bar'), 'baz', 'get_property');
-
-ok(grep { $_ eq 'foo' } $generator->properties, 'properties');
-ok(grep { $_ eq 'bar' } $generator->properties, 'properties');
 
 $generator->set_generator(sub { 'test'.join(',',@_) });
 is($generator->generate, 'test', 'generator');

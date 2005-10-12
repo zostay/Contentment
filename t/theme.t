@@ -13,5 +13,5 @@ SKIP: {
 	like($body, qr{^/themes/default is a directory}m);
 	like($body, qr{^/themes/default/text is a directory}m);
 	like($body, qr{^/themes/default/text/html is a directory}m);
-	like($body, qr{^/themes/default/text/html/top\.pl is a file}m);
+	like($body, qr{^/themes/default/text/html/top\.tt2 is a file}m);
 }

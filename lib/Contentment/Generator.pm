@@ -3,7 +3,7 @@ package Contentment::Generator;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 NAME
 
@@ -34,10 +34,6 @@ This is the list of methods that a generator class must implement and the expect
 =item my $value = $generator-E<gt>get_property($key)
 
 This method must exist and returns whatever information is appropriate. For generators based on files, it might return information for keys naming values returned from the C<stat> operator. This is anything you want.
-
-=item @keys = $generator-E<gt>properties
-
-This method must exist and returns a list of all strings (or all known/common if it's not possible or feasible to list all of them) that may be used as keys into the C<get_property> method.
 
 =item $kind = $generator-E<gt>generated_kind(%args)
 
@@ -114,17 +110,6 @@ sub get_property {
 	my $self = shift;
 	my $key  = shift;
 	$self->{properties}{$key};
-}
-
-=item @keys = $generator-E<gt>properties
-
-Returns all the keys that have been set via the C<set_property> method.
-
-=cut
-
-sub properties {
-	my $self = shift;
-	keys %{ $self->{properties} };
 }
 
 =item $generator-E<gt>set_generator($code)

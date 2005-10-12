@@ -11,7 +11,7 @@ use Contentment::Request;
 use File::Spec;
 use File::System;
 
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 
 use base 'File::System::Passthrough';
 
@@ -409,9 +409,19 @@ sub resolve {
 	unless ($path) {
 		my $q = Contentment::Request->cgi;
 		$path = $q->path_info;
-	}	
+	}
 
-	return $vfs->lookup($path) || $vfs->lookup_source($path);
+	my $file = $vfs->lookup($path);
+	if ($file && $path !~ /\/$/ && $file->is_container) {
+		my $generator = Contentment::Generator->new;
+		$generator->set_generator(sub {
+			Contentment::Log->debug("Redirecting directory %s -> %s/", [$path,$path]);
+			Contentment::Response->redirect("$path/", %{ Contentment::Request->cgi->Vars });
+		});
+		return $generator;
+	} else {
+		return $file || $vfs->lookup_source($path);
+	}
 }
 
 =head1 SEE ALSO
