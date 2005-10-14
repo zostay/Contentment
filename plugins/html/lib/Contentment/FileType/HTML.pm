@@ -5,7 +5,7 @@ use warnings;
 
 use base 'Contentment::FileType::Other';
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 =head1 NAME
 
@@ -65,11 +65,13 @@ sub props {
 
 	($props{title}) = m[<title>(.*?)</title>]si;
 
-	while (my $meta = m[(<\s*meta[^>]+?name=(?:"[^"]+"|\S+\s)[^>]*?>)]sig) {
-		$meta =~ m{name=(?:"([^"]+)"|([^\\>\S]+))}si;
+	while (m[<\s*meta[^>]+?name=(?:"[^"]+"|\S+\s)[^>]*?>]sig) {
+		my $meta = $&;
+
+		$meta =~ m{name=(?:"([^"]+)"|([^\\>\s]+))}si;
 		my $key = $1 || $2;
 
-		$meta =~ m{content=(?:"([^"]*)"|([^\\>\S]*))}si;
+		$meta =~ m{content=(?:"([^"]*)"|([^\\>\s]*))}si;
 		my $value = $1 || $2;
 
 		$props{$key} = $value;

@@ -3,7 +3,7 @@ package Contentment::Response;
 use strict;
 use warnings;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 use Contentment::Generator;
 use Contentment::Hooks;
@@ -78,6 +78,33 @@ sub error {
 		
 	return $error;
 }
+
+sub redirect {
+	my $class = shift;
+	my $url   = shift;
+
+	unless ($url =~ /:/) {
+		$url = Contentment::Request->cgi->url(-base => 1).'/'.$url;
+	}
+
+	my @query;
+	while (my ($key, $value) = splice @_, 0, 2) {
+		push @query, "$key=$value";
+	}
+
+	if (@query) {
+		$url .= '?'.join('&', @query);
+	}
+
+	my $redirect = Contentment::Generator->new;
+	$redirect->set_generator(sub {
+		Contentment::Response->header->{'-status'} = "302 Found";
+		Contentment::Response->header->{'-location'} = $url;
+	});
+
+	return $redirect;
+}
+
 
 =item $generator = Contentment::Response->resolve($path)
 

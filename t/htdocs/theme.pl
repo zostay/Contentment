@@ -1,3 +1,5 @@
+print "Hello Theme!\n";
+
 use Contentment::VFS;
 my $vfs = Contentment::VFS->instance;
 

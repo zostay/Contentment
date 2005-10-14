@@ -7,7 +7,7 @@ use Cache::FileCache;
 use DateTime;
 use MIME::Types;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 =head1 NAME
 
@@ -143,7 +143,13 @@ Used to handle the "Contentment::Request::final_kind" hook.
 
 sub final_kind {
 	my $cgi = shift;
-	return Contentment::FileType::Other->mimetypes->mimeTypeOf($cgi->path_info);
+	my $kind = Contentment::FileType::Other->mimetypes->mimeTypeOf($cgi->path_info);
+	if ($kind) {
+		Contentment::Response->header->{-type} = $kind;
+		return $kind;
+	} else {
+		return undef;
+	}
 }
 
 =back
