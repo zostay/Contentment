@@ -10,7 +10,9 @@ SKIP: {
 	my $res = GET('/perl.txt');
 	my $body = $res->content;
 
-	is($res->header('Content-Type', 'plain/text');
+	# test that the string start right, since CGI usually adds "; encoding=..."
+	# on to the end
+	like($res->header('Content-Type'), qr{^text/plain});
 	like($body, qr/^Hello World!/m);
 	like($body, qr{^path = /perl\.pl}m);
 }
