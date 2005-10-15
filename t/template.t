@@ -1,7 +1,7 @@
 # vim: set ft=perl :
 
 use strict;
-use Test::More tests => 2;
+use Test::More tests => 3;
 
 SKIP: {
 	eval "use Apache::TestRequest 'GET_BODY'";
@@ -11,4 +11,5 @@ SKIP: {
 
 	like($body, qr/^Hello World!/m);
 	like($body, qr{^path = /template\.tt2}m);
+	like($body, qr{^INCLUDE = foo}m);
 }

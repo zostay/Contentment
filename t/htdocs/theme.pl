@@ -1,3 +1,5 @@
+print "Hello Theme!\n";
+
 use Contentment::VFS;
 my $vfs = Contentment::VFS->instance;
 
@@ -20,3 +22,7 @@ print "/themes/default/text/html is a directory\n"
 my $top = $vfs->lookup('/themes/default/text/html/top.tt2');
 print "/themes/default/text/html/top.tt2 is a file\n" 
 	if $top && $top->has_content;
+
+=begin meta
+kind => 'text/html'
+=end meta

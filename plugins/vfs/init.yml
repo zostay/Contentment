@@ -1,6 +1,6 @@
 name: VFS
 description: Used to find files. Required by Contentment.
-version: 0.12
+version: 0.13
 required: 1
 order: -50
 

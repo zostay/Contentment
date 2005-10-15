@@ -11,7 +11,7 @@ use Contentment::Request;
 use File::Spec;
 use File::System;
 
-our $VERSION = '0.12';
+our $VERSION = '0.13';
 
 use base 'File::System::Passthrough';
 
@@ -241,13 +241,10 @@ This is only valid when C<has_content> is true.
 sub generated_kind {
 	my $self = shift;
 
-	$self->has_content
-		or croak "Cannot call 'generated_kind' on file with no content.";
-
 	if (my $filetype = $self->filetype) {
 		return $filetype->generated_kind($self, @_);
 	} else {
-		return 'unknown';
+		return '';
 	}
 }
 
@@ -262,8 +259,7 @@ This is only valid when C<has_content> is true.
 sub filetype {
 	my $self = shift;
 
-	$self->has_content
-		or croak "Cannot call 'filetype' on non-content file $self.";
+	$self->has_content or return undef;
 
 	defined $self->{filetype} and
 		return $self->{filetype};
@@ -412,13 +408,12 @@ sub resolve {
 	}
 
 	my $file = $vfs->lookup($path);
-	if ($file && $path !~ /\/$/ && $file->is_container) {
-		my $generator = Contentment::Generator->new;
-		$generator->set_generator(sub {
-			Contentment::Log->debug("Redirecting directory %s -> %s/", [$path,$path]);
-			Contentment::Response->redirect("$path/", %{ Contentment::Request->cgi->Vars });
-		});
-		return $generator;
+	if ($file && $file->is_container) {
+		if ($path =~ /\/$/) {
+			return $vfs->lookup_source($path);
+		} else {
+			return Contentment::Response->redirect("$path/", %{ Contentment::Request->cgi->Vars });;
+		}
 	} else {
 		return $file || $vfs->lookup_source($path);
 	}

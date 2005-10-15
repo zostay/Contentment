@@ -1,6 +1,6 @@
 name: Filetype
 description: Basic filetype plugin used with static files.
-version: 0.06
+version: 0.07
 order: 0
 
 use_lib:
