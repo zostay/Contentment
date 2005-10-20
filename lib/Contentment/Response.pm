@@ -3,8 +3,9 @@ package Contentment::Response;
 use strict;
 use warnings;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
+use Carp;
 use Contentment::Generator;
 use Contentment::Hooks;
 use Contentment::Log;
@@ -58,7 +59,7 @@ sub error {
 		$error->set_property(description => $description);
 		$error->set_property(detail      => $detail);
 
-		$error->set_generated_kind('text/html');
+		$error->set_generated_kind(sub { 'text/html' });
 
 		$error->set_generator(sub {
 			Contentment::Response->header->{'-status'} = "$status $message";
@@ -123,7 +124,7 @@ This method always returns a generator. If no generator is found using the "Cont
 
 sub resolve {
 	my $class = shift;
-	my $path  = shift;
+	my $path  = shift || Contentment::Request->cgi->path_info;
 	my $orig  = $path;
 
 	eval {	
@@ -140,7 +141,8 @@ sub resolve {
 		Contentment::Log->warning("Contentment::Response::resolve found no match for %s.", [$orig]);
 		$path = Contentment::Response->error(
 			404, 'Not Found', 
-			"Could not find anything for the given path: $orig"
+			"Could not find anything for the given path: $orig",
+			Carp::longmess("Could not find anything for the given path: $orig")
 		);
 	}
 

@@ -3,7 +3,7 @@ package Contentment::Session;
 use strict;
 use warnings;
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 use Contentment;
 use Data::UUID;
@@ -48,7 +48,6 @@ my $session_data;
 sub instance {
 	return $session_data;
 }
-
 sub instance_id {
 	return $session_id;
 }
@@ -85,11 +84,15 @@ sub open_session {
 			-name    => 'SESSIONID',
 			-value   => $session_id,
 			-expires => '60m');
-		Contentment::Response->header->{'-cookie'} = $cookie;
+		push @{ Contentment::Response->header->{'-cookie'} }, $cookie;
 	}
+
+    Contentment::Hooks->call('Contentment::Session::begin', $session_data);
 }
 
 sub close_session {
+    Contentment::Hooks->call('Contentment::Session::end', $session_data);
+
 	my ($session) = Contentment::Session->search({ session_id => $session_id });
 
 	if ($session) {

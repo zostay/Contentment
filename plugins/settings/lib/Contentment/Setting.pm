@@ -3,9 +3,8 @@ package Contentment::Setting;
 use strict;
 use warnings;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
-use Oryx auto_deploy => 1;
 use base 'Oryx::Class';
 
 =head1 NAME

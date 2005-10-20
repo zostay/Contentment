@@ -1,6 +1,6 @@
 name: Settings
 description: Used to store configuration. Required by Contentment.
-version: 0.07
+version: 0.08
 required: 1
 order: -90
 
