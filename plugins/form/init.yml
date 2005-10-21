@@ -1,0 +1,9 @@
+name: Form
+version: 0.01
+description: Adapter to use FormBuilder tempaltes in Contentment.
+
+use_lib:
+ - lib
+
+use:
+ - Contentment::Form

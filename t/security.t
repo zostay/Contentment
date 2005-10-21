@@ -1,11 +1,11 @@
 # vim: set ft=perl :
 
 use strict;
-use Test::More tests => 38;
+use Test::More tests => 41;
 
 SKIP: {
     eval "use Apache::TestRequest 'GET_BODY'";
-    skip "Apache::Test is not installed.", 1 if $@;
+    skip "Apache::Test is not installed.", 41 if $@;
 
     Apache::TestRequest::user_agent(cookie_jar => {});
 
@@ -60,4 +60,10 @@ SKIP: {
     like($body, qr{^permissions = SuperUser}m);
     like($body, qr{^information\.foo = $auth_foo}m);
     like($body, qr{^preferences\.bar = $auth_bar}m);
+
+    $body = GET_BODY('/security-lookup.txt');
+
+    like($body, qr{^type = authenticated}m);
+    like($body, qr{^username = admin}m);
+    like($body, qr{^full_name = Site Administrator}m);
 }

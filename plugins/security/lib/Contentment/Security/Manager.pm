@@ -3,7 +3,7 @@ package Contentment::Security::Manager;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use Contentment::Hooks;
 use Contentment::Security::Principal;
@@ -35,6 +35,10 @@ Return an instance of the security manager. This is named C<instance> because it
 =item $principal = $secman-E<gt>get_principal
 
 Return the C<Contentment::Security::Principal> to associate with the request.
+
+=item $principal = $secman-E<gt>lookup_principal($username)
+
+Return a C<Contentment::Security::Principal> matching the given username, C<$username>, or return C<undef> if no match can be found.
 
 =back
 
@@ -84,6 +88,7 @@ sub get_principal {
             Contentment::Security::Profile::Scratch->new
         );
 
+        # Store the principal in the session
         Contentment::Session->instance
             ->{'Contentment::Security::Manager::principal'}
                 = $principal;
@@ -93,6 +98,29 @@ sub get_principal {
     $self->_update_roles($principal);
     $principal->update_permissions;
 
+    return $principal;
+}
+
+sub lookup_principal {
+    my $self     = shift;
+    my $username = shift;
+
+    # See if we can find a matching user
+    my ($profile) = Contentment::Security::Profile::Persistent->search({
+        username => $username,
+    });
+
+    # Load the user's data if found to create a principal to return
+    my $principal = undef;
+    if ($profile) {
+        $principal = Contentment::Security::Principal->new;
+        $principal->type('authenticated');
+        $principal->profile($profile);
+        $self->_update_roles($principal);
+        $principal->update_permissions($principal);
+    }
+
+    # Return the principal found or undef
     return $principal;
 }
 
@@ -107,6 +135,7 @@ sub _update_roles {
         title => 'Everybody',
     });
 
+    # This is a special role, it shouldn't be deleted.
     defined $everybody_role
         or Contentment::Log->error('Special role "Everybody" is missing!');
 
@@ -118,11 +147,14 @@ sub _update_roles {
             title => 'Authenticated',
         });
     
+        # This is a special role, it shouldn't be deleted.
         defined $everybody_role
             or Contentment::Log->error(
                 'Special role "Authenticated" is missing!'
             );
 
+        # The principal gets the roles in the profile, Authenticated, and
+        # Everybody
         $principal->roles([
             @{ $principal->profile->roles },
             (defined $authenticated_role ? $authenticated_role : ()),
@@ -136,11 +168,13 @@ sub _update_roles {
             title => 'Anonymous',
         });
         
+        # This is a special role, it shouldn't be deleted.
         defined $everybody_role
             or Contentment::Log->error(
                 'Special role "Anonymous" is missing!'
             );
         
+        # The principal gets the Anonymous and Everybody roles.
         $principal->roles([
             (defined $anonymous_role ? $anonymous_role : ()),
             (defined $everybody_role ? $everybody_role : ()),

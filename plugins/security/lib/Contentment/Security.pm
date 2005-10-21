@@ -3,7 +3,7 @@ package Contentment::Security;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use base 'Class::Singleton';
 
@@ -242,6 +242,18 @@ Returns the principal object associated with the current request. This is basica
 sub get_principal {
     my $class = shift;
     return $class->security_manager->get_principal;
+}
+
+=item $principal = Contentment::Security-E<gt>lookup_principal($username)
+
+Returns the principal object associated with the given username or C<undef> if no match is found.
+
+=cut
+
+sub lookup_principal {
+    my $class    = shift;
+    my $username = shift;
+    return $class->security_manager->lookup_principal($username);
 }
 
 =back

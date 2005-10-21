@@ -3,7 +3,9 @@ package Contentment::Request;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
+
+use base 'Class::Singleton';
 
 use CGI;
 use Contentment::Hooks;
@@ -29,9 +31,15 @@ Retrieves a copy of the CGI object or undef if the request hasn't be initialized
 
 =cut
 
-my $cgi;
+sub instance {
+    my $proto = shift;
+    my $class = ref $proto || $proto;
+    $class->SUPER::instance(@_);
+}
+
 sub cgi {
-	return $cgi;
+    my $self = shift->instance;
+	return $self->{cgi};
 }
 
 =item $kind = Contentment::Request-E<gt>final_kind
@@ -40,18 +48,18 @@ This method may be called to ask what kind of file the request wants returned. T
 
 =cut
 
-my $final_kind;
 sub final_kind {
-	return $final_kind if defined $final_kind;
+    my $self = shift->instance;
+	return $self->{final_kind} if defined $self->{final_kind};
 
-	my $cgi = Contentment::Request->cgi;
+	my $cgi = $self->cgi;
 	my $iter = Contentment::Hooks->call_iterator('Contentment::Request::final_kind');
 	while ($iter->next) {
-		$final_kind = $iter->call($cgi);
-		last if defined $final_kind;
+		$self->{final_kind} = $iter->call($cgi);
+		last if defined $self->{final_kind};
 	}
 
-	return $final_kind ||= '';
+	return $self->{final_kind} ||= '';
 }
 
 =item Contentment::Request-E<gt>begin_cgi
@@ -63,9 +71,11 @@ This calls the C<Contentment::Request::begin> hook.
 =cut
 
 sub begin_cgi {
+    my $self = shift->instance;
+
 	Contentment::Log->info("Initializing CGI object from CGI request.");
-	$cgi = CGI->new;
-	Contentment::Hooks->call('Contentment::Request::begin', $cgi);
+	$self->{cgi} = CGI->new;
+	Contentment::Hooks->call('Contentment::Request::begin', $self->{cgi});
 }
 
 =item Contemtent::Request-E<gt>end_cgi
@@ -75,9 +85,11 @@ This shouldn't be called outside of a L<Contentment> handler method. It calls th
 =cut
 
 sub end_cgi {
+    my $self = shift->instance;
+
 	Contentment::Log->info("Shutting down the CGI request.");
 	Contentment::Hooks->call('Contentment::Request::end', 
-		Contentment::Request->cgi);
+		$self->cgi);
 }
 
 =back

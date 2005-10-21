@@ -3,7 +3,9 @@ package Contentment::Response;
 use strict;
 use warnings;
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
+
+use base 'Class::Singleton';
 
 use Carp;
 use Contentment::Generator;
@@ -34,8 +36,14 @@ All arguments are optional.
 
 =cut
 
+sub instance {
+    my $proto = shift;
+    my $class = ref $proto || $proto;
+    $class->SUPER::instance(@_);
+}
+
 sub error {
-	my $class = shift;
+	my $self = shift->instance;
 
 	my ($status, $message, $description, $detail);	
 	if (@_ > 1) {
@@ -81,8 +89,8 @@ sub error {
 }
 
 sub redirect {
-	my $class = shift;
-	my $url   = shift;
+	my $self = shift->instance;
+	my $url  = shift;
 
 	unless ($url =~ /:/) {
 		$url = Contentment::Request->cgi->url(-base => 1).'/'.$url;
@@ -123,9 +131,9 @@ This method always returns a generator. If no generator is found using the "Cont
 =cut
 
 sub resolve {
-	my $class = shift;
-	my $path  = shift || Contentment::Request->cgi->path_info;
-	my $orig  = $path;
+	my $self = shift->instance;
+	my $path = shift || Contentment::Request->cgi->path_info;
+	my $orig = $path;
 
 	eval {	
 		my $iter = Contentment::Hooks->call_iterator('Contentment::Response::resolve');
@@ -136,10 +144,10 @@ sub resolve {
 
 	if ($@) {
 		Contentment::Log->error("Contentment::Response::resolve experienced an error while searching for %s: %s", [$orig,$@]);
-		$path = Contentment::Response->error($@);
+		$path = $self->error($@);
 	} elsif (!$path) {
 		Contentment::Log->warning("Contentment::Response::resolve found no match for %s.", [$orig]);
-		$path = Contentment::Response->error(
+		$path = $self->error(
 			404, 'Not Found', 
 			"Could not find anything for the given path: $orig",
 			Carp::longmess("Could not find anything for the given path: $orig")
@@ -156,12 +164,14 @@ This should not be called outside of a L<Contentment> handler method. It returns
 =cut
 
 sub handle_cgi {
+    my $self = shift->instance;
+
 	# Get the CGI object from the request class
 	my $q = Contentment::Request->cgi;
 	Contentment::Log->info("Handling request %s", [$q->path_info]);
 
 	# Find the generator responsible for rendering output
-	my $generator = Contentment::Response->resolve;
+	my $generator = $self->resolve;
 
 	Contentment::Log->debug("Resolution found generator %s", [$generator]);
 
@@ -178,10 +188,10 @@ sub handle_cgi {
 	Contentment::Log->debug("Generating response for generator %s", [$generator]);
 	capture_in_out {
 		eval {
-			Contentment::Response->generator($generator);
+			$self->generator($generator);
 
-			Contentment::Response->top_kind ||
-				Contentment::Response->top_kind($generator->generated_kind(%{ $q->Vars }));
+			$self->top_kind ||
+				$self->top_kind($generator->generated_kind(%{ $q->Vars }));
 			$generator->generate(%{ $q->Vars });
 		};
 
@@ -190,7 +200,7 @@ sub handle_cgi {
 		if ($@) {
 			Contentment::Log->error("Error generating %s: %s", [$generator, $@]);
 
-			my $error = Contentment::Response->error(
+			my $error = $self->error(
 				500, 'Script Error', $@
 			);
 
@@ -218,7 +228,7 @@ sub handle_cgi {
 			if ($@) {
 				Contentment::Log->error("Response post-process handler failure: %s", [$@]);
 				capture_in_out {
-					Contentment::Response->error($@)->generate;
+					$self->error($@)->generate;
 				};
 			}
 		}
@@ -229,9 +239,9 @@ sub handle_cgi {
 	# Take the final captured output and print out the response
 	Contentment::Log->debug("Sending response to standard output");
 	my $final_output = IO::NestedCapture->get_last_out;
-	unless (Contentment::Response->header_sent) {
-		print $q->header(%{ Contentment::Response->header });
-		Contentment::Response->header_sent;
+	unless ($self->header_sent) {
+		print $q->header(%{ $self->header });
+		$self->header_sent;
 	}
 	print <$final_output>;
 
@@ -242,16 +252,17 @@ sub handle_cgi {
 
 =item Contentment::Response-E<gt>header_sent($header_sent)
 
-Returns a true value if the headers were already printed as part of the request. Set to a true value if you send headers.
+Returns a true value if the headers were already printed as part of the request. Set to a true value if you send headers. Once set to true, it cannot be set back to false.
 
 =cut
 
-my $header_sent = 0;
 sub header_sent {
-	my $class = shift;
-	my $new_sent = shift;
+	my $self     = shift->instance;
+	my $new_sent = shift || 0;
 
-	$header_sent = defined($new_sent) ? $new_sent : $header_sent;
+    $self->{header_sent} ||= $new_sent;
+
+	return $self->{header_sent}; 
 }
 
 =item $header = Contentment::Response-E<gt>header
@@ -260,8 +271,11 @@ Returns a reference to a hash to store header information in. This hash will be 
 
 =cut
 
-my $header = {};
-sub header { return $header }
+sub header { 
+    my $self = shift->instance;
+    $self->{header} ||= {};
+    return $self->{header};
+}
 
 =item $top_kind = Contentment::Response-E<gt>top_kind
 
@@ -271,12 +285,17 @@ Used to reflect the current file kind of the top level response. This should be 
 
 =cut
 
-my $top_kind = '';
 sub top_kind {
-	my $class = shift;
-	my $kind  = shift;
+	my $self = shift->instance;
+	my $kind = shift;
 
-	return $top_kind = defined($kind) ? $kind : $top_kind;
+    # set to default if not set
+    $self->{top_kind} ||= '';
+
+    # set to kind if given
+    $self->{top_kind} = defined($kind) ? $kind : $self->{top_kind};
+
+	return $self->{top_kind};
 }
 
 =item $generator = Contentment::Response-E<gt>generator
@@ -285,12 +304,11 @@ This is used to fetch the top-most generator for the request.
 
 =cut
 
-my $generator;
 sub generator {
-	my $class = shift;
-	my $gen   = shift;
-	$generator = $gen if $gen;
-	return $generator;
+	my $self = shift->instance;
+	my $gen  = shift;
+	$self->{generator} = $gen if $gen;
+	return $self->{generator};
 }
 
 =back
