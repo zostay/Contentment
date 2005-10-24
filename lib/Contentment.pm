@@ -3,7 +3,7 @@ package Contentment;
 use strict;
 use warnings;
 
-our $VERSION = 0.011_016;
+our $VERSION = 0.011_017;
 
 use Carp;
 use Contentment::Hooks;

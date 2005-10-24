@@ -3,7 +3,7 @@ package Contentment::Build;
 use strict;
 use warnings;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 my $build_pkg = eval { require Apache::TestMB }
 	? 'Apache::TestMB' : 'Module::Build';
@@ -23,7 +23,8 @@ sub ACTION_test {
 
 	while (<IN>) {
 		if (/^use Contentment;/) {
-			print OUT "use lib '../../../blib/lib';\n";
+			print OUT qq{use lib '../../../blib/lib';\n};
+            print OUT qq{use lib '../../lib';\n};
 		}
 		
 		print OUT $_;

@@ -5,7 +5,7 @@ use Test::More tests => 3;
 
 SKIP: {
 	eval "use Apache::TestRequest 'GET'";
-	skip "Apache::Test is not installed.", 1 if $@;
+	skip "Apache::Test is not installed.", 3 if $@;
 
 	my $res = GET('/perl.txt');
 	my $body = $res->content;
