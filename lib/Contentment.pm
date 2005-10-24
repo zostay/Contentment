@@ -3,7 +3,7 @@ package Contentment;
 use strict;
 use warnings;
 
-our $VERSION = 0.011_017;
+our $VERSION = 0.011_018;
 
 use Carp;
 use Contentment::Hooks;
@@ -293,9 +293,25 @@ sub handle_cgi {
 	Contentment::Request->end_cgi;
 }
 
-=item Contentment-E<gt>handle_fcgi
+=item Contentment-E<gt>handle_fast_cgi
 
-Not yet implemented.
+This passes control to the appropriate request and response objects to handle FastCGI connections.
+
+See L<Contentment::Request> and L<Contentment::Response> for more information.
+
+=cut
+
+sub handle_fast_cgi {
+    # Loop through each FastCGI connection we get. Other than this loop,
+    # everything else is just like CGI!
+    while (Contentment::Request->begin_fast_cgi) {
+        # Handle the request using regular CGI logic
+        Contentment::Response->handle_cgi;
+
+        # Finish up using the regular CGI logic
+        Contentment::Request->end_fast_cgi;
+    }
+}
 
 =item Contentment-E<gt>handle_lwp
 

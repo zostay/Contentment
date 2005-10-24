@@ -3,13 +3,17 @@ package Contentment::Request;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 use base 'Class::Singleton';
 
 use CGI;
+use CGI::Fast;
 use Contentment::Hooks;
 use Contentment::Log;
+use FCGI;
+use IO::Handle;
+use IO::NestedCapture qw( CAPTURE_STDOUT );
 
 =head1 NAME
 
@@ -90,6 +94,67 @@ sub end_cgi {
 	Contentment::Log->info("Shutting down the CGI request.");
 	Contentment::Hooks->call('Contentment::Request::end', 
 		$self->cgi);
+}
+
+=item Contentment::Request-E<gt>begin_fast_cgi
+
+This shouldn't be called outside of a L<Contentment> handler method. It tells the handler to the load the FastCGI request.
+
+This calls the C<Contentment::Request::begin> hook.
+
+=cut
+
+sub begin_fast_cgi {
+    my $self = shift->instance;
+
+    # Log startup
+    Contentment::Log->info("Initialize FastCGI object from CGI::Fast request.");
+
+    # We need to do some custom tweaking to FastCGI before this will work quite
+    # right. We'll let FastCGI take over STDIN so CGI::Fast will initially read
+    # from there. However, we won't let it have STDOUT because we need to usurp
+    # that ourselves. We will capture that and then route the output to our own
+    # file handle after words in end_fast_cgi().
+    unless (defined $CGI::Fast::Ext_Request) {
+        $self->{outfh} = IO::Handle->new;
+        $CGI::Fast::Ext_Request 
+            = FCGI::Request(\*STDIN, $self->{outfh}, \*STDERR);
+    }
+
+    # Now capture the output file handle for our own nefarious purposes
+    IO::NestedCapture->start(CAPTURE_STDOUT);
+
+    # Try to get a connection to accept
+    if ($self->{cgi} = CGI::Fast->new) {
+        untie *STDIN;
+        Contentment::Hooks->call('Contentment::Request::begin', $self->{cgi});
+        return 1;
+    } 
+    
+    # Quit if there are no more FastCGI connections to be had
+    else {
+        IO::NestedCapture->stop(CAPTURE_STDOUT);
+        return 0;
+    }
+}
+
+=item Contentment::Request->end_fast_cgi
+
+This shouldn't be called outside of a L<Contentment> handler method. It calls the C<Contentment::Request::end> hook.
+
+=cut
+
+sub end_fast_cgi {
+    my $self = shift->instance;
+
+	Contentment::Log->info("Shutting down the CGI request.");
+	Contentment::Hooks->call('Contentment::Request::end', $self->cgi);
+
+    IO::NestedCapture->stop(CAPTURE_STDOUT);
+
+    my $infh  = IO::NestedCapture->get_last_out;
+    my $outfh = $self->{outfh};
+    $outfh->print(<$infh>);
 }
 
 =back

@@ -1,5 +1,5 @@
 name: Node
-version: 0.01
+version: 0.02
 description: The plugin providing nodes and such for Contentment.
 
 use_lib:
@@ -7,6 +7,7 @@ use_lib:
 
 use:
  - Contentment::Node
+ - Contentment::Node::Manager
  - Contentment::Node::Revision
  - Contentment::Node::RevisionSet
 

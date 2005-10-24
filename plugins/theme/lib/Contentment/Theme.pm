@@ -3,7 +3,7 @@ package Contentment::Theme;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 use Contentment::Log;
 use Contentment::Response;
@@ -30,18 +30,32 @@ Handles the "Contentment::Response::end" hook by attempting to wrap the generate
 sub theme {
 	if (my $kind = Contentment::Response->top_kind) {
 
+        # Lookup the theme and template to use
+        my $settings = Contentment::Setting->instance;
+        my $theme    
+            = $settings->{'Contentment::Plugin::Theme'}{'default_theme'}
+                || 'default';
+        my $template
+            = $settings->{'Contentment::Plugin::Theme'}{'default_template'}
+                || 'top';
+
 		# See if there's a theme for this kind
-		my $gen  = Contentment::Response->resolve("/themes/default/$kind/top");
+        my $base_url   = Contentment->global_configuration->{base_url};
+        my $theme_dir  = "themes/$theme/";
+        my $theme_path = "/$theme_dir$kind/$template";
+		my $gen 
+            = Contentment::Response->resolve($theme_path);
 		if ($gen->get_property('error')) {
 
 			# Nope, no theme. Skip it.
 			Contentment::Log->debug("No theme found for kind '%s'", [$kind]);
 			print <STDIN>;
-		} else {
-
-			# We have a theme, do it.
+		} 
+        
+        # We have a theme, do it.
+        else {
 			Contentment::Log->debug("Theme found for kind '%s', generating %s", [$kind,$gen]);
-			$gen->generate;
+			$gen->generate(theme_dir => "$base_url$theme_dir");
 		}
 	} else {
 

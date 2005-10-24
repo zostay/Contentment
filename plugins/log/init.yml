@@ -1,6 +1,6 @@
 name: Log
 description: General log handler plugins.
-version: 0.01
+version: 0.02
 order: -80
 
 use_lib:

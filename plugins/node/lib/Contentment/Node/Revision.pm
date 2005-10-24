@@ -3,7 +3,7 @@ package Contentment::Node::Revision;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use base 'Oryx::Class';
 
@@ -97,6 +97,20 @@ our $schema = {
     ],
 };
 
+=head2 SPECIAL METHODS
+
+The following methods are defined for node revision objects:
+
+=over
+
+=item $revision = RevisionClass->create(\%args)
+
+This is slightly different from the typical L<Oryx::Class> C<create()> method.  This method actually creates two objects rather than just one and also does some additional setup.
+
+This creates a new node and a new revision under that node according the given C<%args>.
+
+=cut
+
 sub create {
     my $class = shift;
 
@@ -108,8 +122,18 @@ sub create {
     $self->node->update;
     $self->update;
 
+    Contentment::Node::Manager->add_revision_to_current_revision_set($self);
+
     return $self;
 }
+
+=item $cloned_revision = $revision-E<gt>clone(\%args)
+
+This method operates in pretty much the exact same way as the C<create()> method, except that it duplicates the fields in the original when not modified in the passed C<%args>. This will attach the new revision to the same node as the original.
+
+The clone will become the current revision for the current revision set.
+
+=cut
 
 sub _all_attributes {
     my $self  = shift;
@@ -152,8 +176,25 @@ sub clone {
     $clone->node->update;
     $clone->update;
 
+    # Make this revision the current one
+    Contentment::Node::Manager->add_revision_to_current_revision_set($clone);
+
     return $clone;
 }
+
+=item $revision-E<gt>trash
+
+This is very similar to C<delete()> except that nothing is removed from the database. Okay... so it's nothing like C<delete()>. It removes the object from the current revision set.
+
+=cut
+
+sub trash {
+    my $self = shift;
+    Contentment::Node::Manager
+        ->remove_revision_from_current_revision_set($self);
+}
+
+=back
 
 =head1 AUTHOR
 

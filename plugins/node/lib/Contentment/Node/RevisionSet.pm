@@ -1,9 +1,11 @@
 package Contentment::Node::RevisionSet;
 
+# XXX RevisionSet is a cruddy name. Fix it. 
+
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use base 'Oryx::Class';
 
@@ -61,7 +63,7 @@ our $schema = {
             class => 'Contentment::Node::Revision',
         },
         {
-            role  => 'trashed_revisions',
+            role  => 'trashed_nodes',
             type  => 'Array',
             class => 'Contentment::Node::Revision',
         },
