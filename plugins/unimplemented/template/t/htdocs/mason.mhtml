@@ -1,5 +1,0 @@
-<p>Hello <% $who %>!</p>
-
-<%args>
-$who => 'World'
-</%args>
