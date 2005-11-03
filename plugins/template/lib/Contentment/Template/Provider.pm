@@ -3,7 +3,7 @@ package Contentment::Template::Provider;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.04';
 
 use Contentment::Log;
 use Contentment::Response;
@@ -24,7 +24,30 @@ sub fetch {
 	# Is it already a generator?
 	if (ref $name && UNIVERSAL::can($name, 'get_property')) {
 		$generator = $name;
-	} else {
+	}
+
+    # It's a reference to a scalar, just quickly return a document
+    elsif (ref $name eq 'SCALAR') {
+        my $parser = $self->{PARSER}
+            ||= Template::Config->parser($self->{PARAMS})
+            ||  return (Template::Config->error(), 
+                        Template::Constants::STATUS_ERROR);
+        my $parsedoc = $parser->parse($$name, {});
+            
+		my $data = Template::Document->new($parsedoc);
+
+        if (defined $data) {
+            return ($data, Template::Constants::STATUS_OK);
+        }
+
+        else {
+            return ("Could not compile inline template.", 
+                    Template::Constants::STATUS_ERROR);
+        }
+    } 
+
+    # Otherwise, assume a path and try to resolve
+    else {
 		$generator = Contentment::Response->resolve($name);
 	}
 
@@ -32,13 +55,17 @@ sub fetch {
 
 	my ($data, $error);
 	if ($generator->get_property('for_template_toolkit')) {
-		Contentment::Log->debug("Template %s is for Template Toolkit", [$generator]);
+		Contentment::Log->debug("Template %s is for Template Toolkit", 
+            [$generator]);
 
-		($data, $error) = $self->_compile({ text => scalar($generator->content) })
-			unless $error;
+		($data, $error) = $self->_compile({ 
+            text => scalar($generator->content) 
+        }) unless $error;
 		$data = $data->{data} unless $error;
 	} else {
-		Contentment::Log->debug("Template %s is not in Template Toolkit format, creating a custom Contentment::Template::Document.", [$generator]);
+		Contentment::Log->debug(
+            'Template %s is not in Template Toolkit format, creating a custom '
+           .'Contentment::Template::Document.', [$generator]);
 
 		$data = Template::Document->new({
 			BLOCK     => sub { 
@@ -52,7 +79,6 @@ sub fetch {
 				my $out = IO::NestedCapture->get_last_out;
 				join '',<$out>;
 			},
-			GENERATOR => $generator,
 		});
 		$error = Template::Constants::STATUS_OK;
 	}

@@ -3,7 +3,7 @@ package Contentment::Security;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use base 'Class::Singleton';
 
@@ -152,6 +152,12 @@ sub _new_instance {
     return bless {
         security_manager => $security_manager_class->instance,
     }, $class;
+}
+
+sub instance {
+    my $proto = shift;
+    my $class = ref $proto || $proto;
+    return $class->SUPER::instance(@_);
 }
 
 sub security_manager {
@@ -347,12 +353,18 @@ sub install {
 
 =item Contentment::Security::begin
 
-This handles the "Contentment::begin" hook and instantiates the security manager.
+This handles the "Contentment::begin" hook and instantiates the security manager and installs the docs folder into the VFS.
 
 =cut
 
 sub begin {
     Contentment::Security->security_manager;
+
+    my $vfs = Contentment::VFS->instance;
+    my $setting = Contentment::Setting->instance;
+    my $plugin_data = $setting->{'Contentment::Plugin::Security'};
+    my $docs = File::Spec->catdir($plugin_data->{plugin_dir}, 'docs');
+    $vfs->add_layer(-1, [ 'Real', 'root' => $docs ]);
 }
 
 =back

@@ -1,0 +1,20 @@
+name: Form
+version: 0.02
+description: A plugin for automating form rendering, validation, and processing.
+
+use_lib:
+ - lib
+
+
+use:
+ - Contentment::Form
+ - Contentment::Form::Widget::Hidden
+ - Contentment::Form::Widget::Label
+ - Contentment::Form::Widget::Text
+ - Contentment::Form::Widget::Submit
+
+hooks:
+  Contentment::Request::begin:
+    order: 30
+    sub: Contentment::Form::process
+  Contentment::install: Contentment::Form::install

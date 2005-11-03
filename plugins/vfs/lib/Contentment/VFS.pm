@@ -3,15 +3,15 @@ package Contentment::VFS;
 use strict;
 use warnings;
 
-use Carp;
 use Contentment;
+use Contentment::Exception;
 use Contentment::Hooks;
 use Contentment::Log;
 use Contentment::Request;
 use File::Spec;
 use File::System;
 
-our $VERSION = '0.13';
+our $VERSION = '0.14';
 
 use base 'File::System::Passthrough';
 
@@ -52,17 +52,6 @@ sub instance {
 	my $conf = Contentment->global_configuration;
 
 	return $vfs = $class->SUPER::new($conf->{vfs});
-}
-
-=item $vfs = Contentment::VFS-E<gt>new
-
-I<Deprecated.> Use C<instance> instead.
-
-=cut
-
-sub new {
-	carp "The Contentment::VFS::new method is deprecated. Use Contentment::VFS::instance instead.";
-	return shift->instance;
 }
 
 =item $source_obj = $obj-E<gt>lookup_source($path)
@@ -179,7 +168,10 @@ sub generate_headers {
 	my $self = shift;
 
 	$self->has_content
-		or croak "Cannot call 'generate_headers' on a file with no content.";
+		or Contentment::Exception->throw(
+               message => q(Cannot call "generate_headers" on a file with no )
+                         .q(content.),
+           );
 
 	if (my $filetype = $self->filetype) {
 		return $filetype->generate_headers($self, @_);
@@ -200,7 +192,9 @@ sub generate {
 	my $self = shift;
 
 	$self->has_content
-		or croak "Cannot call 'generate' on file with no content.";
+		or Contentment::Exception->throw(
+               message => q(Cannot call "generate" on file with no content.),
+           );
 
 	if (my $filetype = $self->filetype) {
 		return $filetype->generate($self, @_);
@@ -221,7 +215,9 @@ sub real_kind {
 	my $self = shift;
 
 	$self->has_content
-		or croak "Cannot call 'real_kind' on file with no content.";
+		or Contentment::Exception->throw(
+               message => q(Cannot call "real_kind" on file with no content.),
+           );
 
 	if (my $filetype = $self->filetype) {
 		return $filetype->real_kind($self);
@@ -295,7 +291,9 @@ sub ancestors {
 	my $root = $self->root;
 	my @ancestors = $root;
 
-	croak "Root failure." unless $self->root;
+    Contentment::Exception->throw(
+        message => 'Root failure.'
+    ) unless $self->root;
 
 	my $orig_path = $self->path;
 	$orig_path =~ s/^\///;
@@ -303,7 +301,9 @@ sub ancestors {
 	for my $path (split /\//, $orig_path) {
 		$file_path .= "/$path";
 		my $file = $self->lookup($file_path)
-			or croak "Error looking up file '$file_path'";
+			or Contentment::Exception->throw(
+                   message => qq(Error looking up file "$file_path"),
+               );
 		push @ancestors, $file;
 	}
 
@@ -376,13 +376,17 @@ sub remove_layer {
 
 	if ($self->{fs}->isa('File::System::Layered')) {
 		my @layers = $self->{fs}->get_layers;
-		croak "Cannot remove the last layer of the file system." if @layers == 1;
+        Contentment::Exception->throw(
+            message => 'Cannot remove the last layer of the file system.',
+        ) if @layers == 1;
 
 		splice @layers, $index, 1;
 
 		$self->{fs}->set_layers(@layers);
 	} else {
-		croak "Cannot remove layers from an unlayered file system.";
+        Contentment::Exception->throw(
+            message => 'Cannot remove layers from an unlayered file system.',
+        );
 	}
 }
 

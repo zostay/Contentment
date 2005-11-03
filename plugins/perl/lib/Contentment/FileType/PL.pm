@@ -5,9 +5,9 @@ use warnings;
 
 use base 'Contentment::FileType::POD';
 
-use Carp;
+our $VERSION = '0.09';
 
-our $VERSION = '0.08';
+use Contentment::Exception;
 
 =head1 NAME
 
@@ -86,7 +86,11 @@ sub generate {
 
 		# Do it!
 		eval $_____code; 
-		croak $@ if $@ 
+        if ($@) {
+            UNIVERSAL::isa($@, 'Contentment::Exception')
+                ? $@->rethrow
+                : die $@;
+        }
 	};
 
 	Contentment::Log->debug("Running code in '$file'");

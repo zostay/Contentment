@@ -3,7 +3,7 @@ package Contentment::Security::Profile::Persistent;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.03';
 
 use base 'Oryx::Class';
 
@@ -58,6 +58,36 @@ our $schema = {
         },
     ],
 };
+
+sub edit_user_form {
+    my $submission = shift;
+    my %results = %{ $submission->results };
+
+    # Make sure we modify the current profile correctly to prevent our changes
+    # from being clobbered by the security manager's routine updates
+    my $profile;
+    if ($results{id} == Contentment::Security->get_principal->profile->id) {
+        $profile = Contentment::Security->get_principal->profile;
+    } else {
+        $profile 
+            = Contentment::Security::Profile::Persistent
+                ->retrieve($results{id});
+    }
+
+    $profile->username($results{username});
+    $profile->password($results{password}) if $results{password};
+    $profile->full_name($results{full_name});
+    $profile->email_address($results{email_address});
+    $profile->web_site($results{web_site});
+
+    @{ $profile->roles }
+        = grep { defined $_ }
+          map  { Contentment::Security::Role->retrieve($_) }
+          @{ $results{roles} };
+
+    $profile->update;
+    $profile->commit;
+}
 
 =cut
 

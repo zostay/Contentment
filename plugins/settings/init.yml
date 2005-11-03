@@ -1,6 +1,6 @@
 name: Settings
 description: Used to store configuration. Required by Contentment.
-version: 0.08
+version: 0.09
 required: 1
 order: -90
 
@@ -11,6 +11,7 @@ use:
  - Contentment::Setting
 
 hooks:
+  Contentment::begin: Contentment::Setting::begin
   Contentment::remove: 
     order: 90
     sub: Contentment::Setting::remove
