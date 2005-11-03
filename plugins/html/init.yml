@@ -1,0 +1,18 @@
+name: HTML
+description: This plugin handles HTML file handling.
+version: 0.05
+order: 10
+
+use_lib:
+ - lib
+
+use:
+ - Contentment::FileType::HTML
+
+hooks:
+  Contentment::FileType::match:
+    order: -10
+    sub: Contentment::FileType::HTML::match
+#  Contentment::Response::end:
+#    order: 50
+#    sub: Contentment::FileType::HTML::filter_links

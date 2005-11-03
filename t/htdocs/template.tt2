@@ -1,0 +1,11 @@
+[% USE Response %]
+
+[% META
+	kind = 'text/plain'
+%]
+
+[% DEFAULT who = 'World' %]
+
+Hello [% who %]!
+path = [% Response.generator.get_property('path') %]
+INCLUDE = [% INCLUDE foo.txt %]

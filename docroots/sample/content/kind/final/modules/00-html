@@ -1,4 +1,0 @@
-<%init>
-return "text/html" if $url =~ /\.html?$/;
-return undef;
-</%init>

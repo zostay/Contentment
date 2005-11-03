@@ -1,0 +1,16 @@
+name: Transform
+version: 0.06
+description: The transformation plugin translates documents of one kind to another.
+order: 0
+
+use_lib:
+ - lib
+
+use:
+ - Contentment::Transform
+
+hooks:
+  Contentment::Response::end:
+    order: -30
+    sub: Contentment::Transform::transform
+  Contentment::begin: Contentment::Transform::begin

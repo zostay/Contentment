@@ -1,9 +1,0 @@
-<%init>
-my $url;
-my @uuids;
-for my $submission (Contentment::Form::Submission->create_from_args(%ARGS)) {
-	$url ||= $submission->process; # only set the first time
-	push @uuids, $submission->{uuid};
-}
-$m->comp('/content/util/redirect', to => $url, __processed_uuid__ => \@uuids);
-</%init>
