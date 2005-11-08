@@ -24,22 +24,22 @@ SKIP: {
 
     has_tag_with_attrs($body, 'input', {
         type  => 'hidden',
-        name  => '__form__',
+        name  => 'FORM',
         value => 't::test_form',
-    }, '__form__');
+    }, 'FORM');
 
     my $has_submission_id = 
     has_tag_with_attrs($body, 'input', {
         type  => 'hidden',
-        name  => '__id__',
+        name  => 'ID',
         value => qr|^ [0-9A-F]{8}- (?:[0-9A-F]{4}-){3} [0-9A-F]{12} $|x,
-    }, '__id__');
+    }, 'ID');
 
     has_tag_with_attrs($body, 'input', {
         type  => 'hidden',
-        name  => '__activate__',
+        name  => 'ACTIVATE',
         value => 1,
-    }, '__activate__');
+    }, 'ACTIVATE');
 
     has_tag_with_attrs($body, 'label', { for => 'test1' }, 'label');
 
@@ -64,7 +64,7 @@ SKIP: {
     my $submission_id;
     TAG:
     while (my $tag = $toke->get_tag('input')) {
-        if ($tag->[1]{name} eq '__id__') {
+        if ($tag->[1]{name} eq 'ID') {
             $submission_id = $tag->[1]{value};
             last TAG;
         }
@@ -73,9 +73,9 @@ SKIP: {
 #    diag("Using submission_id = $submission_id");
 
     $content = POST_BODY('/form.html', [
-        __form__     => 't::test_form',
-        __id__       => $submission_id,
-        __activate__ => 1,
+        FORM         => 't::test_form',
+        ID           => $submission_id,
+        ACTIVATE     => 1,
         test1        => 'test1',
         test3        => 'test3',
     ]);

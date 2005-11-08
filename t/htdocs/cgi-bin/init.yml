@@ -2,6 +2,8 @@ oryx_connection:
  - dbi:SQLite:dbname=testdb
 # - dbm:Deep:datapath=/tmp
 
+base_url: http://localhost:8529/
+
 plugins_dir: ../../../plugins
 
 vfs:

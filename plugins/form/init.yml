@@ -1,5 +1,5 @@
 name: Form
-version: 0.02
+version: 0.03
 description: A plugin for automating form rendering, validation, and processing.
 
 use_lib:
@@ -18,3 +18,4 @@ hooks:
     order: 30
     sub: Contentment::Form::process
   Contentment::install: Contentment::Form::install
+  Contentment::begin: Contentment::Form::begin

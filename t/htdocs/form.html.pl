@@ -26,7 +26,6 @@ my $form = Contentment::Form->define(
         test2 => {
             name  => 'test2',
             class => 'Hidden',
-            value => 'test2',
         },
         test3 => {
             name  => 'test3',
@@ -43,5 +42,5 @@ if ($form->submission->is_finished) {
 }
 
 else {
-    $form->render;
+    $form->render({ test2 => 'test2' });
 }

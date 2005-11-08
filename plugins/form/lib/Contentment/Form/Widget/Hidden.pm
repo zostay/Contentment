@@ -3,7 +3,7 @@ package Contentment::Form::Widget::Hidden;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use base 'Contentment::Form::Widget';
 
@@ -22,7 +22,6 @@ Contentment::Form::Widget::Hidden - Purely server-side form data
           foo => {
               name  => 'foo',
               class => 'Hidden',
-              value => 'bar',
           },
       },
       # ...
@@ -56,7 +55,6 @@ sub construct {
         params => \@_,
         spec => {
             name  => { type => SCALAR },
-            value => 1,
         },
     );
 
@@ -64,8 +62,14 @@ sub construct {
 }
 
 sub validate {
-    my $self = shift;
-    return { $self->{name} => $self->{value} };
+    my $self       = shift;
+    my $submission = shift;
+    my $values     = shift; # ignored
+    
+    # Our value will be taken from the previous results rather than the results
+    # that are being created here.
+    my $results = $submission->results;
+    return { $self->{name} => $results->{ $self->{name} } };
 }
 
 =head1 AUTHOR

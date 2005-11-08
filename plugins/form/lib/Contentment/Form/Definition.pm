@@ -3,7 +3,7 @@ package Contentment::Form::Definition;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use base qw/ Oryx::Class Class::Accessor /;
 
@@ -86,7 +86,7 @@ However, you must be careful in these situations that the form doesn't break dur
 
 =item $form-E<gt>render(\%defaults, \%vars)
 
-This method renders the template that was defined in the form definition. You can specify initial default values for the form using the C<%defaults> hash. These have the same form as the results hash that should be generated during form valiation.
+This method renders the template that was defined in the form definition or renders according to the default template if none was given. You can specify initial default values for the form using the C<%defaults> hash. These have the same form as the results hash that should be generated during form valiation.
 
 The second hash, C<%vars>, is used to pass in variables that should also be passed to the template.
 
@@ -104,6 +104,7 @@ sub render {
         $self->submission->commit;
     }
 
+    # Create a new lexical hash so we don't muck with the original
     my %variables = %$vars;
 
     Contentment::Form->instance->{definition} = $variables{form} = $self;
@@ -153,18 +154,18 @@ sub begin {
     # or otherwise submit to the form without getting a submission ID first.
     # Once the form has been defined in the system, this field will allow the
     # user to create a submission ID on the fly.
-    $output .= qq(\n<input type="hidden" id="${name}::__form__" );
-    $output .= qq(name="__form__" value="$name"/>);
+    $output .= qq(\n<input type="hidden" id="${name}::FORM" );
+    $output .= qq(name="FORM" value="$name"/>);
 
     # Identify the form submission used
     my $submission_id = $self->submission->submission_id;
-    $output .= qq(\n<input type="hidden" id="${name}::__id__" );
-    $output .= qq(name="__id__" value="$submission_id"/>);
+    $output .= qq(\n<input type="hidden" id="${name}::ID" );
+    $output .= qq(name="ID" value="$submission_id"/>);
 
     # Add the activation notice if requested
     if ($self->activate) {
-        $output .= qq(\n<input type="hidden" id="${name}::__activate__" );
-        $output .= qq(name="__activate__" value="1"/>);
+        $output .= qq(\n<input type="hidden" id="${name}::ACTIVATE" );
+        $output .= qq(name="ACTIVATE" value="1"/>);
     }
 
     # Return the output string to TT2
@@ -182,6 +183,28 @@ sub end {
 
     # End it and return to TT2
     return qq(</form>);
+}
+
+=item $form-E<gt>render_widget($name)
+
+This method renders the widget named C<$name> according to the themes template for the widget. Prior to rendering the widget template, the theme master named "form/Pre-Widget" will be rendered. After rendering the widget template, the theme master named "form/Post-Widget" will be rendered.
+
+The theme master chosen for the widget will be "form/Name" where "Name" is the short name of the widget if the class has the namespace prefix "Contentment::Form::Widget::". Otherwise, it will be the full name of the widget class with each of the colons changed to underscores. Thus, "Contentment::Form::Widget::Text" uses the template "form/Text" while "My::Widget::Foo" would use the template "form/My__Widget__Foo".
+
+=cut
+
+sub render_widget {
+    my $self = shift;
+    my $name = shift;
+
+    my $class = $self->widget_parameters->{$name}{class};
+    $class =~ s/^Contentment::Form::Widget//;
+
+    Contentment::Theme->theme($class, {
+        form        => $self,
+        widget_name => $name,
+        widget      => $self->widget->{$name},
+    });
 }
 
 =back

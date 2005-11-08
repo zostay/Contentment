@@ -3,7 +3,7 @@ package Contentment::Form::Widget::Text;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use base 'Contentment::Form::Widget';
 
@@ -30,19 +30,6 @@ Contentment::Form::Widget::Text - Textbox widget
       },
       # ...
   );
-
-  # ...
-
-  __DATA__
-  [% form.begin %]
-
-  [% form.widgets.username.label.render %] 
-  [% form.widgets.username.render %]<br/>
-  
-  [% form.widgets.password.label.render %] 
-  [% form.widgets.password.render %]<br/>
-
-  [% form.end %]
 
 =head1 DESCRIPTION
 
@@ -152,8 +139,9 @@ sub render_begin {
 }
 
 sub validate {
-    my $self = shift;
-    my $p    = shift;
+    my $self       = shift;
+    my $submission = shift;
+    my $p          = shift;
 
     my $value = $p->{ $self->{name} };
 

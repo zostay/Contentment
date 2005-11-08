@@ -1,0 +1,7 @@
+[% form.start %]
+
+[% FOREACH name IN form.widgets.keys %]
+[% form.render_widget(name) %]
+[% END %]
+
+[% form.end %]

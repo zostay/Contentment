@@ -3,7 +3,7 @@ package Contentment::Security::Profile::Persistent;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 use base 'Oryx::Class';
 
@@ -59,34 +59,81 @@ our $schema = {
     ],
 };
 
-sub edit_user_form {
-    my $submission = shift;
-    my %results = %{ $submission->results };
+sub fetch_role_options {
+    return [
+        map { [ 
+                $_->id, 
+                q(<a href="admin/roles/edit.html?id=).$_->id.q(">)
+                    .$_->title.q(</a>), 
+                $_->description 
+            ] } 
+            Contentment::Security::Role->search({ is_special => 0 })
+    ];
+}
 
-    # Make sure we modify the current profile correctly to prevent our changes
-    # from being clobbered by the security manager's routine updates
-    my $profile;
-    if ($results{id} == Contentment::Security->get_principal->profile->id) {
-        $profile = Contentment::Security->get_principal->profile;
-    } else {
-        $profile 
-            = Contentment::Security::Profile::Persistent
-                ->retrieve($results{id});
+sub process_edit_form {
+    my $submission = shift;
+    my $results    = $submission->results;
+
+    # They've asked for an update
+    if ($results->{submit} eq 'Update') {
+
+        # Are we creating or editting?
+        if ($results->{id}) {
+
+            # Make sure we modify the current profile correctly to prevent our
+            # changes from being clobbered by the security manager's routine
+            # updates
+            my $profile;
+            if ($results->{id} 
+            == Contentment::Security->get_principal->profile->id) {
+                $profile = Contentment::Security->get_principal->profile;
+            } else {
+                $profile 
+                    = Contentment::Security::Profile::Persistent
+                        ->retrieve($results->{id});
+            }
+
+            $profile->username($results->{username});
+            $profile->password($results->{password}) if $results->{password};
+            $profile->full_name($results->{full_name});
+            $profile->email_address($results->{email_address});
+            $profile->web_site($results->{web_site});
+
+            @{ $profile->roles }
+                = grep { defined $_ }
+                  map  { Contentment::Security::Role->retrieve($_) }
+                      @{ $results->{roles} };
+
+            $profile->update;
+            $profile->commit;
+
+        }
+
+        # Creating a new user
+        else {
+            my $profile = Contentment::Security::Profile::Persistent->create({
+                username => $results->{username},
+                password => $results->{password},
+                full_name => $results->{full_name},
+                email_address => $results->{email_address},
+                web_site => $results->{web_site},
+            });
+
+            @{ $profile->roles }
+                = grep { defined $_ }
+                  map  { Contentment::Security::Role->retrieve($_) }
+                      @{ $results->{roles} };
+
+            $profile->update;
+            $profile->commit;
+        }
     }
 
-    $profile->username($results{username});
-    $profile->password($results{password}) if $results{password};
-    $profile->full_name($results{full_name});
-    $profile->email_address($results{email_address});
-    $profile->web_site($results{web_site});
-
-    @{ $profile->roles }
-        = grep { defined $_ }
-          map  { Contentment::Security::Role->retrieve($_) }
-          @{ $results{roles} };
-
-    $profile->update;
-    $profile->commit;
+    # They've canceled
+    else {
+        # do nothing
+    }
 }
 
 =cut

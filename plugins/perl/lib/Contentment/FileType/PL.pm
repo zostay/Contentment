@@ -5,9 +5,10 @@ use warnings;
 
 use base 'Contentment::FileType::POD';
 
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 use Contentment::Exception;
+#use Safe;
 
 =head1 NAME
 
@@ -77,21 +78,19 @@ sub generate {
 	my $class = shift;
 	my $file  = shift;
 
-	my $sub = sub {
-		my $_____code = $file->content;
-		
-		# Clear variables out so they aren't closed here.
-		my $class = undef;
-		my $file  = undef;
+    my $code  = $file->content;
 
-		# Do it!
-		eval $_____code; 
-        if ($@) {
-            UNIVERSAL::isa($@, 'Contentment::Exception')
-                ? $@->rethrow
-                : die $@;
-        }
-	};
+#    my $compartment = Safe->new;
+#    $compartment->deny_only();
+#    my $sub = $compartment->reval(<<"END_OF_SUB");
+    my $sub = eval <<"END_OF_SUB";
+sub {
+#line 1 "$file"
+$code
+}
+END_OF_SUB
+
+    die $@ if $@;
 
 	Contentment::Log->debug("Running code in '$file'");
 

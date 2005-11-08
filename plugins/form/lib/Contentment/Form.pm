@@ -3,13 +3,14 @@ package Contentment::Form;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use base 'Class::Singleton';
 
 use Contentment::Exception;
 use Contentment::Form::Definition;
 use Contentment::Form::Submission;
+use File::Spec;
 use List::Util qw( reduce );
 use Params::Validate qw( validate_with :types );
 use Test::Deep::NoTest;
@@ -23,12 +24,25 @@ Contentment::Form - forms API for Contentment
   # Typically, you want a two part Perl-script. The first part sets up the form
   # definition and initial data. The second is a template for rendering.
 
+  my $template = <<'END_OF_TEMPLATE';
+  [% form.begin %]
+
+  [% form.widgets.username.label.render %] [% Form.widgets.username.render %]
+  <br/>
+
+  [% form.widgets.password.label.render %] [% Form.widgets.password.render %]
+  <br/>
+
+  [% form.widgets.submit.render %]
+  [% form.end %]
+  END_OF_TEMPLATE
+
   my $form = Contentment::Form->define({
       name     => 'Contentment::Security::Manager::login_form',
       method   => 'POST',
       action   => 'Contentment::Security::Manager::process_login_form',
       activate => 1,
-      template => \*DATA,
+      template => \$template,
       widgets  => {
           username => {
               name  => 'username',
@@ -54,19 +68,6 @@ Contentment::Form - forms API for Contentment
       print $form->render;
   }
 
-  __DATA__
-  [% USE Form -%]
-  [% Form.begin %]
-
-  [% Form.widgets.username.label.render %] [% Form.widgets.username.render %]
-  <br/>
-
-  [% Form.widgets.password.label.render %] [% Form.widgets.password.render %]
-  <br/>
-
-  [% Form.widgets.submit.render %]
-  [% Form.end %]
-
 =head1 DESCRIPTION
 
 One of the biggest hassles of writing a web application is handling the forms. It's such a domain-specific hassle that there aren't many general solutions out there and the ones I looked at couldn't handle the needs of Contentment. So, I wrote my own---though, if I can eventually extrapolate this into a more general offering, I hope to do so.
@@ -81,7 +82,7 @@ B<Definition.> First you must define the form. This is done using the C<define()
 
 =item 2.
 
-B<Rendering.> Once defined, the form is rendered. The definition should include a template that can be used to render the form fields. Rendering occurs via the C<render()> method.
+B<Rendering.> Once defined, the form is rendered. The definition should include a template that can be used to render the form fields. Rendering occurs via the C<render()> method of the object returned by the C<define()> method.
 
 =item 3.
 
@@ -95,13 +96,19 @@ B<Server-side validation.> Once the client hits the submit button, we need to ma
 
 It is very important that this process is done very carefully. If this step isn't taken seriously our code will contain security vulnerabilities.
 
+Server-side validation is performed by the "Contentment::Form::process" hook handler, which then calls the C<validate()> method for each widget associated with the form.
+
 =item 5.
 
 B<Activation.> If the submitted form has the activation flag set, we need to take action. Action will only be taken if the activation flag is set and the form has passed validation with no errors. Once activated, the subroutine associated with the form will be executed with the validated data.
 
+Activation is performed by the "Contentment::Form::process", which calls the action subroutine associated with the form.
+
 =item 6.
 
 B<Finished.> If the action executes without error, the form submission is marked as finished.
+
+The form is finished within the "Contentment::Form::process" hook handler when the action subroutine executes without throwing an exception.
 
 =back
 
@@ -156,28 +163,6 @@ The action subroutine should expect a single argument, the data constructed by t
 
 The action subroutine should throw an exception on failure so that the form can be kept unfinished and be reactivated by the user. On success, the subroutine should exit normally (the return value is ignored).
 
-=item template (required)
-
-This is a Template Toolkit template used to render the form. By convention, using the C<__DATA__> section of the Perl program is recommended for your code:
-
-  my $form = Contentment::Form->define({
-      name     => 'My::Form',
-      action   => 'My::Form::handler',
-      template => \*DATA,
-      widgets  => {
-          # Some widgets ...
-      },
-  });
-
-  # rendering stuff ...
-  
-  __DATA__
-  <!-- TT2 Template -->
-
-The template argument may be a file name, a reference to a file handle, or a reference to a scalar containing the literal template.
-
-In the future, this option may not be required when coupled with default form templates, but this is not the future.
-
 =item widgets (required)
 
 This option must be set to a reference to a hash containing the definition of each widget to be used in the form. The keys are mnemonic names that are used to look the widget up via the C<widgets()> method of L<Contentment::Form::Definition>. The values are passed to the widgets' constructors. 
@@ -197,6 +182,38 @@ For example:
           type  => 'password',
       },
   },
+
+=item template (optional)
+
+This is a Template Toolkit template used to render the form.
+
+The template argument may be a file name:
+
+  template => 'foo-foo-template.tt2',
+  
+a reference to a file handle:
+   
+   template => \*FH,
+    
+ or a reference to a scalar containing the literal template.
+
+  template => \$template,
+
+Under most circumstances, you should avoid specifying the template directly. Instead, the template can be specified as part of the theme. This way, your forms will render according to the theme designer's wishes.
+
+However, the default rendering options will surely not suit every circumstance, so providing your own template may be required. The simplest template possible looks something like this:
+
+  [% form.start %]
+
+  [% FOREACH name IN form.widgets.keys %]
+  [% form.render_widget(name) %]
+  [% END %]
+
+  [% form.end %]
+
+The C<form> variable is provided as a reference to the form object the C<render()> method was called upon. Make sure to at least include the C<start()> and C<end()> form calls before and after rendering any widgets, respectively. Use the C<render_widget()> method whenever you don't need to customize the rendernig of your widgets so that the template designer has as much say as possible.
+
+Make sure you read the descriptions for C<start()>, C<end()>, and C<render_widget()> before writing your own template. You will also need to konw how to use the C<begin()>, C<end()>, and C<render()> methods of each of the widgets you are using.
 
 =item activate (optional)
 
@@ -496,6 +513,21 @@ sub install {
     $storage->deployClass('Contentment::Form::Submission');
 }
 
+=item Contentment::Form::begin
+
+This handler is for the "Contentment::begin" hook. It adds the F<docs> folder to the VFS.
+
+=cut
+
+sub begin {
+    Contentment::Log->debug("Calling hook handler Contentment::Form::begin");
+    my $vfs = Contentment::VFS->instance;
+    my $setting = Contentment::Setting->instance;
+    my $plugin_data = $setting->{'Contentment::Plugin::Form'};
+    my $docs = File::Spec->catdir($plugin_data->{plugin_dir}, 'docs');
+    $vfs->add_layer(-1, [ 'Real', 'root' => $docs ]);
+}
+
 =item Contentment::Form::process
 
 This handler is for the "Contentment::Request::begin" hook. It checks to see if any form is incoming. If so, it attempts to validate and, if activated, process the form using the given action.
@@ -506,8 +538,8 @@ sub process {
     my $self = Contentment::Form->instance;
     my $cgi  = shift;
 
-    # With every form they must give us the __form__ argument.
-    if (my $form_name = $cgi->param('__form__')) {
+    # With every form they must give us the FORM argument.
+    if (my $form_name = $cgi->param('FORM')) {
         Contentment::Log->debug('Processing the form named %s', [$form_name]);
 
         my $submission;
@@ -515,7 +547,7 @@ sub process {
 
         # Attempt to load the submission from the form
         my $submission_id;
-        if ($submission_id = $cgi->param('__id__')) {
+        if ($submission_id = $cgi->param('ID')) {
             ($submission) = Contentment::Form::Submission->search({
                 submission_id => $submission_id,
             });
@@ -561,6 +593,7 @@ sub process {
         # Set the definition's weak submission reference
         $definition->submission($submission);
 
+        # Remember the current ID for debugging
         $submission_id = $submission->submission_id;
 
         # Usernames/sessions cannot change between submissions. This generally
@@ -610,8 +643,14 @@ sub process {
             $widgets{$key} = $widget;
 
             # Report on errors
-            my $widget_results = eval { $widget->validate($cgi_vars) };
+            my $widget_results = eval { 
+                $widget->validate($submission, $cgi_vars) 
+            };
             if ($@) {
+                Contentment::Log->debug(
+                    'Validation failed on widget "%s": %s', [$key, $@]
+                );
+
                 if (UNIVERSAL::isa($@, 'Contentment::ValidationException')) {
                     $submission->errors->{$key} = $@->message;
                     $widget_results = $@->results;
@@ -629,7 +668,7 @@ sub process {
         $submission->results(\%results);
         $definition->widgets(\%widgets);
 
-        my $activated = $cgi->param('__activate__');
+        my $activated = $cgi->param('ACTIVATE');
         
         if ($activated && !keys %{ $submission->errors }) {
             Contentment::Log->debug('Form ID %s has been activated and there '
@@ -655,12 +694,12 @@ sub process {
                     $submission->is_activated(0);
 
                     if (UNIVERSAL::isa($@, 'Contentment::Exception')) {
-                        $submission->errors->{__form__}
+                        $submission->errors->{FORM}
                             = $@->message;
                     }
 
                     else {
-                        $submission->errors->{__form__} = $@;
+                        $submission->errors->{FORM} = $@;
                     }
                 }
 
@@ -709,17 +748,17 @@ However, there are a few special hidden form tags added to every form generated 
 
 =over
 
-=item __form__
+=item FORM
 
-This is a requirement for every C<Contentment::Form>. Any CGI submission not including this parameter will be ignored by the C<Contentment::Form> processor. Thus, if you want to create forms that are not processed by this processor, make certain there is no variable named "__form__".
+This is a requirement for every C<Contentment::Form>. Any CGI submission not including this parameter will be ignored by the C<Contentment::Form> processor. Thus, if you want to create forms that are not processed by this processor, make certain there is no variable named "FORM".
 
-The value of the variable is the form name. If no "__id__" variable is included with the submission, the processor attempts to load a form definition for the given form name. If one is found, then a submission will be created and filled using the data found there. This allows for mechanize scripts to run without having to load the initial form page first and form results to be more easily bookmarked.
+The value of the variable is the form name. If no "ID" variable is included with the submission, the processor attempts to load a form definition for the given form name. If one is found, then a submission will be created and filled using the data found there. This allows for mechanize scripts to run without having to load the initial form page first and form results to be more easily bookmarked.
 
-=item __id__
+=item ID
 
 This is an optional field for submissions, but is provided any time a form is rendered. This field specifies the submission ID for the form submission, which allows for the processor to keep a running tally of forms. Eventually, this will be the mechanism by which multi-page forms are made possible.
 
-=item __activate__
+=item ACTIVATE
 
 This is an optional field that should be set to "1" if the processor should attempt to run the associated action for the submission. Activation will proceed only if the form is found to be completely valid.
 

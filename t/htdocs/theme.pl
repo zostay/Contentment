@@ -26,3 +26,4 @@ print "/themes/default/text/html/top.tt2 is a file\n"
 =begin meta
 kind => 'text/html'
 =end meta
+=cut

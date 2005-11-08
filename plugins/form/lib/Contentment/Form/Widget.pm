@@ -3,7 +3,7 @@ package Contentment::Form::Widget;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 NAME
 
@@ -119,11 +119,11 @@ The default implementation returns an empty string.
 
 sub render_end { return '' }
 
-=item $success = $widget-E<gt>validate(\%args)
+=item $results = $widget-E<gt>validate($submission, \%args)
 
-With each submission, this method is called to verify the validity of the submitted data and translate it from a raw form submission into a hash of results. It is passed the raw values given from the HTTP submission in C<%args>. 
+With each submission, this method is called to verify the validity of the submitted data and translate it from a raw form submission into a hash of results. It is passed the submission that is currently being processed, C<$submission>, and the raw values given from the HTTP submission in C<%args>.
 
-If the data is valid, it should return a reference to a hash containing the key value pairs it will contribute to the validated results. On failure, it should throw a C<Contentment::ValidationException> when the widget values are invalid. Use the "results" field of the exception to place the partially validated results. This can allow the user to see and correct the entry and make another submission.
+If the data in C<%args> is valid, it should return a reference to a hash containing the key value pairs it will contribute to the validated results. It should B<not> modify the submission directly. On failure, it should throw a C<Contentment::ValidationException> when the widget values are invalid. Use the "results" field of the exception to place the partially validated results. This can allow the user to see and correct the entry and make another submission.
 
 The default implementation always returns an empty hash reference.
 

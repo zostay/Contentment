@@ -3,7 +3,7 @@ package Contentment::Response;
 use strict;
 use warnings;
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 use base 'Class::Singleton';
 
@@ -92,7 +92,7 @@ sub redirect {
 	my $self = shift->instance;
 	my $url  = shift;
 
-	unless ($url =~ /:/) {
+	unless ($url =~ /^\w+:/) {
 		$url = Contentment->global_configuration->{base_url}.$url;
 	}
 

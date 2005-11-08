@@ -3,7 +3,7 @@ package Contentment::Security::Manager;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.04';
 
 use Contentment::Hooks;
 use Contentment::Security::Principal;
@@ -396,6 +396,44 @@ sub end {
     else {
         Contentment::Security::Manager->instance->_save_anonymous_profile(
             $principal,
+        );
+    }
+}
+
+=back
+
+=head2 FORM HANDLER
+
+=over
+
+=item Contentment::Security::Manager::process_login_form
+
+On success, this logs the user in.
+
+It expects the following query parameters:
+
+=over
+
+=item username
+
+This is the username of the user that is logging in.
+
+=item password
+
+This is the password of the user that is logging in.
+
+=back
+
+=cut
+
+sub process_login_form {
+    my $self       = Contentment::Security::Manager->instance;
+    my $submission = shift;
+    my $results    = $submission->results;
+
+    if (!$self->login($results->{username}, $results->{password})) {
+        Contentment::Exception->throw(
+            message => 'Incorrect username or password.',
         );
     }
 }

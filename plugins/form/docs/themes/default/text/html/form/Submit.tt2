@@ -1,0 +1,3 @@
+<div class="submit-buttons">
+[% widget.render %]
+</div>

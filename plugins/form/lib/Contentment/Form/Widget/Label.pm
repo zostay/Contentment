@@ -3,7 +3,7 @@ package Contentment::Form::Widget::Label;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use base 'Contentment::Form::Widget';
 
@@ -13,17 +13,6 @@ use Params::Validate qw( validate_with :types );
 =head1 NAME
 
 Contentment::Form::Widget::Label - A very simple label widget
-
-=head1 SYNOPSIS
-
-  # Normally, labels are not added to the form definition
-  
-  # ...
-
-  __DATA__
-  [% form.begin %]
-  [% form.widgets.username.label.render %] [% form.widgets.username.render %]
-  [% form.end %] 
 
 =head1 DESCRIPTION
 
@@ -71,10 +60,6 @@ For example,
 
   # ...
   
-  __DATA__
-  [% form.widgets.username.label.render %]
-  [% form.widgets.fullname.label.render %]
-
 renders:
 
   <label for="username">Username</label>
@@ -138,7 +123,8 @@ sub render_begin {
 
     # Start the label
     my $id = $self->id;
-    return qq(<label for="$self->{for}" id="$id">$self->{content});
+    return qq(<label for="$self->{for}" id="$id" class="label-widget">)
+             .$self->{content};
 }
 
 sub render_end {

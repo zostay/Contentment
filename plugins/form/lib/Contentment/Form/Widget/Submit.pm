@@ -3,7 +3,7 @@ package Contentment::Form::Widget::Submit;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use base 'Contentment::Form::Widget';
 
@@ -26,13 +26,6 @@ Contentment::Form::Widget::Submit - Submit widget
       }
       # ...
   );
-
-  # ...
-  
-  __DATA__
-  [% form.begin %]
-  [% form.widgets.submit.render %]
-  [% form.end %]
 
 =head1 DESCRIPTION
 
@@ -74,11 +67,8 @@ sub construct {
     );
 
     if (!ref $p{value}) {
-        $p{value} = { $p{value} => 1 };
+        $p{value} = [ $p{value} ];
     } 
-    else {
-        $p{value} = { map { $_ => 1 } @{ $p{value} } };
-    }
 
     return bless \%p, $class;
 }
@@ -92,7 +82,7 @@ sub render_begin {
     my $self = shift;
 
     my $html;
-    for my $value (keys %{ $self->{value} }) {
+    for my $value (@{ $self->{value} }) {
         $html .= 
             qq(<input type="submit" name="$self->{name}" id="$self->{name}" )
            .qq(value="$value"/> );
@@ -102,12 +92,15 @@ sub render_begin {
 }
 
 sub validate {
-    my $self = shift;
-    my $p    = shift;
+    my $self       = shift;
+    my $submission = shift;
+    my $p          = shift;
 
     my $value = $p->{ $self->{name} };
 
-    if (defined $value && !$self->{value}{ $value }) {
+    my %possible_values = map { $_ => 1 } @{ $self->{value} };
+
+    if (defined $value && !$possible_values{ $value }) {
         Contentment::ValidationException->throw(
             message => qq(There is no button named "$value" on the form for )
                       .qq(field "$self->{name}".),
