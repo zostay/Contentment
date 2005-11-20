@@ -3,7 +3,7 @@ package Contentment::Form;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 use base 'Class::Singleton';
 
@@ -42,7 +42,12 @@ Contentment::Form - forms API for Contentment
       method   => 'POST',
       action   => 'Contentment::Security::Manager::process_login_form',
       activate => 1,
-      template => \$template,
+      template => [ Template => {
+          source     => $template,
+          properties => {
+              kind => 'text/html',
+          },
+      ],
       widgets  => {
           username => {
               name  => 'username',
@@ -185,33 +190,37 @@ For example:
 
 =item template (optional)
 
-This is a Template Toolkit template used to render the form.
+This is the generator factory method arguments used to construct a generator object responsible for rendering the template. This comes in the form of an array reference where the first argument is the name of the generator class and the second argument is the hash containing the arguments for the generator constructor. The arguments must be serializable with L<YAML>.
 
-The template argument may be a file name:
+The C<generate()> method of the object will be passed the C<%vars> hash, which is the second argument to the C<render()> method of the form definition object.
 
-  template => 'foo-foo-template.tt2',
-  
-a reference to a file handle:
-   
-   template => \*FH,
-    
- or a reference to a scalar containing the literal template.
-
-  template => \$template,
+When you need to access the form definition within the template, use the C<form()> method of L<Contentment::Form> to retrieve the currently rendering form.
 
 Under most circumstances, you should avoid specifying the template directly. Instead, the template can be specified as part of the theme. This way, your forms will render according to the theme designer's wishes.
 
-However, the default rendering options will surely not suit every circumstance, so providing your own template may be required. The simplest template possible looks something like this:
+However, the default rendering options will surely not suit every circumstance, so providing your own template may be required. The simplest template possible looks something like this (using a Template Toolkit template):
 
-  [% form.start %]
+  [% USE Form %]
+  [% Form.start %]
 
-  [% FOREACH name IN form.widgets.keys %]
-  [% form.render_widget(name) %]
+  [% FOREACH name IN Form.widgets.keys %]
+  [% Form.render_widget(name) %]
   [% END %]
 
-  [% form.end %]
+  [% Form.end %]
 
-The C<form> variable is provided as a reference to the form object the C<render()> method was called upon. Make sure to at least include the C<start()> and C<end()> form calls before and after rendering any widgets, respectively. Use the C<render_widget()> method whenever you don't need to customize the rendernig of your widgets so that the template designer has as much say as possible.
+or (using a Perl template):
+
+  my $form = Contentment::Form->form;
+  $form->start();
+
+  for my $name (keys %{ $form->widgets }) {
+      $form->render_widget($name);
+  }
+
+  $form->end();
+
+Make sure to at least include the C<start()> and C<end()> form calls before and after rendering any widgets, respectively. Use the C<render_widget()> method whenever you don't need to customize the rendering of your widgets so that the template designer has as much say as possible.
 
 Make sure you read the descriptions for C<start()>, C<end()>, and C<render_widget()> before writing your own template. You will also need to konw how to use the C<begin()>, C<end()>, and C<render()> methods of each of the widgets you are using.
 
@@ -284,7 +293,8 @@ sub define {
                 default => 'Contentment::Form::process_noop',
             },
             template => {
-                type => SCALAR | GLOBREF | SCALARREF,
+                type    => ARRAYREF,
+                default => undef,
             },
             widgets => {
                 type => HASHREF,
@@ -321,26 +331,6 @@ sub define {
             'No last submission. Will have to create/find a definition.'
         );
 
-        # If template is a glob read the file
-        if (ref $p{template} eq 'GLOB') {
-            $p{template} = join '', readline $p{template};
-        }
-
-        # If template is a scalar reference, grab the scalar
-        elsif (ref $p{template} eq 'SCALAR') {
-            $p{template} = ${ $p{template} };
-        }
-
-        # If template is a file name, open the file and read it
-        else {
-            open TMPL, $p{template}
-                or Contentment::Exception->throw(
-                    message => qq(Failed to open template file "$p{template}".),
-                );
-            $p{template} = join '', <TMPL>;
-            close TMPL;
-        }
-
         # Find any previous definitions
         my @definitions = Contentment::Form::Definition->search({
             form_name => $p{name},
@@ -363,7 +353,9 @@ sub define {
                   $latest_definition->action   ne $p{action}   ? 1
                 : $latest_definition->enctype  ne $p{enctype}  ? 2
                 : $latest_definition->method   ne $p{method}   ? 3
-                : $latest_definition->template ne $p{template} ? 4
+                : !eq_deeply(
+                    $latest_definition->template,
+                    $p{template})                              ? 4
                 : !eq_deeply(
                     $latest_definition->widget_parameters, 
                     $p{widgets})                               ? 5

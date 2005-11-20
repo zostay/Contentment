@@ -3,7 +3,7 @@ package Contentment::Form::Definition;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 use base qw/ Oryx::Class Class::Accessor /;
 
@@ -37,7 +37,7 @@ our $schema = {
         type => 'String',
     },{
         name => 'template',
-        type => 'Text',
+        type => 'Complex',
     },{
         name => 'widget_parameters',
         type => 'Complex',
@@ -104,17 +104,10 @@ sub render {
         $self->submission->commit;
     }
 
-    # Create a new lexical hash so we don't muck with the original
-    my %variables = %$vars;
-
     Contentment::Form->instance->{definition} = $variables{form} = $self;
 
-    my $tt = Contentment::Template->new_template;
-    my $template = $self->template;
-    $tt->process(\$template, \%variables)
-        or Contentment::Exception->throw(
-               message => $tt->error(),
-           );
+    my $generator = Contentment::Generator->generator(@{ $self->template });
+    $generator->generator(%$vars);
 
     delete Contentment::Form->instance->{definition};
 

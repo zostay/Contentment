@@ -11,7 +11,7 @@ use Contentment::Request;
 use File::Spec;
 use File::System;
 
-our $VERSION = '0.14';
+our $VERSION = '0.15';
 
 use base 'File::System::Passthrough';
 
@@ -119,159 +119,170 @@ sub lookup_source {
 	return $result;
 }
 
-=item @properties = $obj-E<gt>properties
+sub properties_hash {
+    my $self = shift;
 
-When C<$obj-E<gt>has_content> returns true, this method will attempt to lookup the filetype and return the list of additional properties reported by the filetype in addition to those native to the filesystem.
-
-=cut
-
-sub properties {
-	my $self = shift;
-
-	my %properties = map { ($_ => 1) } $self->SUPER::properties;
-
-	if ($self->has_content && $self->filetype) {
-		$properties{$_}++ foreach ($self->filetype->properties($self));
-	}
-
-	return keys %properties;
+    return { 
+        map { $_ => $self->get_property($_) } $self->properties;
+    };
 }
 
-=item $value = $obj-E<gt>get_property($key)
+#=item @properties = $obj-E<gt>properties
+#
+#When C<$obj-E<gt>has_content> returns true, this method will attempt to lookup the filetype and return the list of additional properties reported by the filetype in addition to those native to the filesystem.
+#
+#=cut
+#
+#sub properties {
+#	my $self = shift;
+#
+#	my %properties = map { ($_ => 1) } $self->SUPER::properties;
+#
+#	if ($self->has_content && $self->filetype) {
+#		$properties{$_}++ foreach ($self->filetype->properties($self));
+#	}
+#
+#	return keys %properties;
+#}
 
-When C<$obj-E<gt>has_content> returns true, this method will lookup both properties native to the file system and those for the file type plugin.
+#=item $value = $obj-E<gt>get_property($key)
+#
+#When C<$obj-E<gt>has_content> returns true, this method will lookup both properties native to the file system and those for the file type plugin.
+#
+#=cut
+#
+#sub get_property {
+#	my $self = shift;
+#	my $key  = shift;
+#
+#	my $value = $self->SUPER::get_property($key);
+#	if (defined $value) {
+#		return $value;
+#	} elsif ($self->has_content and $self->filetype and
+#			$value = $self->filetype->get_property($self, $key)) {
+#		return $value;
+#	} else {
+#		return undef;
+#	}
+#}
+
+#=item $headers = $obj-E<gt>generate_headers(@_)
+#
+#This method is only valid when C<has_content> returns true. This calls the C<generate_headers> method of the file type returned by the C<filetype> method or returns an empty hash reference.
+#
+#=cut
+#
+#sub generate_headers {
+#	my $self = shift;
+#
+#	$self->has_content
+#		or Contentment::Exception->throw(
+#               message => q(Cannot call "generate_headers" on a file with no )
+#                         .q(content.),
+#           );
+#
+#	if (my $filetype = $self->filetype) {
+#		return $filetype->generate_headers($self, @_);
+#	} else {
+#		return {};
+#	}
+#}
+
+#=item $result = $obj-E<gt>generate(@_)
+#
+#This causes the output of the object to be generated and printed to the currently selected file handle. The result of this generation is also returned.
+#
+#This method is only valid when C<has_content> returns true. Generation differs from just calling the C<content> method in that this uses the C<filetype> to interpret and write the file. Generate may take arguments, which are passed directly on to the C<generate> method of the associated file type plugin.
+#
+#=cut
+#
+#sub generate {
+#	my $self = shift;
+#
+#	$self->has_content
+#		or Contentment::Exception->throw(
+#               message => q(Cannot call "generate" on file with no content.),
+#           );
+#
+#	if (my $filetype = $self->filetype) {
+#		return $filetype->generate($self, @_);
+#	} else {
+#		return;
+#	}
+#}
+
+#=item $kind = $file_thing-E<gt>real_kind
+#
+#Determines the filetype of the file represented and returns the real kind of the file.
+#
+#This method is only valid when C<has_content> is true.
+#
+#=cut
+#
+#sub real_kind {
+#	my $self = shift;
+#
+#	$self->has_content
+#		or Contentment::Exception->throw(
+#               message => q(Cannot call "real_kind" on file with no content.),
+#           );
+#
+#	if (my $filetype = $self->filetype) {
+#		return $filetype->real_kind($self);
+#	} else {
+#		return 'unknown';
+#	}
+#}
+
+#=item $kind = $file_thing-E<gt>generated_kind(@_)
+#
+#Determines the filetype of the file represented and returns the generated kind of the file. Note that it is important to pass the same set of arguments to this method as to the C<generate> method, as a file type plugin may generate different types based upon the arguments given.
+#
+#This is only valid when C<has_content> is true.
+#
+#=cut
+#
+#sub generated_kind {
+#	my $self = shift;
+#
+#	if (my $filetype = $self->filetype) {
+#		return $filetype->generated_kind($self, @_);
+#	} else {
+#		return '';
+#	}
+#}
+
+=item $generator = $file_thing-E<gt>generator
+
+Returns the generator which is capable of generating the file thing.
+
+Returns C<undef> when C<has_content> is false.
 
 =cut
 
-sub get_property {
-	my $self = shift;
-	my $key  = shift;
-
-	my $value = $self->SUPER::get_property($key);
-	if (defined $value) {
-		return $value;
-	} elsif ($self->has_content and $self->filetype and
-			$value = $self->filetype->get_property($self, $key)) {
-		return $value;
-	} else {
-		return undef;
-	}
-}
-
-=item $headers = $obj-E<gt>generate_headers(@_)
-
-This method is only valid when C<has_content> returns true. This calls the C<generate_headers> method of the file type returned by the C<filetype> method or returns an empty hash reference.
-
-=cut
-
-sub generate_headers {
+sub generator {
 	my $self = shift;
 
-	$self->has_content
-		or Contentment::Exception->throw(
-               message => q(Cannot call "generate_headers" on a file with no )
-                         .q(content.),
-           );
-
-	if (my $filetype = $self->filetype) {
-		return $filetype->generate_headers($self, @_);
-	} else {
-		return {};
-	}
-}
-
-=item $result = $obj-E<gt>generate(@_)
-
-This causes the output of the object to be generated and printed to the currently selected file handle. The result of this generation is also returned.
-
-This method is only valid when C<has_content> returns true. Generation differs from just calling the C<content> method in that this uses the C<filetype> to interpret and write the file. Generate may take arguments, which are passed directly on to the C<generate> method of the associated file type plugin.
-
-=cut
-
-sub generate {
-	my $self = shift;
-
-	$self->has_content
-		or Contentment::Exception->throw(
-               message => q(Cannot call "generate" on file with no content.),
-           );
-
-	if (my $filetype = $self->filetype) {
-		return $filetype->generate($self, @_);
-	} else {
-		return;
-	}
-}
-
-=item $kind = $file_thing-E<gt>real_kind
-
-Determines the filetype of the file represented and returns the real kind of the file.
-
-This method is only valid when C<has_content> is true.
-
-=cut
-
-sub real_kind {
-	my $self = shift;
-
-	$self->has_content
-		or Contentment::Exception->throw(
-               message => q(Cannot call "real_kind" on file with no content.),
-           );
-
-	if (my $filetype = $self->filetype) {
-		return $filetype->real_kind($self);
-	} else {
-		return 'unknown';
-	}
-}
-
-=item $kind = $file_thing-E<gt>generated_kind(@_)
-
-Determines the filetype of the file represented and returns the generated kind of the file. Note that it is important to pass the same set of arguments to this method as to the C<generate> method, as a file type plugin may generate different types based upon the arguments given.
-
-This is only valid when C<has_content> is true.
-
-=cut
-
-sub generated_kind {
-	my $self = shift;
-
-	if (my $filetype = $self->filetype) {
-		return $filetype->generated_kind($self, @_);
-	} else {
-		return '';
-	}
-}
-
-=item $filetype = $file_thing-E<gt>filetype
-
-Returns the filetype plugin which matches the file thing.
-
-This is only valid when C<has_content> is true.
-
-=cut
-
-sub filetype {
-	my $self = shift;
-
+    # If there's no content, we provide no generator.
 	$self->has_content or return undef;
 
-	defined $self->{filetype} and
-		return $self->{filetype};
+    # We've already figured it out for this object. Return that one.
+	defined $self->{generator} and return $self->{generator};
 
-	my $iter = Contentment::Hooks->call_iterator('Contentment::FileType::match');
+    # Run the hook handlers until we get a generator and use that
+	my $iter = Contentment::Hooks->call_iterator('Contentment::VFS::generator');
 	while ($iter->next) {
-		my $plugin = $iter->call($self);
-		if ($plugin) {
-			Contentment::Log->debug("Matched file %s with filetype %s", [$self,$plugin]);
-			return $self->{filetype} = $plugin;
+		my $generator = $iter->call($self);
+		if ($generator) {
+			Contentment::Log->debug('Matched file %s with generator %s', 
+                [$self,$generator]);
+			return $self->{generator} = $generator;
 		}
 	}
 
-	Contentment::Log->warning("Couldn't match %s with any filetype", [$self]);
+	Contentment::Log->warning(q(Couldn't match %s with a generator), [$self]);
 
-	return;
+	return undef;
 }
 
 =item @files = $obj-E<gt>ancestors
@@ -406,26 +417,69 @@ sub resolve {
 	my $path = shift;
 	my $vfs = Contentment::VFS->instance;
 
+    # Default to the request path_info, if no $path argument is given
 	unless ($path) {
 		my $q = Contentment::Request->cgi;
 		$path = $q->path_info;
 	}
 
+    # Lookup the file at the given path
 	my $file = $vfs->lookup($path);
+
+    # If such a file exists and it's a directory...
 	if ($file && $file->is_container) {
+
+        # If the path ends in a "/", generate the index in that directory
 		if ($path =~ /\/$/) {
-			return $vfs->lookup_source($path);
-		} else {
-			return Contentment::Response->redirect("$path/", %{ Contentment::Request->cgi->Vars });;
+
+            # If there is an index, generate it
+            if (my $thing = $vfs->lookup_source($path)) {
+                return $thing->generator;
+            }
+
+            # If there isn't an index, we didn't find anything.
+            else {
+                return undef;
+            }
+		} 
+        
+        # The path doesn't end in a "/", redirect them so that it does.
+        else {
+			return Contentment::Response->redirect(
+                "$path/", %{ Contentment::Request->cgi->Vars }
+            );
 		}
-	} else {
-		return $file || $vfs->lookup_source($path);
+	} 
+    
+    # We didn't find anything literally at that path, let's try by looking for
+    # files with different suffixes.
+    else {
+        
+        # A file with a different suffix does exist, use that.
+		if (defined my $thing = $file || $vfs->lookup_source($path)) {
+            return $thing->generator;
+        } 
+        
+        # We found nothing.
+        else {
+            return undef;
+        }
 	}
 }
 
+=head2 HOOKS
+
+=over
+
+=item Contentment::VFS::generator
+
+The handlers for this hook are passed a single argument, a L<Contentment::VFS> object pointing to a particular path. The handler should return C<undef> if it is unable to provide a generator for that file. The handler should return a constructor generator for the file, if it can provide a generator. The hook stops when the first handler returns something other than C<undef>.
+
+=back
+
 =head1 SEE ALSO
 
-L<File::System>, L<File::System::Other>, L<File::System::Passthrough>, L<Contentment::FileType::Other>, L<Contentment::FileType::Mason>, L<Contentment::FileType::POD>
+L<File::System>, L<File::System::Other>, L<File::System::Passthrough>, L<Contentment::Generator::Plain>
 
 =head1 AUTHOR
 

@@ -3,7 +3,7 @@ package Contentment::Response;
 use strict;
 use warnings;
 
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 
 use base 'Class::Singleton';
 
@@ -60,29 +60,32 @@ sub error {
 	my $error = Contentment::Hooks->call('Contentment::Response::error');
 
 	unless ($error) {
-		$error = Contentment::Generator->new;
-		$error->set_property(error       => 1);
-		$error->set_property(status      => $status);
-		$error->set_property(message     => $message);
-		$error->set_property(description => $description);
-		$error->set_property(detail      => $detail);
-
-		$error->set_generated_kind(sub { 'text/html' });
-
-		$error->set_generator(sub {
-			Contentment::Response->header->{'-status'} = "$status $message";
-			print "<?xml version=\"1.0\"?>\n";
-			print "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n";
-			print "    \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n";
-			print "<html xmlns=\"http://www.w3.org/1999/html\">\n";
-			print "<head><title>$status $message</title></head>\n";
-			print "<body>\n";
-			print "<h1>$message</h1>\n";
-			print "<p>An error occurred finding or generating the content: $description</p>\n";
-			print "<p>You may wish to contact the webmaster about this problem.</p>\n";
-			print "<!-- $detail -->\n";
-			print "</body></html>\n";
-		});
+		$error = Contentment::Generator->generator('Plain', {
+            properties => {
+                error       => 1,
+                status      => $status,
+                message     => $message,
+                description => $description,
+                detail      => $detail,
+                kind        => 'text/html',
+            },
+            source => sub {
+                Contentment::Response->header->{'-status'} = "$status $message";
+                print <<"END_OF_HTML";
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/html">
+<head><title>$status $message</title></head>
+<body>
+<h1>$message</h1>
+<p>An error occurred finding or generating the content: $description</p>
+<p>You may wish to contact the webmaster about this problem.</p>
+<!-- $detail -->
+</body></html>
+END_OF_HTML
+		    },
+        });
 	}
 		
 	return $error;
@@ -105,11 +108,17 @@ sub redirect {
 		$url .= '?'.join('&', @query);
 	}
 
-	my $redirect = Contentment::Generator->new;
-	$redirect->set_generator(sub {
-		Contentment::Response->header->{'-status'} = "302 Found";
-		Contentment::Response->header->{'-location'} = $url;
-	});
+	my $redirect = Contentment::Generator->generator('Plain', {
+        properties => {
+            title       => 'Redirect',
+            description => "Redirect to $url",
+            kind        => '',
+        },
+        source => sub {
+            Contentment::Response->header->{'-status'} = "302 Found";
+            Contentment::Response->header->{'-location'} = $url;
+        },
+    });
 
 	return $redirect;
 }
@@ -191,8 +200,8 @@ sub handle_cgi {
 			$self->generator($generator);
 
 			$self->top_kind ||
-				$self->top_kind($generator->generated_kind(%{ $q->Vars }));
-			$generator->generate(%{ $q->Vars });
+				$self->top_kind($generator->get_property('kind'));
+			$generator->generate($q->Vars);
 		};
 
 		# Bad stuff. Generate an error page. Throw away input captured thus

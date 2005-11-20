@@ -1,18 +1,18 @@
-name: Filetype
-description: Basic filetype plugin used with static files.
-version: 0.07
+name: Plain
+description: A generator for plain files (binary or text).
+version: 0.08
 order: 0
 
 use_lib:
  - lib
 
 use:
- - Contentment::FileType::Other
+ - Contentment::Generator::Plain
 
 hooks:
-  Contentment::FileType::match:
+  Contentment::VFS::generator:
     order: 95
-    sub: Contentment::FileType::Other::match
+    sub: Contentment::Generator::Plain::match
   Contentment::Request::final_kind:
     order: 95
-    sub: Contentment::FileType::Other::final_kind
+    sub: Contentment::Generator::Plain::final_kind

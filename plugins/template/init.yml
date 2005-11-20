@@ -1,5 +1,5 @@
 name: Template
-version: 0.04
+version: 0.05
 description: Allows Contentment tools to use Template Toolkit templates.
 order: 10
 
@@ -7,10 +7,10 @@ use_lib:
  - lib
 
 use:
- - Contentment::FileType::Template
+ - Contentment::Generator::Template
 
 hooks:
-  Contentment::FileType::match: Contentment::FileType::Template::match
+  Contentment::VFS::generator: Contentment::Generator::Template::match
 
 configuration: 
   PLUGIN_BASE:
