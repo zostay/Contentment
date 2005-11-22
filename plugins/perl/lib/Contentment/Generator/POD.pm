@@ -9,7 +9,7 @@ use MIME::Types;
 use Params::Validate qw( validate_with :types );
 use Text::Balanced qw( extract_quotelike );
 
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 
 =head1 NAME
 
@@ -39,8 +39,6 @@ Contentment::Generator::POD - A generator for Plain Old Documentation
 
   my $title       = $generator->get_property('title');
   my $description = $generator->get_property('description');
-
-  my $kind = $generator->generated_kind();
 
   $generator->generate();
 
@@ -132,10 +130,6 @@ sub new {
             source => {
                 type    => GLOBREF | CODEREF | SCALAR,
             },
-            kind => {
-                type    => SCALAR,
-                default => 'text/x-pod',
-            },
             properties => {
                 type    => HASHREF,
                 default => {},
@@ -143,6 +137,8 @@ sub new {
         },
         allow_extra => 1,
     );
+
+    $p{properties}{kind} ||= 'text/x-pod';
 
     return $self->SUPER::new(\%p);
 }
@@ -193,29 +189,48 @@ sub source {
 			my ($key, $value) = decode_property($1, $2);
 			if (defined $key) {
 				$props{$key} = $value;
-			} else {
-				warn "Invalid property value for $key in =begin meta of ",$file->path," line $.";
+			} 
+            
+            else {
+				warn "Invalid property value for $key in =begin meta ",
+                     "on line $.";
 			}
-		} elsif ($meta && /^=end\s+meta\s*$/) {
+		} 
+        
+        elsif ($meta && /^=end\s+meta\s*$/) {
 			$meta = 0;
-		} elsif ($meta && !/^\s*$/) {
-			warn "Invalid line in the middle of metadata section.";
-		} elsif (!$meta && /^=begin\s+meta\s*$/) {
+		} 
+        
+        elsif ($meta && !/^\s*$/) {
+			warn "Invalid line in the middle of metadata section on line $.";
+		} 
+        
+        elsif (!$meta && /^=begin\s+meta\s*$/) {
 			$meta = 1;
-		} elsif (!$meta && /^=for\s+meta\s+(\w+)\s*=>\s*(.*)$/) {
+		} 
+        
+        elsif (!$meta && /^=for\s+meta\s+(\w+)\s*=>\s*(.*)$/) {
 			my ($key, $value) = decode_property($1, $2);
 			if (defined $key) {
 				$props{$key} = $value;
-			} else {
-				warn "Invalid property value for $key in =for meta of ",$file->path," line $.";
+			} 
+            
+            else {
+				warn "Invalid property value for $key in =for meta on line $.";
 			}
-		} elsif (!$props{title} && !$meta && !$title && /^=head1\s+NAME\s*$/) {
+		} 
+        
+        elsif (!$props{title} && !$meta && !$title && /^=head1\s+NAME\s*$/) {
 			$title = 1;
-		} elsif (!$meta && $title && /^\s*(\S*)\s*-\s*(.*)$/) {
+		} 
+        
+        elsif (!$meta && $title && /^\s*(\S*)\s*-\s*(.*)$/) {
 			$title = 0;
 			$props{title} = $1;
 			$props{abstract} = $2;
-		} elsif (!$props{title} && !$meta && !$title && /^=head1\s+(.*)$/) {
+		} 
+        
+        elsif (!$props{title} && !$meta && !$title && /^=head1\s+(.*)$/) {
 			$props{title} = $1;
 		}
 	}

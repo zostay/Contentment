@@ -3,7 +3,7 @@ package Contentment::Generator::HTML;
 use strict;
 use warnings;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 use base 'Contentment::Generator::Plain';
 
@@ -48,10 +48,6 @@ Constructs an HTML generator. It accepts the following arguments:
 
 This is the HTML text to generate. It takes the same forms as L<Contentment::Generator::Plain>'s constructor.
 
-=item kind (optional, defaults to "text/html")
-
-You may specify this option if you need C<generated_kind()> to return something besides "text/html".
-
 =item properties (optional, defaults to {})
 
 The C<get_property()> method searches for meta-tags in the HTML source and uses those as properties. If you wish to have additional properties that aren't defined in the meta tags, you may add them with this option. These options create additional properties, they do not override the meta tags in the file.
@@ -61,22 +57,20 @@ The C<get_property()> method searches for meta-tags in the HTML source and uses 
 sub new {
     my $class = shift;
     my %p = validate_with(
-        source => 1,
-        kind => {
-            type    => SCALAR,
-            default => 'text/html',
-        },
-        properties => {
-            type    => HASHREF,
-            default => {},
+        params => \@_,
+        spec => {
+            source => 1,
+            properties => {
+                type    => HASHREF,
+                default => {},
+            },
         },
     );
+
+    $p{properties}{kind} ||= 'text/html';
+
     return $class->SUPER::new(\%p);
 }
-
-=item $kind = $generator-E<gt>generated_kind
-
-Returns "text/html" or the kind given as an argument to the constructor.
 
 =item $properties = $generator-E<gt>properties
 
@@ -111,7 +105,7 @@ sub source {
 	my %properties = %{ $self->SUPER::properties };
 
     # Get the source
-    my $source = $self->source;
+    my $source = $self->SUPER::source;
 
     # Is there a title? We assume sane HTML.
 	($properties{title}) = $source =~ m[<title>(.*?)</title>]si;
@@ -213,14 +207,21 @@ Handles the "Contentment::FileType::match" hook.
 =cut
 
 sub match {
-	local $_ = shift;
+	my $file = shift;
 
-	/\.html?$/ && return Contentment::Generator::HTML->new({
-        source     => $_->content,
-        properties => $_->properties_hash,
-    });
+	if ($file =~ /\.html?$/) { 
+        my %properties      = %{ $file->properties_hash };
+        $properties{kind} ||= 'text/html';
 
-    return undef;
+        return Contentment::Generator->generator('HTML', {
+            source     => scalar($file->content),
+            properties => \%properties,
+        });
+    }
+
+    else {
+        return undef;
+    }
 }
 
 =back

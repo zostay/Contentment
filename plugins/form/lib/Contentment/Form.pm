@@ -3,7 +3,7 @@ package Contentment::Form;
 use strict;
 use warnings;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use base 'Class::Singleton';
 
@@ -201,7 +201,7 @@ Under most circumstances, you should avoid specifying the template directly. Ins
 However, the default rendering options will surely not suit every circumstance, so providing your own template may be required. The simplest template possible looks something like this (using a Template Toolkit template):
 
   [% USE Form %]
-  [% Form.start %]
+  [% Form.begin %]
 
   [% FOREACH name IN Form.widgets.keys %]
   [% Form.render_widget(name) %]
@@ -212,13 +212,13 @@ However, the default rendering options will surely not suit every circumstance, 
 or (using a Perl template):
 
   my $form = Contentment::Form->form;
-  $form->start();
+  print $form->start();
 
   for my $name (keys %{ $form->widgets }) {
-      $form->render_widget($name);
+      print $form->render_widget($name);
   }
 
-  $form->end();
+  print $form->end();
 
 Make sure to at least include the C<start()> and C<end()> form calls before and after rendering any widgets, respectively. Use the C<render_widget()> method whenever you don't need to customize the rendering of your widgets so that the template designer has as much say as possible.
 

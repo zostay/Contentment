@@ -138,13 +138,17 @@ sub has_tag_with_attrs {
             for my $problem (@{ $@ }) {
                 $Test->diag($problem);
             }
+
+            return 0;
         }
         else {
             $Test->diag("Found no $tag elements.");
+            return 0;
         }
     }
     else {
         $Test->ok(1, $name);
+        return 1;
     }
 }
 
@@ -157,11 +161,13 @@ sub no_tag_with_attrs {
 
     if ($@) {
         $Test->ok(1, $name);
+        return 1;
     } 
     else {
         $Test->ok(0, $name);
         failed_test_at;
         $Test->diag($found);
+        return 0;
     }
 }
 
@@ -179,13 +185,16 @@ sub has_tag_with_content {
             for my $problem (@{ $@ }) {
                 $Test->diag($problem);
             }
+            return 0;
         }
         else {
             $Test->diag("Found no $tag elements.");
+            return 0;
         }
     }
     else {
         $Test->ok(1, $name);
+        return 1;
     }
 }
 

@@ -29,8 +29,8 @@ $node1 = $node1->clone({
 });
 $node1->commit;
 
-use Data::Dumper;
-print STDERR Dumper($node1);
+#use Data::Dumper;
+#print STDERR Dumper($node1);
 
 print 'node1 comment = ',$node1->comment,"\n";
 print 'node1 title = ',$node1->title,"\n";

@@ -3,7 +3,7 @@ package Contentment::Template::Provider;
 use strict;
 use warnings;
 
-our $VERSION = '0.04';
+our $VERSION = '0.06';
 
 use Contentment::Log;
 use Contentment::Response;
@@ -35,6 +35,7 @@ sub fetch {
         my $parsedoc = $parser->parse($$name, {});
             
 		my $data = Template::Document->new($parsedoc);
+        $data->blocks->{input} = sub { join '', <STDIN> };
 
         if (defined $data) {
             return ($data, Template::Constants::STATUS_OK);
@@ -68,7 +69,10 @@ sub fetch {
            .'Contentment::Template::Document.', [$generator]);
 
 		$data = Template::Document->new({
-			BLOCK     => sub { 
+            DEFBLOCKS => {
+                input => sub { join '', <STDIN> },
+            },
+			BLOCK => sub { 
 				my $context = shift;
 				# TODO Create a custom Stash so that we don't have this HACK
 				# using undocumented features of Template::Stash.

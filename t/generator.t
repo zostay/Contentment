@@ -1,24 +1,21 @@
 # vim: set ft=perl :
 
 use strict;
-use Contentment::Generator;
-use Test::More tests => 11;
+use Test::More tests => 6;
 
-my $generator;
-ok($generator = Contentment::Generator->new, 'new');
+SKIP: {
+    eval "use Apache::TestRequest 'GET_BODY'";
+    skip "Apache::Test is not installed.", 1 if $@;
 
-is($generator->generated_kind, '', 'default generated kind');
-is($generator->generated_kind(foo => 1), '', 'default generated kind with args');
+    my $body = GET_BODY('/generator.txt');
 
-$generator->set_generated_kind(sub { 'test'.join(',',@_) });
-is($generator->generated_kind, 'test', 'set genereted kind');
-is($generator->generated_kind(foo => 1), 'testfoo,1', 'set generated kind with args');
+    like($body, qr/^GENERATOR IS/m);
+    
+    like($body, qr/^kind = test/m);
+    like($body, qr/^foo = 1/m);
+    like($body, qr/^bar = baz/m);
 
-is($generator->set_property(foo => 1), 1, 'set_property');
-is($generator->set_property(bar => 'baz'), 'baz', 'set_property');
-is($generator->get_property('foo'), 1, 'get_property');
-is($generator->get_property('bar'), 'baz', 'get_property');
+    like($body, qr/^BEGIN PLAIN\s+test\s+END/m);
 
-$generator->set_generator(sub { 'test'.join(',',@_) });
-is($generator->generate, 'test', 'generator');
-is($generator->generate(bar => 'baz'), 'testbar,baz', 'generator');
+    like($body, qr/^BEGIN ARGS\s+test\s+END/m);
+}

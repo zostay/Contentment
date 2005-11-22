@@ -5,11 +5,13 @@
 =cut
 
 my $template = <<'END_OF_TEMPLATE';
-
-[% form.begin %]
-[% form.widgets.test1.label.render %] [% form.widgets.test1.render %]<br/>
-[% form.widgets.test3.render %]
-[% form.end %]
+<form>
+</form>
+[% USE Form -%]
+[% Form.begin %]
+[% Form.widgets.test1.label.render %] [% Form.widgets.test1.render %]<br/>
+[% Form.widgets.test3.render %]
+[% Form.end %]
 
 END_OF_TEMPLATE
 
@@ -17,7 +19,9 @@ my $form = Contentment::Form->define(
     name     => 't::test_form',
     enctype  => 'multipart/form-data',
     activate => 1,
-    template => \$template,
+#    template => [ 'Template', {
+#        source => $template,
+#    }, ],
     widgets  => {
         test1 => {
             name  => 'test1',

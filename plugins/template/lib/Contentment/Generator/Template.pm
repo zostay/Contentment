@@ -3,7 +3,7 @@ package Contentment::Generator::Template;
 use strict;
 use warnings;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 use base 'Contentment::Generator::Plain';
 
@@ -32,7 +32,6 @@ Contentment::Generator::Template - Generator for Template Toolkit templates
   });
 
   my $title = $generator->get_property('title');
-  my $kind = $generator->generated_kind();
 
   $generator->generate({ who => 'World' });
 
@@ -52,13 +51,9 @@ This constructs a template generator. It takes the following arguments:
 
 This is the source template to generate from. It takes the same kinds of items as the "source" option to the constructor L<Contentment::Generator::Plain> takes.
 
-=item kind (optional, defaults to '')
-
-This is the value to return from C<generated_kind()>. If the source contains a property named "kind", that value will override this.
-
 =item properties (optional, defaults to {})
 
-This is the set of properties to start with. These will be overridden by any properties in the source. The special property "kind" will be overridden by the value given as the "kind" option (unless the source also contains a "kind" property).
+This is the set of properties to start with. These will be overridden by any properties in the source.
 
 =item variables (optional, defaults to {})
 
@@ -86,13 +81,9 @@ sub new {
 
     my %p = validate_with(
         params => \@_,
-        specs => {
+        spec => {
             source => {
                 type => GLOBREF | CODEREF | SCALAR,
-            },
-            kind => {
-                type    => SCALAR,
-                default => '',
             },
             properties => {
                 type    => HASHREF,
@@ -120,35 +111,12 @@ sub source {
     # Skip it if already sourced.
     return $self->SUPER::source if $self->is_sourced;
 
-    # Use the "kind" option as the "kind" property
-    if (defined $self->{kind}) {
-        $self->properties->{kind} = delete $self->{kind};
-    }
-
     # Otherwise, parse the template
     my $tt = Contentment::Template->new_template;
-    my $source = $self->source;
-    my $self->{template} = $tt->context->template(\$source);
+    my $source = $self->SUPER::source;
+    $self->{template} = $tt->context->template(\$source);
 
     return $source;
-}
-
-=item $kind = $generator-E<gt>generated_kind
-
-Returns the kind given via the "kind" property in the source file or the "kind" option given to the constructor or the "kind" property specified by the "properties" option to the constructor.
-
-=cut
-
-sub generated_kind {
-    my $self = shift;
-
-    # Parse the template
-    $self->source;
-
-    # Return the kind
-    return $self->{template}->kind 
-        || $self->{kind} 
-        || $self->{properties}{kind};
 }
 
 =item $generator-E<gt>properties (EXCEPTION)
@@ -169,7 +137,7 @@ sub properties {
 
 =item $value = $generator-E<gt>get_property($key)
 
-Retrieves the property value for the given key, C<$key>. This will fetch the property for the key from the proeprties set in source first, then fallback to properties set in the "properties" option to the constructor. For the property named "kind" it will, additionally, try to use the "kind" option to the constructor before the "kind" key of the hash passed as the "properties" option to the constructor.
+Retrieves the property value for the given key, C<$key>. This will fetch the property for the key from the proeprties set in source first, then fallback to properties set in the "properties" option to the constructor.
 
 =cut
 
@@ -188,7 +156,6 @@ sub get_property {
 
 	return 
           defined $self->{template}->$key         ? $self->{template}->$key
-        : $key eq 'kind' && defined $self->{kind} ? $self->{kind}
         :                                           $self->{properties}{$key};
 }
 
@@ -201,15 +168,16 @@ The first argument, C<%args>, is passed as a hash named "args" to the template. 
 =cut
 
 sub generate {
-	my $class = shift;
-	my %args  = @_;
+	my $self = shift;
+	my %args = @_;
 
     # Compile
     $self->source;
 
     # Process or error
     my $tt = Contentment::Template->new_template;
-    $self->{template}->({ 
+    my $source = $self->source;
+    $tt->process(\$source, { 
         %{ $self->{variables} },
         args => \%args,
     }) or die $tt->error;
@@ -230,17 +198,19 @@ Handles the "Contentment::VFS::generator" hook. Specifies that the "Contentment:
 =cut
 
 sub match {
-	local $_ = ''.shift;
+	my $file = shift;
 
-    if (/\.tt2/) {
-        my $filename = $_->basename;
+    if ($file->basename =~ /\.tt2/) {
+        my $filename = $file->basename;
         $filename =~ s/\.tt2$//;
         my $kind = MIME::Types->new->mimeTypeOf($filename) || '';
 
+        my %properties      = %{ $file->properties_hash };
+        $properties{kind} ||= $kind;
+
         return Contentment::Generator::Template->new({
-            source     => $_->content,
-            kind       => $kind,
-            properties => $_->properties_hash,
+            source     => scalar($file->content),
+            properties => \%properties,
         });
     }
 
@@ -250,6 +220,10 @@ sub match {
 }
 
 =back
+
+=head1 BUGS
+
+Currently, this generator compiles the source twice most of the time. This is due to the seemly obfuscated nature of the L<Template> Toolkit compiler. I need to unravel the innards a bit more to learn how to use a L<Template::Document> correctly.
 
 =head1 SEE ALSO
 

@@ -5,7 +5,7 @@ use warnings;
 
 use base 'Contentment::Generator::POD';
 
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 
 use Contentment::Exception;
 use MIME::Types;
@@ -19,7 +19,6 @@ Contentment::Generator::PerlScript - A generator for Perl scripts
 =head1 SYNOPSIS
 
   my $generator = Contentment::Generator::PerlScript->new({
-      kind => 'text/plain',
       properties => {
           title => 'Testing',
           description => 'This is a test.',
@@ -32,8 +31,6 @@ Contentment::Generator::PerlScript - A generator for Perl scripts
 
   my $title = $generator->get_property('title');
   my $description = $generator->get_property('description');
-
-  my $kind = $generator->generated_kind();
 
   $generator->generate({ who => "World" });
 
@@ -73,20 +70,16 @@ This is the Perl subroutine to actually execute. This by-passes the "source" opt
 
 This option may not be used if "source" is used.
 
-=item kind (optional, defaults to "")
-
-This is the kind to return by the C<generated_kind()> method. Using this option will override any property named "kind" passed to the "properties" option, but will not override a "kind" property found within the source code if the "source" option is used.
-
 =item properties (optional, defaults to C<{}>)
 
-This is the list of properties the generator should return. It defaults to having no properties. If the "source" option is used, properties within the source will override any set here. Also, the property named "kind" will be the value returned by the C<generated_kind()> method.
+This is the list of properties the generator should return. It defaults to having no properties. If the "source" option is used, properties within the source will override any set here.
 
 =back
 
 =cut
 
 sub new {
-    my $self = shift;
+    my $class = shift;
 
     my %p = validate_with(
         params => \@_,
@@ -98,10 +91,6 @@ sub new {
             code => {
                 type    => CODEREF,
                 default => undef,
-            },
-            kind => {
-                type    => SCALAR,
-                default => '',
             },
             properties => {
                 type    => HASHREF,
@@ -118,22 +107,10 @@ sub new {
     }
 
     # Set it so that the super-constructor doesn't whine
-    $p{source} = \''; 
+    $p{source} ||= ''; 
 
     # use the parent constructor to build it
     return $class->SUPER::new(\%p);
-}
-
-=item $kind = $generator-E<gt>generated_kind
-
-First, this checks to see if the source contained a property named "kind". If not, it will check to see if the "kind" option was passed to the constructor to return that value. If not this, then it will check to see if the "kind" property was passed to the "properties" option to the constructor. Finally, it will fall back to the empty string (""). 
-
-=cut
-
-sub generated_kind {
-    my $self = shift;
-
-    return $self->get_property('kind');
 }
 
 =item $value = $generator-E<gt>get_property($key)
@@ -145,11 +122,6 @@ This will cause the source to parsed if source was given. The properties within 
 sub get_property {
     my $self = shift;
     my $key  = shift;
-
-    # Override kind property with the "kind" option to the constructor
-    if (defined $self->{kind}) {
-        $self->{properties}{kind} = delete $self->{kind};
-    }
 
     # Parse the source if the source was given
     $self->source;
@@ -191,7 +163,7 @@ sub source {
     my $code = $self->SUPER::source;
     my $sub  = eval <<"END_OF_SUB";
 sub {
-#line 1 "$file"
+#line 1
 $code
 }
 END_OF_SUB
@@ -218,21 +190,25 @@ Handles the "Contentment::VFS::generator" hook for L<Contentment::Generator::Per
 =cut
 
 sub match {
-	local $_ = shift;
+	my $file = shift;
 
-    my $package;
-    /\.pl$/       && $package = 'Contentment::Generator::PerlScript';
-    /\.pod$|\.pm/ && $package = 'Contentment::Generator::POD';
+    my $package = 'Contentment::Generator';
+    $package
+       .= $file->basename =~ /\.pl$/       ? '::PerlScript'
+        : $file->basename =~ /\.pod$|\.pm/ ? '::POD'
+        :                                    '';
 
-    if ($package) {
-        my $filename = $_->basename;
+    if ($package =~ /^Contentment::Generator::/) {
+        my $filename = $file->basename;
         $filename =~ s/\.(?:pl|pod|pm)$//;
         my $kind = MIME::Types->new->mimeTypeOf($filename) || '';
 
+        my %properties      = %{ $file->properties_hash };
+        $properties{kind} ||= $kind;
+
         return $package->new({
-            source     => $_->content,
-            kind       => $kind,
-            properties => $_->properties_hash,
+            source     => scalar($file->content),
+            properties => \%properties,
         });
     } 
     

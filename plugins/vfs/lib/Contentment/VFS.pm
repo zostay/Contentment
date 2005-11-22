@@ -11,7 +11,7 @@ use Contentment::Request;
 use File::Spec;
 use File::System;
 
-our $VERSION = '0.15';
+our $VERSION = '0.16';
 
 use base 'File::System::Passthrough';
 
@@ -123,7 +123,7 @@ sub properties_hash {
     my $self = shift;
 
     return { 
-        map { $_ => $self->get_property($_) } $self->properties;
+        map { $_ => $self->get_property($_) } $self->properties
     };
 }
 
@@ -456,7 +456,8 @@ sub resolve {
     else {
         
         # A file with a different suffix does exist, use that.
-		if (defined my $thing = $file || $vfs->lookup_source($path)) {
+        my $thing = $file || $vfs->lookup_source($path);
+		if (defined $thing) {
             return $thing->generator;
         } 
         

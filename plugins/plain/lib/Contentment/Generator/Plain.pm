@@ -7,7 +7,7 @@ use Cache::FileCache;
 use DateTime;
 use MIME::Types;
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 use IO::NestedCapture qw( capture_out );
 use Params::Validate qw( validate_with :types );
@@ -56,10 +56,6 @@ This is the source text to generate from. Since the plain generator doesn't do a
 
 The source may be specified as a scalar containing the text to generate, a reference to a file handle from which to read the text to generate, or a reference to a subroutine that prints the text to generate to standard output. If given a subroutine, that subroutine will be called at most once and will not be passed any arguments.
 
-=item kind (optional, defaults to "")
-
-This is the kind to return by the C<generated_kind()> method. It defaults to the empty string representing an unknown kind.
-
 =item properties (optional, defaults to C<{}>)
 
 This is the list of properties the generator should return. It defaults to having no properties.
@@ -69,17 +65,13 @@ This is the list of properties the generator should return. It defaults to havin
 =cut
 
 sub new {
-    my $self = shift;
+    my $class = shift;
 
     my %p = validate_with(
         params => \@_,
         spec => {
             source => {
                 type => GLOBREF | CODEREF | SCALAR,
-            },
-            kind => {
-                type    => SCALAR,
-                default => '',
             },
             properties => {
                 type    => HASHREF,
@@ -88,27 +80,6 @@ sub new {
         },
         allow_extra => 1,
     );
-
-    # Convert GLOB references to subroutines
-    if (ref $p{source} eq 'GLOB') {
-        my $fh = $p{source};
-        $p{source} = sub { print <$fh> };
-    }
-
-    # Already a subroutine
-    elsif (ref $p{source} eq 'CODE') {
-        # do nothing
-    }
-
-    # Convert a scalar to a subroutine
-    elsif (!ref $p{source}) {
-        $p{source} = sub { print $p{source} };
-    }
-
-    # Bad stuff.
-    else {
-        Contentment::Exception->throw(message => 'Unreachable code reached.');
-    }
 
     return bless \%p, $class;
 }
@@ -122,16 +93,36 @@ This accessor returns the source as a text string.
 sub source {
     my $self = shift;
 
+    # If cached, return immediately
     return $self->{cache} if $self->is_sourced;
 
-    capture_out {
-        $self->{source}->();
-    };
+    # If not cached and source is a file handle, cache the data in the file
+    if (ref $self->{source} eq 'GLOB') {
+        my $fh = $self->{source};
+        $self->{cache} = join '', <$fh>;
+    }
 
+    # If not cached and source is a subroutine, run the subroutine, capture the
+    # output and cache it
+    elsif (ref $self->{source} eq 'CODE') {
+        capture_out {
+            $self->{source}->();
+        };
+
+        my $fh = IO::NestedCapture->get_last_out;
+        $self->{cache} = join '', <$fh>;
+    }
+
+    # If not cached and source is a scalar, use it as the cache
+    elsif (!ref $self->{source}) {
+        $self->{cache} = $self->{source};
+    }
+
+    # Note that we've sourced the original source
     delete $self->{source};
 
-    my $fh = IO::NestedCapture->get_last_out;
-    return $self->{cache} = join '', <$fh>;
+    # Return the new cache
+    return $self->{cache};
 }
 
 =item $test = $generator-E<gt>is_sourced
@@ -158,17 +149,6 @@ sub properties {
     my $properties = shift;
     $self->{properties} = $properties if defined $properties;
     return $self->{properties};
-}
-
-=item $kind = $generator-E<gt>generated_kind
-
-Returns the value given as the C<$kind> argument to the constructor.
-
-=cut
-
-sub generated_kind {
-    my $self = shift;
-    return $self->{kind};
 }
 
 =item $value = $generator-E<gt>get_property($key)
@@ -224,7 +204,7 @@ sub generate {
 
 =head2 PLAIN GENERATOR GUTS
 
-If you would like to subclass the plain generator, it exists as a blessed hash where the following keys are used: "kind", "source", "properties", and "cache". Do not access these directly, but use of the provided accessors. If you need to store additional data, don't use those keys.
+If you would like to subclass the plain generator, it exists as a blessed hash where the following keys are used: "source", "properties", and "cache". Do not access these directly, but use of the provided accessors. If you need to store additional data, don't use those keys.
 
 If you need to define some action that is performed when the source is read (compiling templates, code, reading properties, etc.), then you should subclass the C<source()> method like this:
 
@@ -256,11 +236,13 @@ Used to handle the "Contentment::VFS::generator" hook. Always returns a L<Conten
 
 sub match { 
     my $file = shift;
+    
+    my %properties      = %{ $file->properties_hash };
+    $properties{kind} ||= MIME::Types->new->mimeTypeOf($file->basename);
 
     return Contentment::Generator::Plain->new({
-        source     => $file->content,
-        kind       => MIME::Types->new->mimeTypeOf($file->basename);
-        properties => $file->properties_hash,
+        source     => scalar($file->content),
+        properties => \%properties,
     });
 }
 

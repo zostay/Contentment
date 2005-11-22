@@ -3,10 +3,11 @@ package Contentment::Form::Definition;
 use strict;
 use warnings;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use base qw/ Oryx::Class Class::Accessor /;
 
+use IO::NestedCapture qw( capture_out );
 use Scalar::Util qw( weaken );
 
 =head1 NAME
@@ -104,10 +105,14 @@ sub render {
         $self->submission->commit;
     }
 
-    Contentment::Form->instance->{definition} = $variables{form} = $self;
+    Contentment::Form->instance->{definition} = $self;
 
-    my $generator = Contentment::Generator->generator(@{ $self->template });
-    $generator->generator(%$vars);
+    if ($self->template) {
+        my $generator = Contentment::Generator->generator(@{ $self->template });
+        $generator->generate(%$vars, form => $self);
+    } else {
+        Contentment::Theme->theme('form/Form', %$vars, form => $self);
+    }
 
     delete Contentment::Form->instance->{definition};
 
@@ -193,11 +198,15 @@ sub render_widget {
     my $class = $self->widget_parameters->{$name}{class};
     $class =~ s/^Contentment::Form::Widget//;
 
-    Contentment::Theme->theme($class, {
-        form        => $self,
-        widget_name => $name,
-        widget      => $self->widget->{$name},
-    });
+    capture_out {
+        Contentment::Theme->theme("form/$class", 
+            widget_name => $name,
+            widget      => $self->widgets->{$name},
+        );
+    };
+
+    my $fh = IO::NestedCapture->get_last_out;
+    return join '', <$fh>;
 }
 
 =back

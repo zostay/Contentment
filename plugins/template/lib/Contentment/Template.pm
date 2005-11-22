@@ -3,7 +3,7 @@ package Contentment::Template;
 use strict;
 use warnings;
 
-our $VERSION = '0.04';
+our $VERSION = '0.06';
 
 use Contentment::Template::Provider;
 use Template;
@@ -23,7 +23,8 @@ Contentment::Template - Setup Template Toolkit for use by Contentment
   );
 
   my $tt = Contentment::Template->new_template(%conf);
-  $tt->process(\$template, { foo => 'bar', baz => 'qux' });
+  $tt->process(\$template, { foo => 'bar', baz => 'qux' })
+      or die $tt->error;
 
 =head1 DESCRIPTION
 

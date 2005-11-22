@@ -3,7 +3,7 @@ package Contentment::Theme;
 use strict;
 use warnings;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 use Contentment::Log;
 use Contentment::Response;
@@ -17,13 +17,13 @@ Contentment::Theme - Contentment plugin for adding themes to content
 
 =head1 SYNOPSIS
 
-  Contentment::Theme->theme('master', $arguments);
+  Contentment::Theme->theme('master', %arguments);
 
 =head1 DESCRIPTION
 
-The theme plugin provides a simple theming system. Basically, the L</"SYNOPSIS"> says it all. To take some data and theme that data, simply run:
+The theme plugin provides a simple theming system. Basically, the L</"SYNOPSIS"> says it all. To take some data and theme that data, simply call:
 
-  Contentment::Theme->theme('master', $arguments);
+  Contentment::Theme->theme('master', %arguments);
 
 The "master" is the name of the master template to apply to the arguments. The arguments will be passed to the theme in the way that arguments are normally passed to the filetype of the master template.
 

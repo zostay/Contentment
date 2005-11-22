@@ -3,6 +3,7 @@
 use strict;
 use Test::More tests => 10;
 
+my $s = 1;
 SKIP: {
     eval "use Apache::TestRequest qw( GET_BODY POST_BODY )";
     skip "Apache::Test is not installed.", 10 if $@;
@@ -17,39 +18,39 @@ SKIP: {
 
     my $body = parse_html(my $content = GET_BODY('/form.html'));
 
-    has_tag_with_attrs($body, 'form', {
+    $s &= has_tag_with_attrs($body, 'form', {
         enctype => 'multipart/form-data',
         method  => 'POST',
     }, 'form');
 
-    has_tag_with_attrs($body, 'input', {
+    $s &= has_tag_with_attrs($body, 'input', {
         type  => 'hidden',
         name  => 'FORM',
         value => 't::test_form',
     }, 'FORM');
 
     my $has_submission_id = 
-    has_tag_with_attrs($body, 'input', {
+    $s &= has_tag_with_attrs($body, 'input', {
         type  => 'hidden',
         name  => 'ID',
         value => qr|^ [0-9A-F]{8}- (?:[0-9A-F]{4}-){3} [0-9A-F]{12} $|x,
     }, 'ID');
 
-    has_tag_with_attrs($body, 'input', {
+    $s &= has_tag_with_attrs($body, 'input', {
         type  => 'hidden',
         name  => 'ACTIVATE',
         value => 1,
     }, 'ACTIVATE');
 
-    has_tag_with_attrs($body, 'label', { for => 'test1' }, 'label');
+    $s &= has_tag_with_attrs($body, 'label', { for => 'test1' }, 'label');
 
-    has_tag_with_attrs($body, 'input', {
+    $s &= has_tag_with_attrs($body, 'input', {
         type => 'text',
         name => 'test1',
         id   => 'test1',
     }, 'Text');
 
-    has_tag_with_attrs($body, 'input', {
+    $s &= has_tag_with_attrs($body, 'input', {
         type  => 'submit',
         name  => 'test3',
         id    => 'test3',
@@ -70,6 +71,8 @@ SKIP: {
         }
     }
 
+    diag($content) if !$s;
+
 #    diag("Using submission_id = $submission_id");
 
     $content = POST_BODY('/form.html', [
@@ -81,6 +84,8 @@ SKIP: {
     ]);
 
     for my $i (1 .. 3) {
-        like($content, qr{^test$i: test$i}m);
+        $s &= like($content, qr{^test$i: test$i}m);
     }
+    
+    diag($content) if !$s;
 }

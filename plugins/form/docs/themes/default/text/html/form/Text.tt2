@@ -1,1 +1,1 @@
-[% widget.label.render %] [% widget.render %]<br/>
+[% args.widget.label.render %] [% args.widget.render %]<br/>
