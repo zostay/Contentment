@@ -4,7 +4,9 @@ oryx_connection:
 
 base_url: http://localhost:8529/
 
-plugins_dir: ../../../plugins
+plugins_dir: 
+ - ../../../plugins
+ - ../../plugins
 
 vfs:
  - Real

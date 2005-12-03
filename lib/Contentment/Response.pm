@@ -3,7 +3,7 @@ package Contentment::Response;
 use strict;
 use warnings;
 
-our $VERSION = '0.12';
+our $VERSION = '0.13';
 
 use base 'Class::Singleton';
 
@@ -148,14 +148,20 @@ sub resolve {
 		my $iter = Contentment::Hooks->call_iterator('Contentment::Response::resolve');
 		while ($iter->next) {
 			$path = $iter->call($path);
+#            use Data::Dumper;
+#            print STDERR Dumper($path);
 		}
 	};
 
+
 	if ($@) {
-		Contentment::Log->error("Contentment::Response::resolve experienced an error while searching for %s: %s", [$orig,$@]);
+		Contentment::Log->error(
+            'Contentment::Response::resolve experienced an error while '
+           .'searching for %s: %s', [$orig,$@]);
 		$path = $self->error($@);
 	} elsif (!$path) {
-		Contentment::Log->warning("Contentment::Response::resolve found no match for %s.", [$orig]);
+		Contentment::Log->warning(
+            'Contentment::Response::resolve found no match for %s.', [$orig]);
 		$path = $self->error(
 			404, 'Not Found', 
 			"Could not find anything for the given path: $orig",

@@ -3,11 +3,11 @@
 use strict;
 use warnings;
 
-use Test::More tests => 15;
+use Test::More tests => 17;
 
 SKIP: {
     eval "use Apache::TestRequest 'GET_BODY'";
-    skip "Apache::Test is not installed.", 9 if $@;
+    skip "Apache::Test is not installed.", 17 if $@;
 
     my $body = GET_BODY('/node.txt');
     
@@ -30,4 +30,10 @@ SKIP: {
     like($body, qr{^revision\[1\] comment = Test 3}m);
     like($body, qr{^revision\[1\] title = Testing 3}m);
     like($body, qr{^revision\[1\] content = This is yet another test\.}m);
+    
+    $body = GET_BODY('/test/Testing_3.txt');
+    like($body, qr{This is yet another test\.});
+
+    $body = GET_BODY('/test/Testing_2.txt');
+    like($body, qr{This is another test\.});
 }

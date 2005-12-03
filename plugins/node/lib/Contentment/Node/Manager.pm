@@ -3,19 +3,19 @@ package Contentment::Node::Manager;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use base 'Class::Singleton';
 
 =head1 NAME
 
-Contentment::Node::Manager - Revision set manager and utility
+Contentment::Node::Manager - Node collection manager and utility
 
 =head1 DESCRIPTION
 
-This class holds the singleton object responsible for determining what revision set is in use by the current request.
+This class holds the singleton object responsible for determining what node collection is in use by the current request.
 
-As of this writing, the implementation is simplistic and always defines the revision set created during install as the current one.
+As of this writing, the implementation is simplistic and always defines the node collection created during install as the current one.
 
 =head2 METHODS
 
@@ -23,74 +23,83 @@ This class supports the following methods
 
 =over
 
-=item $revision_set = Contentment::Node::Manager-E<gt>get_current_revision_set
+=item $collection = Contentment::Node::Manager-E<gt>get_current_collection
 
-Fetch the revision set in use for thise request. In general, you probably don't want to mess with this object too much directly. The internals are kind of icky, which is why the L<Contentment::Node::Manager> class exists after all.
+Fetch the node collection in use for thise request. In general, you probably don't want to mess with this object too much directly. The internals are kind of icky, which is why the L<Contentment::Node::Manager> class exists after all.
 
 =cut
 
-sub get_current_revision_set {
-    return Contentment::Node::RevisionSet->retrieve(1);
+sub get_current_collection {
+    my $col = Contentment::Node::Collection->retrieve(1);
+    if ($col) {
+        return $col;
+    }
+
+    else {
+        Contentment::Exception->throw(
+            message => 'Cannot find a current collection.',
+        );
+    }
 }
 
-=item Contentment::Node::Manager-E<gt>add_revision_to_current_revision_set($revision)
+=item Contentment::Node::Manager-E<gt>add_revision_to_current_collection($revision)
 
-This method attaches the given revision to the revision set. Any other revisions from the same node will be removed from the revision set.
+This method attaches the given revision to the node collection. Any other revisions from the same node will be removed from the node collection.
 
 =cut
 
 # TODO This code is NASTY. Something needs to be done to make it nicer and most
 # especially faster. This is surely extremely dog slow. I think we might want to
-# convert the associations in RevisionSet from Arrays to Hashes and use the
+# convert the associations in Collections from Arrays to Hashes and use the
 # node's ID as a hash key for fast lookups.
 
-sub add_revision_to_current_revision_set {
+sub add_revision_to_current_collection {
     my $class    = shift;
     my $revision = shift;
 
-    my $revision_set = $class->get_current_revision_set;
+    my $collection = $class->get_current_collection;
 
     # Rip out any revision for the same node
-    @{ $revision_set->updated_revisions }
+    @{ $collection->updated_revisions }
         = grep { $_->node->id != $revision->node->id }
-               @{ $revision_set->updated_revisions };
-    @{ $revision_set->trashed_nodes }
+               @{ $collection->updated_revisions };
+    @{ $collection->trashed_nodes }
         = grep { $_->id != $revision->node->id }
-               @{ $revision_set->trashed_nodes };
+               @{ $collection->trashed_nodes };
 
     # Add the revision to the update
-    push @{ $revision_set->updated_revisions }, $revision;
+    push @{ $collection->updated_revisions }, $revision;
 
     # Make sure we're up-to-date
-    $revision_set->update;
-    $revision_set->commit;
+    $collection->update;
+    $collection->commit;
 }
 
-=item Contentment::Node::Manager->remove_revision_from_current_revision_set($revision)
+=item Contentment::Node::Manager->remove_revision_from_current_collection($revision)
 
-Removes this revision from the revision set. This will make the revision (and entire node) appear to be deleted (as far as most of Contentment is concerned) without actually removing the record from the database.
+Removes this revision from the node collection. This will make the revision (and entire node) appear to be deleted (as far as most of Contentment is concerned) without actually removing the record from the database.
 
 =cut
 
-sub remove_revision_from_current_revision_set {
+sub remove_revision_from_current_collection {
     my $class    = shift;
     my $revision = shift;
 
-    my $revision_set = $class->get_current_revision_set;
+    my $collection = $class->get_current_collection;
 
     # Rip it out of the update nodes
-    @{ $revision_set->updated_revisions }
+    @{ $collection->updated_revisions }
         = grep { $_->node->id != $revision->node->id }
-               @{ $revision_set->updated_revisions };
+               @{ $collection->updated_revisions };
 
     # Unless it's already there, add the node to the trashed list
-    push @{ $revision_set->trashed_nodes }, $revision->node
+    push @{ $collection->trashed_nodes }, $revision->node
         unless grep { $_->id == $revision->node->id }
-                    @{ $revision_set->trashed_nodes };
+                    @{ $collection->trashed_nodes };
 
     # Make sure we're up-to-date
-    $revision_set->update;
-    $revision_set->commit;
+    $collection->update;
+    $collection->commit;
 }
 
 =back

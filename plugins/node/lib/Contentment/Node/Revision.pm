@@ -3,7 +3,7 @@ package Contentment::Node::Revision;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use base 'Oryx::Class';
 
@@ -122,7 +122,7 @@ sub create {
     $self->node->update;
     $self->update;
 
-    Contentment::Node::Manager->add_revision_to_current_revision_set($self);
+    Contentment::Node::Manager->add_revision_to_current_collection($self);
 
     return $self;
 }
@@ -131,7 +131,7 @@ sub create {
 
 This method operates in pretty much the exact same way as the C<create()> method, except that it duplicates the fields in the original when not modified in the passed C<%args>. This will attach the new revision to the same node as the original.
 
-The clone will become the current revision for the current revision set.
+The clone will become the current revision for the current node collection.
 
 =cut
 
@@ -177,21 +177,21 @@ sub clone {
     $clone->update;
 
     # Make this revision the current one
-    Contentment::Node::Manager->add_revision_to_current_revision_set($clone);
+    Contentment::Node::Manager->add_revision_to_current_collection($clone);
 
     return $clone;
 }
 
 =item $revision-E<gt>trash
 
-This is very similar to C<delete()> except that nothing is removed from the database. Okay... so it's nothing like C<delete()>. It removes the object from the current revision set.
+This is very similar to C<delete()> except that nothing is removed from the database. Okay... so it's nothing like C<delete()>. It removes the object from the current node collection.
 
 =cut
 
 sub trash {
     my $self = shift;
     Contentment::Node::Manager
-        ->remove_revision_from_current_revision_set($self);
+        ->remove_revision_from_current_collection($self);
 }
 
 =back

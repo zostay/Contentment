@@ -1,6 +1,11 @@
-use TestNode;
+=begin meta
+    title => 'Node Test'
+    description => 'Test of the Node API.'
+    kind => 'text/plain'
+=end meta
+=cut
 
-my $node1 = TestNode->create({
+my $node1 = Contentment::Node::Test->create({
     comment => 'Test 1',
     title   => 'Testing 1',
     content => 'This is a test.',
@@ -11,7 +16,7 @@ print 'node1 comment = ',$node1->comment,"\n";
 print 'node1 title = ',$node1->title,"\n";
 print 'node1 content = ',$node1->content,"\n";
 
-my $node2 = TestNode->create({
+my $node2 = Contentment::Node::Test->create({
     comment => 'Test 2',
     title   => 'Testing 2',
     content => 'This is another test.',

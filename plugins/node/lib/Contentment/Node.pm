@@ -3,9 +3,11 @@ package Contentment::Node;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.03';
 
 use base 'Oryx::Class';
+
+use List::MoreUtils qw( uniq );
 
 =head1 NAME
 
@@ -13,7 +15,7 @@ Contentment::Node - Node storage for Contentment
 
 =head1 DESCRIPTION
 
-This package is primarily intended for documentation to the end user. Don't use this class directly. Rather use L<Contentment::Node::Revision> and L<Contentment::Node::RevisionSet> instead.
+This package is primarily intended for documentation to the end user. Don't use this class directly. Rather use L<Contentment::Node::Revision> and L<Contentment::Node::Collection> instead.
 
 Use the documentation here to get the big picture.
 
@@ -74,7 +76,7 @@ Finally, you'll probably want to use your node class by instantiating a few. How
 
 =head2 NODE REVISIONS
 
-Now, it wouldn't be much of a publishing system without the ability to keep old revisions around. The details of this work are found in L<Contentment::Node::Revision> and L<Contentment::Node::RevisionSet>.
+Now, it wouldn't be much of a publishing system without the ability to keep old revisions around. The details of this work are found in L<Contentment::Node::Revision> and L<Contentment::Node::Collection>.
 
 Basically, a node object is really a collection of revisions. In general, each time you make a change to a node, a new revision is created and selected as the current revision. The old revision exists in limbo where you can't see it anymore unless you explicitly ask to see it.
 
@@ -138,7 +140,7 @@ our $schema = {
 
 =item Contentment::Node::install
 
-This handles the "Contentment::install" hook. It deploys the L<Contentment::Node>, L<Contentment::Node::Revision>, and L<Contentment::Node::RevisionSet> schemas.
+This handles the "Contentment::install" hook. It deploys the L<Contentment::Node>, L<Contentment::Node::Revision>, and L<Contentment::Node::Collection> schemas.
 
 =cut
 
@@ -147,12 +149,179 @@ sub install {
     my $storage = $Contentment::Oryx::storage;
     $storage->deployClass('Contentment::Node');
     $storage->deployClass('Contentment::Node::Revision');
-    $storage->deployClass('Contentment::Node::RevisionSet');
+    $storage->deployClass('Contentment::Node::Collection');
 
     # Create the primary revision set
-    my $HEAD_revision_set = Contentment::Node::RevisionSet->create({
+    my $HEAD_revision_set = Contentment::Node::Collection->create({
         group_name => 'HEAD',
     });
+}
+
+=item Contentment::Node::simple
+
+Implements the "Contentment::VFS::simple" hook and adds a new set of paths under the "/node" directory.
+
+=cut
+
+sub vfs {
+    my $path = shift;
+
+    my ($year, $month, $day, $id);
+
+    if ($path eq '') {
+        return {
+            type     => 'd',
+            children => [ 'id', 'created' ],
+        };
+    }
+
+    elsif ($path eq 'id') {
+        return {
+            type     => 'd',
+            children => [
+                map { $_->id } 
+                Contentment::Node::Manager->get_current_collection->revisions
+            ],
+        };
+    }
+
+    elsif (($id) = $path =~ m{^id/(\d+)$}) {
+        return {
+            type      => 'fd',
+            generator => Contentment::Node->retrieve($id)->generator,
+            children  => [ 'rev', 'col' ],
+        };
+    }
+
+    elsif ($path eq 'created') {
+        return {
+            type     => 'd',
+            children => [ 'year', 'month', 'day' ],
+        };
+    }
+
+    elsif ($path =~ m{^created/(?:year|month|day)$}) {
+        return {
+            type     => 'd',
+            children => [
+                uniq map { $_->created_on->year }
+                Contentment::Node::Manager->get_current_collection->revisions
+            ],
+        };
+    }
+
+    elsif (($year) = $path =~ m{^created/year/(\d+)$}) {
+        return {
+            type     => 'd',
+            children => [
+                map { $_->id }
+                grep { $_->created_on->year == $year }
+                Contentment::Node::Manager->get_current_collection->revisions
+            ],
+        };
+    }
+
+    elsif (($year, $id) = $path =~ m{^created/year/(\d+)/(\d+)$}) {
+        my $node = Contentment::Node->retrieve($id);
+        if ($node->created_on->year != $year) {
+            Contentment::Exception->throw(
+                message => "No node with ID $id created in year $year.",
+            );
+        }
+
+        return {
+            type      => 'f',
+            generator => $node->generator,
+        };
+    }
+
+    elsif (($year) = $path =~ m{^created/(?:day|month)/(\d+)$}) {
+        return {
+            type     => 'd',
+            children => [
+                uniq map { $_->created_on->month }
+                grep { $_->created_on->year == $year }
+                Contentment::Node::Manager->get_current_collection->revisions
+            ],
+        };
+    }
+
+    elsif (($year, $month) = $path =~ m{^created/month/(\d+)/(\d+)$}) {
+        return {
+            type     => 'd',
+            children => [
+                uniq map { $_->id }
+                grep { $_->created_on->year  == $year 
+                    && $_->created_on->month == $month }
+                Contentment::Node::Manager->get_current_collection->revisions
+            ],
+        };
+    }
+
+    elsif (($year, $month, $id) 
+    = $path =~ m{^created/month/(\d+)/(\d+)/(\d+)$}) {
+        my $node = Contentment::Node->retrieve($id);
+        if ($node->created_on->year  != $year
+         || $node->created_on->month != $month) {
+            Contentment::Exception->throw(
+                message => "No node with ID $id created ".
+                           "in year $year and month $month.",
+            );
+        }
+
+        return {
+            type      => 'f',
+            generator => $node->generator,
+        };
+    }
+
+    elsif (($year, $month) = $path =~ m{^created/day/(\d+)/(\d+)$}) {
+        return {
+            type     => 'd',
+            children => [
+                uniq map { $_->created_on->day }
+                grep { $_->created_on->year  == $year 
+                    && $_->created_on->month == $month }
+                Contentment::Node::Manager->get_current_collection->revisions
+            ],
+        };
+    }
+
+    elsif (($year, $month, $day) 
+    = $path =~ m{^created/day/(\d+)/(\d+)/(\d+)$}) {
+        return {
+            type     => 'd',
+            children => [
+                uniq map { $_->id }
+                grep { $_->created_on->year  == $year 
+                    && $_->created_on->month == $month 
+                    && $_->created_on->day   == $day }
+                Contentment::Node::Manager->get_current_collection->revisions
+            ],
+        };
+    }
+
+    elsif (($year, $month, $day, $id) 
+    = $path =~ m{^created/day/(\d+)/(\d+)/(\d+)/(\d+)$}) {
+        my $node = Contentment::Node->retrieve($id);
+        if ($node->created_on->year  != $year
+         || $node->created_on->month != $month
+         || $node->created_on->day   != $day) {
+            Contentment::Exception->throw(
+                message => "No node with ID $id created ".
+                           "in year $year and month $month and day $day.",
+            );
+        }
+
+        return {
+            type      => 'f',
+            generator => $node->generator,
+        };
+    }
+
+    else {
+        return undef;
+    }
 }
 
 =back

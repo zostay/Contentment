@@ -7,7 +7,7 @@ use Cache::FileCache;
 use DateTime;
 use MIME::Types;
 
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 use IO::NestedCapture qw( capture_out );
 use Params::Validate qw( validate_with :types );
@@ -63,6 +63,13 @@ This is the list of properties the generator should return. It defaults to havin
 =back
 
 =cut
+
+use overload '""' => sub {
+    my $self = shift;
+    my $class = ref $self;
+    my $title = $self->{properties}{title} || '';
+    return "$class($title)";
+};
 
 sub new {
     my $class = shift;
