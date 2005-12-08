@@ -1,5 +1,5 @@
 name: Form
-version: 0.05
+version: 0.06
 description: A plugin for automating form rendering, validation, and processing.
 
 use_lib:
@@ -10,7 +10,9 @@ use:
  - Contentment::Form
  - Contentment::Form::Widget::Hidden
  - Contentment::Form::Widget::Label
+ - Contentment::Form::Widget::TabularChoice
  - Contentment::Form::Widget::Text
+ - Contentment::Form::Widget::TextArea
  - Contentment::Form::Widget::Submit
 
 hooks:

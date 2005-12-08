@@ -3,7 +3,7 @@ package Contentment::Security;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.05';
 
 use base 'Class::Singleton';
 
@@ -33,7 +33,8 @@ Plugins can use this class to check the permissions available to the current pri
       my $vote = shift;
 
       # throw an exception if they can't moderate comments
-      Contentment::Security->check_permission('ModerateComment');
+      Contentment::Security->check_permission(
+          'Contentment::Plugin::Moderation::moderate_comment');
 
       $self->{vote} += $vote;
   }
@@ -107,7 +108,8 @@ To check which permissions have been granted to the current request, just use th
 
       # check to see if the current user can do_something(). If not, this will
       # throw an exception.
-      Contentment::Security->check_security("do_something");
+      Contentment::Security->check_permission(
+          'Contentment::Plugin::MyPlugin::do_something');
 
       $class->{do} = "something";
   }
@@ -184,7 +186,7 @@ sub register_permissions {
     while (my ($name, $param) = splice @_, 0, 2) {
         # Check for an existing definition
         my ($perm) = Contentment::Security::Permission->search(
-            name => $name,
+            permission_name => $name,
         );
 
         # If there's an existing definition, whine about it
@@ -195,9 +197,9 @@ sub register_permissions {
         # If not, create it
         else {
             $perm = Contentment::Security::Permission->create({
-                name        => $name,
-                title       => $param->{title},
-                description => $param->{description},
+                permission_name => $name,
+                title           => $param->{title},
+                description     => $param->{description},
             });
         }
 
@@ -233,7 +235,32 @@ sub check_permission {
     my $perm  = shift;
 
     unless ($class->has_permission($perm)) {
-        die "Access Denied.";
+        Contentment::Exception->throw(
+            status  => 401,
+            message => 'Access Denied.',
+        );
+    }
+}
+
+=item Contentment::Security-E<Gt>check_permissions(@perm)
+
+This method uses C<has_permission()> to determine if the current request has been granted at least one of the named permissions. If not, an exception is thrown.
+
+=cut
+
+sub check_permissions {
+    my $class = shift;
+
+    my $permission = 1;
+    for my $perm (@_) {
+        $permission &= $class->has_permission($perm);
+    }
+
+    unless ($permission) {
+        Contentment::Exception->throw(
+            status  => 401,
+            message => 'Access Denied.',
+        );
     }
 }
 
@@ -349,6 +376,25 @@ sub install {
     push @{ $superuser_profile->roles }, $superuser_role;
     $superuser_profile->update;
     $superuser_profile->commit;
+
+    Contentment::Security->register_permissions(
+        'Contentment::Security::Manager::login' => {
+            title => 'login',
+            description => 'May login.',
+        },
+        'Contentment::Security::Manager::manage_users' => {
+            title => 'manage users',
+            description => 'May create and edit user accounts.',
+        },
+        'Contentment::Security::Manager::assign_roles' => {
+            title => 'assign roles',
+            description => 'May assign user accounts roles.',
+        },
+        'Contentment::Security::Manager::manage_roles' => {
+            title => 'manage roles',
+            description => 'May create and edit roles.',
+        },
+    );
 }
 
 =item Contentment::Security::begin

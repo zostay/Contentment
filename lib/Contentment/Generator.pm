@@ -3,7 +3,9 @@ package Contentment::Generator;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
+
+use IO::NestedCapture qw( capture_out );
 
 =head1 NAME
 
@@ -111,6 +113,29 @@ sub generator {
     warn qq(Error loading "$generator_class": $@) if $@;
 
     return $generator_class->new(@_);
+}
+
+=item $content = Contentment::Generator->content_of($generator, \%args)
+
+This is a helper to stringify the generation of a generator in case you need to just capture the string output instead of printing that output immediately. This is very useful for calling generators from the Template Toolkit generator:
+
+  [% USE Generator %]
+  [% Generator.content_of(arg.gen, foo = 1 bar = 2) %]
+
+=cut
+
+sub content_of {
+    my $class     = shift;
+    my $generator = shift;
+
+    capture_out {
+        $generator->generate(@_);
+    };
+
+    my $fh   = IO::NestedCapture->get_last_out;
+    my $text = join '', <$fh>;
+
+    return $text;
 }
 
 =back

@@ -1,8 +1,12 @@
 [% USE Form %]
 [% Form.begin %]
 
-[% FOREACH name IN Form.widgets.keys -%]
-[% Form.render_widget(name) %]
+[% FOREACH error IN Form.submission.errors.keys %]
+<p class="error">[% Form.submission.errors.$error %]</p>
+[% END %]
+
+[% FOREACH widget IN Form.widgets -%]
+[% Form.render_widget(widget) %]
 [%- END %]
 
 [% Form.end %]

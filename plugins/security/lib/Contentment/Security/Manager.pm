@@ -3,7 +3,7 @@ package Contentment::Security::Manager;
 use strict;
 use warnings;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use Contentment::Hooks;
 use Contentment::Security::Principal;
@@ -215,7 +215,6 @@ sub login {
         }
 
         # Okay, now load the new principal
-        Contentment::Log->info("LOGIN SUCCESS by %s", [$username]);
         my $principal = Contentment::Security::Principal->new;
         $principal->type('authenticated');
         $principal->profile($profile);
@@ -227,11 +226,26 @@ sub login {
             ->{'Contentment::Security::Manager::principal'}
                 = $principal;
 
+        # Finally, check to make sure they may login.
+        my $may_login = Contentment::Security->has_permission(
+            'Contentment::Security::Manager::login');
+        unless ($may_login) {
+            delete Contentment::Session->instance
+                ->{'Contentment::Security::Manager::principal'};
+            Contentment::Log->info(
+                'LOGIN FAILED by %s: does not have "login" permission',
+                [$username]
+            );
+            return '';
+        }
+
         # Return success
+        Contentment::Log->info('LOGIN SUCCESS by %s', [$username]);
         return 1;
     } else {
         # Return failure
-        Contentment::Log->info("LOGIN FAILED by %s", [$username]);
+        Contentment::Log->info(
+            'LOGIN FAILED by %s: incorrect username/password', [$username]);
         return '';
     }
 }

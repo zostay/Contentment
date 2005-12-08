@@ -1,6 +1,6 @@
 name: Test
 description: A test plugin.
-version: 0.1
+version: 0.01
 order: 10
 
 use_lib:

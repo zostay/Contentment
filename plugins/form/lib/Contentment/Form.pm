@@ -48,7 +48,7 @@ Contentment::Form - forms API for Contentment
               kind => 'text/html',
           },
       ],
-      widgets  => {
+      widgets  => [
           username => {
               name  => 'username',
               class => 'Text',
@@ -62,7 +62,7 @@ Contentment::Form - forms API for Contentment
               value => 'Login',
               class => 'Submit',
           },
-      },
+      ],
   });
 
   if ($form->submission->is_finished) {
@@ -170,13 +170,13 @@ The action subroutine should throw an exception on failure so that the form can 
 
 =item widgets (required)
 
-This option must be set to a reference to a hash containing the definition of each widget to be used in the form. The keys are mnemonic names that are used to look the widget up via the C<widgets()> method of L<Contentment::Form::Definition>. The values are passed to the widgets' constructors. 
+This option must be set to a reference to an array containing the definition of each widget to be used in the form. Each widget is defined as a key/value pair as if it were a reference to a hash (i.e., the order the widgets are defined is significant). The keys are mnemonic names that are used to look the widget up via the C<widgets()> method of L<Contentment::Form::Definition>. The values are passed to the widgets' constructors. 
 
 Each value is a hash of options. One of the options should be named "class" and should either be the full name of the widget class or the last element of the class name if it is defined under the "Contentment::Form::Widget::" namespace.
 
 For example:
 
-  widgets => {
+  widgets => [
       username => {
           name  => 'username',
           class => 'Text',
@@ -186,7 +186,7 @@ For example:
           class => 'Text',
           type  => 'password',
       },
-  },
+  ],
 
 =item template (optional)
 
@@ -203,8 +203,8 @@ However, the default rendering options will surely not suit every circumstance, 
   [% USE Form %]
   [% Form.begin %]
 
-  [% FOREACH name IN Form.widgets.keys %]
-  [% Form.render_widget(name) %]
+  [% FOREACH widget IN Form.widgets %]
+  [% Form.render_widget(widget) %]
   [% END %]
 
   [% Form.end %]
@@ -214,8 +214,8 @@ or (using a Perl template):
   my $form = Contentment::Form->form;
   print $form->start();
 
-  for my $name (keys %{ $form->widgets }) {
-      print $form->render_widget($name);
+  for my $widget (@{ $form->widgets }) {
+      print $form->render_widget($widget);
   }
 
   print $form->end();
@@ -224,7 +224,7 @@ Make sure to at least include the C<start()> and C<end()> form calls before and 
 
 Make sure you read the descriptions for C<start()>, C<end()>, and C<render_widget()> before writing your own template. You will also need to konw how to use the C<begin()>, C<end()>, and C<render()> methods of each of the widgets you are using.
 
-=item activate (optional)
+=item activate (optional, defaults to false)
 
 If submission of this form should result in the form being activated, set this argument to a true value. 
 
@@ -297,7 +297,7 @@ sub define {
                 default => undef,
             },
             widgets => {
-                type => HASHREF,
+                type => ARRAYREF,
             },
             activate => {
                 type    => BOOLEAN,
@@ -440,14 +440,16 @@ sub define {
     );
 
     # Construct the widgets
-    my %widgets;
-    while (my ($key, $value) = each %{ $definition->widget_parameters }) {
+    my (@widgets, %widgets);
+    my @widget_parameters = @{ $definition->widget_parameters };
+    while (my ($key, $value) 
+    = splice @{ $definition->widget_parameters }, 0, 2) {
         my %widget_parameters =  %$value;
         my $widget_class = delete $widget_parameters{class};
         $self->_load_widget_class($widget_class);
 
         eval {
-            $widgets{$key} 
+            push @widgets, $widgets{$key} 
                 = $widget_class->construct(\%widget_parameters);
         };
 
@@ -457,7 +459,8 @@ sub define {
             );
         }
     }
-    $definition->widgets(\%widgets);
+    $definition->widgets(\@widgets);
+    $definition->widgets_by_name(\%widgets);
 
     # Done, return it.
     return $definition;
@@ -620,12 +623,14 @@ sub process {
 
         my %widgets;
         my %results;
-        my $cgi_vars = $cgi->Vars;
+        my %cgi_vars = $cgi->Vars;
+        for (values %cgi_vars) { $_ = /\0/ ? [ split /\0/ ] : $_ }
 
         $submission->errors({});
 
         # Now, iterate through the widgets and lets load the data.
-        while (my ($key, $params) = each %{ $definition->widget_parameters }) {
+        my @widgets = @{ $definition->widget_parameters };
+        while (my ($key, $params) = splice @widgets, 0, 2) {
             my %p = %$params; # modify a copy!
 
             # Build the widget and validate
@@ -636,7 +641,7 @@ sub process {
 
             # Report on errors
             my $widget_results = eval { 
-                $widget->validate($submission, $cgi_vars) 
+                $widget->validate($submission, \%cgi_vars) 
             };
             if ($@) {
                 Contentment::Log->debug(

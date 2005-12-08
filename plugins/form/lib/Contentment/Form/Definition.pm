@@ -51,7 +51,7 @@ our $schema = {
     } ],
 };
 
-__PACKAGE__->mk_accessors(qw( activate widgets _defaults ));
+__PACKAGE__->mk_accessors(qw( activate widgets widgets_by_name _defaults ));
 
 sub submission {
     my $self       = shift;
@@ -73,17 +73,40 @@ These instances then provide the following methods:
 
 =over
 
-=item $form-E<gt>widgets
+=item $array = $form-E<gt>widgets
+
+This returns the widgets as an array reference. Iterate over this array if you need to iterate over all the widgets int he proper order. For example, if you want to use the default template for each widget type:
+
+  for my $widget (@{ $form->widgets }) {
+      print $form->render_widget($widget);
+  }
+
+=item $hash = $form-E<gt>widgets_by_name
 
 This returns a hash containing the constructed widgets. The keys are the mnemonic names passed to the "widgets" options of the C<define()> method of L<Contentment::Form>.
 
-This should be used during rendering to fetch each widget and call the widget's C<render()> method or C<begin()>/C<end()> methods.
+This may be used during rendering to fetch each widget and call the widget's C<render()> method or C<begin()>/C<end()> methods.
 
 This method may also be used to modify the widget's settings after construction. This is useful when it a widget option may need to be set without making that setting a part of the persistent definition.
 
 For example, if you have a select box with a list of options that is determined from the contents of a database table that changes frequently or which vary depending on the user accessing the form. You might not want to create a new revision to the form definition every single time the options change (or you may not want to make the definition store them at all). 
 
 However, you must be careful in these situations that the form doesn't break during validation because the value set here is lost when a new request is created. In general, it's best if widgets take more responsibility for handling these kinds of situations.
+
+=item $widget = $form-E<gt>widget($name)
+
+This is a shortcut for:
+
+  my $widget = $form->widgets_by_name->{$name}
+
+=cut
+
+sub widget {
+    my $self = shift;
+    my $name = shift;
+
+    return $self->widgets_by_name->{$name};
+}
 
 =item $form-E<gt>render(\%defaults, \%vars)
 
@@ -183,11 +206,13 @@ sub end {
     return qq(</form>);
 }
 
-=item $form-E<gt>render_widget($name)
+=item $text = $form-E<gt>render_widget($name)
 
-This method renders the widget named C<$name> according to the themes template for the widget. Prior to rendering the widget template, the theme master named "form/Pre-Widget" will be rendered. After rendering the widget template, the theme master named "form/Post-Widget" will be rendered.
+=item $text = $form-E<gt>render_widget($widget)
 
-The theme master chosen for the widget will be "form/Name" where "Name" is the short name of the widget if the class has the namespace prefix "Contentment::Form::Widget::". Otherwise, it will be the full name of the widget class with each of the colons changed to underscores. Thus, "Contentment::Form::Widget::Text" uses the template "form/Text" while "My::Widget::Foo" would use the template "form/My__Widget__Foo".
+This method renders the widget, C<$widget>, or the widget named C<$name> according to the themes template for the widget. Prior to rendering the widget template, the theme master named "form/Pre-Widget" will be rendered. After rendering the widget template, the theme master named "form/Post-Widget" will be rendered.
+
+The theme master chosen for the widget will be "form/Name" where "Name" is the short name of the widget class if the class has the namespace prefix "Contentment::Form::Widget::". Otherwise, it will be the full name of the widget class with each of the colons changed to underscores. Thus, "Contentment::Form::Widget::Text" uses the template "form/Text" while "My::Widget::Foo" would use the template "form/My__Widget__Foo".
 
 =cut
 
@@ -195,14 +220,25 @@ sub render_widget {
     my $self = shift;
     my $name = shift;
 
-    my $class = $self->widget_parameters->{$name}{class};
-    $class =~ s/^Contentment::Form::Widget//;
+    my ($class, $widget);
+    if (ref $name) {
+        $widget = $name;
+        $class  = ref $widget;
+    }
+
+    else {
+        $widget = $self->widget($name);
+        $class  = $self->widget_parameters->{$name}{class};
+    }
+
+    $class =~ s/^Contentment::Form::Widget:://;
 
     capture_out {
+        Contentment::Theme->theme("form/Pre-Widget");
         Contentment::Theme->theme("form/$class", 
-            widget_name => $name,
-            widget      => $self->widgets->{$name},
+            widget => $widget,
         );
+        Contentment::Theme->theme("form/Post-Widget");
     };
 
     my $fh = IO::NestedCapture->get_last_out;

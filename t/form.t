@@ -1,18 +1,18 @@
 # vim: set ft=perl :
 
 use strict;
-use Test::More tests => 10;
+use Test::More tests => 11;
 
 my $s = 1;
 SKIP: {
     eval "use Apache::TestRequest qw( GET_BODY POST_BODY )";
-    skip "Apache::Test is not installed.", 10 if $@;
+    skip "Apache::Test is not installed.", 11 if $@;
 
     eval "use HTML::TokeParser";
-    skip "HTML::TokeParser is not installed.", 10 if $@;
+    skip "HTML::TokeParser is not installed.", 11 if $@;
 
     eval "require 't/html_test.pl'";
-    skip qq(Failed to load helper library "t/html_test.pl": $@), 10 if $@;
+    skip qq(Failed to load helper library "t/html_test.pl": $@), 11 if $@;
 
     Apache::TestRequest::user_agent(cookie_jar => {});
 
@@ -56,6 +56,11 @@ SKIP: {
         id    => 'test3',
         value => 'test3',
     }, 'Submit');
+
+    $s &= has_tag_with_attrs($body, 'textarea', {
+        name  => 'test4',
+        id    => 'test4',
+    }, 'TextArea');
 
     skip "No submission ID, cannot test form POSTs.", 3 
         if !$has_submission_id;

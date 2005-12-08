@@ -81,27 +81,6 @@ sub instance {
 	return \%hash;
 }
 
-=head2 HOOK HANDLERS
-
-=over
-
-=item Contentment::Setting::begin
-
-This installs the docs folder into the VFS.
-
-=back
-
-=cut
-
-sub begin {
-    Contentment::Log->debug("Calling hook handler Contentment::Setting::begin");
-    my $vfs = Contentment::VFS->instance;
-    my $setting = Contentment::Setting->instance;
-    my $plugin_data = $setting->{'Contentment::Plugin::Settings'};
-    my $docs = File::Spec->catdir($plugin_data->{plugin_dir}, 'docs');
-    $vfs->add_layer(-1, [ 'Real', 'root' => $docs ]);
-}
-
 package Contentment::Setting::Tie;
 
 sub TIEHASH {

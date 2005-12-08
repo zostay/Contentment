@@ -1,5 +1,5 @@
 name: Template
-version: 0.06
+version: 0.07
 description: Allows Contentment tools to use Template Toolkit templates.
 order: 10
 

@@ -4,25 +4,11 @@
 =end meta
 =cut
 
-my $template = <<'END_OF_TEMPLATE';
-<form>
-</form>
-[% USE Form -%]
-[% Form.begin %]
-[% Form.widgets.test1.label.render %] [% Form.widgets.test1.render %]<br/>
-[% Form.widgets.test3.render %]
-[% Form.end %]
-
-END_OF_TEMPLATE
-
 my $form = Contentment::Form->define(
     name     => 't::test_form',
     enctype  => 'multipart/form-data',
     activate => 1,
-#    template => [ 'Template', {
-#        source => $template,
-#    }, ],
-    widgets  => {
+    widgets  => [
         test1 => {
             name  => 'test1',
             class => 'Text',
@@ -36,7 +22,11 @@ my $form = Contentment::Form->define(
             class => 'Submit',
             value => 'test3',
         },
-    },
+        test4 => {
+            name  => 'test4',
+            class => 'TextArea',
+        },
+    ],
 );
 
 if ($form->submission->is_finished) {

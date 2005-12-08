@@ -1,0 +1,7 @@
+[% USE Generator %]
+<div class="entry">
+<h3>[% args.blog.title %]</h3>
+<div class="entry-content">
+[% Generator.content_of(args.blog.generator) %]
+</div>
+</div>

@@ -3,7 +3,7 @@ package Contentment::Security::Profile::Persistent;
 use strict;
 use warnings;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use base 'Oryx::Class';
 
@@ -60,6 +60,9 @@ our $schema = {
 };
 
 sub fetch_role_options {
+    Contentment::Security->check_permission(
+        'Contentment::Security::Manager::assign_roles');
+
     return [
         map { [ 
                 $_->id, 
@@ -72,6 +75,9 @@ sub fetch_role_options {
 }
 
 sub process_edit_form {
+    Contentment::Security->check_permission(
+        'Contentment::Security::Manager::manage_users');
+
     my $submission = shift;
     my $results    = $submission->results;
 
@@ -100,10 +106,13 @@ sub process_edit_form {
             $profile->email_address($results->{email_address});
             $profile->web_site($results->{web_site});
 
-            @{ $profile->roles }
-                = grep { defined $_ }
-                  map  { Contentment::Security::Role->retrieve($_) }
-                      @{ $results->{roles} };
+            if (Contentment::Security->has_permission(
+            'Contentment::Security::Manager::assign_roles')) {
+                @{ $profile->roles }
+                    = grep { defined $_ }
+                    map  { Contentment::Security::Role->retrieve($_) }
+                        @{ $results->{roles} };
+            }
 
             $profile->update;
             $profile->commit;
@@ -120,10 +129,13 @@ sub process_edit_form {
                 web_site => $results->{web_site},
             });
 
-            @{ $profile->roles }
-                = grep { defined $_ }
-                  map  { Contentment::Security::Role->retrieve($_) }
-                      @{ $results->{roles} };
+            if (Contentment::Security->has_permission(
+            'Contentment::Security::Manager::assign_roles')) {
+                @{ $profile->roles }
+                    = grep { defined $_ }
+                    map  { Contentment::Security::Role->retrieve($_) }
+                        @{ $results->{roles} };
+            }
 
             $profile->update;
             $profile->commit;
