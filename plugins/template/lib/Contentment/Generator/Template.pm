@@ -3,7 +3,7 @@ package Contentment::Generator::Template;
 use strict;
 use warnings;
 
-our $VERSION = '0.06';
+our $VERSION = '0.08';
 
 use base 'Contentment::Generator::Plain';
 
@@ -203,7 +203,8 @@ sub match {
     if ($file->basename =~ /\.tt2/) {
         my $filename = $file->basename;
         $filename =~ s/\.tt2$//;
-        my $kind = MIME::Types->new->mimeTypeOf($filename) || '';
+        my $kind = Contentment::MIMETypes
+            ->instance->mimeTypeOf($filename) || '';
 
         my %properties      = %{ $file->properties_hash };
         $properties{kind} ||= $kind;

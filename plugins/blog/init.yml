@@ -1,6 +1,6 @@
 name: Blog
 description: A simple weblog.
-version: 0.04
+version: 0.05
 order: 10
 
 use_lib:
@@ -14,3 +14,4 @@ hooks:
     order: 10
     sub: Contentment::Node::Blog::install
   Contentment::begin: Contentment::Node::Blog::begin
+  Contentment::MIMETypes::register: Contentment::Node::Blog::mimetypes

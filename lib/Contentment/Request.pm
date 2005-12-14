@@ -3,17 +3,19 @@ package Contentment::Request;
 use strict;
 use warnings;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use base 'Class::Singleton';
 
 use CGI;
-use CGI::Fast;
 use Contentment::Hooks;
 use Contentment::Log;
-use FCGI;
 use IO::Handle;
 use IO::NestedCapture qw( CAPTURE_STDOUT );
+
+# Don't fail if FastCGI is not available.
+eval "use CGI::Fast";
+eval "use FCGI";
 
 =head1 NAME
 

@@ -3,7 +3,7 @@ package Contentment::Form::Definition;
 use strict;
 use warnings;
 
-our $VERSION = '0.05';
+our $VERSION = '0.07';
 
 use base qw/ Oryx::Class Class::Accessor /;
 
@@ -134,7 +134,7 @@ sub render {
         my $generator = Contentment::Generator->generator(@{ $self->template });
         $generator->generate(%$vars, form => $self);
     } else {
-        Contentment::Theme->theme('form/Form', %$vars, form => $self);
+        Contentment::Theme->theme('form/Form', { %$vars, form => $self });
     }
 
     delete Contentment::Form->instance->{definition};
@@ -235,9 +235,9 @@ sub render_widget {
 
     capture_out {
         Contentment::Theme->theme("form/Pre-Widget");
-        Contentment::Theme->theme("form/$class", 
+        Contentment::Theme->theme("form/$class", {
             widget => $widget,
-        );
+        });
         Contentment::Theme->theme("form/Post-Widget");
     };
 

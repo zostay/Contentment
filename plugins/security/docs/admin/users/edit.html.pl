@@ -7,46 +7,14 @@
 Contentment::Security->check_permission(
     'Contentment::Security::Manager::manage_users');
     
+my $self = shift;
 my %args = @_;
 
-#my $template = <<'END_OF_TEMPLATE';
-#[% form.begin %]
-#
-#[% form.widgets.username.label.render %]      [% form.widgets.username.render %]<br/>
-#[% form.widgets.password.label.render %]      [% form.widgets.password.render %]<br/>
-#[% form.widgets.full_name.label.render %]     [% form.widgets.full_name.render %]<br/>
-#[% form.widgets.email_address.label.render %] [% form.widgets.email_address.render %]<br/>
-#[% form.widgets.web_site.label.render %]      [% form.widgets.web_site.render %]<br/>
-#
-#[% form.widgets.roles.render %]
-#
-#[% form.widgets.submit.render %]
-#[% form.end %]
-#END_OF_TEMPLATE
-    
 my $form = Contentment::Form->define({
     name      => 'Contentment::Security::Profile::Persistent::edit_form',
-#    method    => 'POST',
     action    => 
         'Contentment::Security::Profile::Persistent::process_edit_form',
     activate  => 1,
-#    template  => \$template,
-#    modes     => {
-#        modes   => [ qw( new edit delete ) ],
-#        widgets => {
-#            id => {
-#                new => 0,
-#            },
-#            submit => {
-#                new => {
-#                    value => [ qw( Create Cancel ) ],
-#                },
-#                delete => {
-#                    value => [ qw( Delete Cancel ) ],
-#                },
-#            },
-#        },
-#    },
     widgets   => [ 
         id => {
             name  => 'id',
@@ -100,6 +68,9 @@ elsif (my $id = $args{id} || $form->submission->results->{id}) {
     my $profile = Contentment::Security::Profile::Persistent
         ->retrieve($args{id} || $form->submission->results->{id});
 
+    $self->properties->{title}       = $profile->username;
+    $self->properties->{description} = $profile->full_name;
+
     print $form->render({
         id            => $profile->id,
         username      => $profile->username,
@@ -115,5 +86,8 @@ elsif (my $id = $args{id} || $form->submission->results->{id}) {
 
 else {
     # New
+    $self->properties->{title}       = 'New User';
+    $self->properties->{description} = 'Create a new user.';
+
     $form->render;
 }

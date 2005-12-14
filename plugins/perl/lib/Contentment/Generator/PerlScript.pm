@@ -5,10 +5,9 @@ use warnings;
 
 use base 'Contentment::Generator::POD';
 
-our $VERSION = '0.12';
+our $VERSION = '0.13';
 
 use Contentment::Exception;
-use MIME::Types;
 use Params::Validate qw( validate_with :types );
 #use Safe;
 
@@ -144,7 +143,7 @@ sub generate {
     $self->source;
 
     # Execute it.
-    return $self->{code}->(@_);
+    return $self->{code}->($self, @_);
 }
 
 =item $source = $self->source
@@ -201,7 +200,8 @@ sub match {
     if ($package =~ /^Contentment::Generator::/) {
         my $filename = $file->basename;
         $filename =~ s/\.(?:pl|pod|pm)$//;
-        my $kind = MIME::Types->new->mimeTypeOf($filename) || '';
+        my $kind = Contentment::MIMETypes
+            ->instance->mimeTypeOf($filename) || '';
 
         my %properties      = %{ $file->properties_hash };
         $properties{kind} ||= $kind;
@@ -221,7 +221,7 @@ sub match {
 
 =head1 SEE ALSO
 
-L<MIME::Types>, L<Contentment::Generator::POD>
+L<Contentment::MIMETypes>, L<Contentment::Generator::POD>
 
 =head1 AUTHOR
 

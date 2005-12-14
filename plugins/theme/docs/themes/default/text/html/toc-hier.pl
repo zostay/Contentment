@@ -1,3 +1,4 @@
+my $self = shift;
 my %args = @_;
 my @files = @{ $args{files} || [] };
 
@@ -11,7 +12,6 @@ if (@files) {
 		$url =~ s/\.\w+$/\.html/;
 
 		my $num = scalar(@x = split m[/], $file->path);
-#		print "<pre>path = ".$file->path.", last_num = $last_num, num = $num</pre>";
 		while ($num > $last_num) {
 			print q(<ul class="toc">);
 			$last_num++;

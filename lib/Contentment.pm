@@ -3,11 +3,12 @@ package Contentment;
 use strict;
 use warnings;
 
-our $VERSION = 0.011_026;
+our $VERSION = 0.011_027;
 
 use Carp;
 use Contentment::Hooks;
 use Contentment::Log;
+use Contentment::MIMETypes;
 use Contentment::Response;
 use Contentment::Request;
 use Cwd ();

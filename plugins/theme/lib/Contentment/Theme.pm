@@ -3,7 +3,7 @@ package Contentment::Theme;
 use strict;
 use warnings;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 use Contentment::Log;
 use Contentment::Response;
@@ -17,13 +17,13 @@ Contentment::Theme - Contentment plugin for adding themes to content
 
 =head1 SYNOPSIS
 
-  Contentment::Theme->theme('master', %arguments);
+  Contentment::Theme->theme('master', \%arguments);
 
 =head1 DESCRIPTION
 
 The theme plugin provides a simple theming system. Basically, the L</"SYNOPSIS"> says it all. To take some data and theme that data, simply call:
 
-  Contentment::Theme->theme('master', %arguments);
+  Contentment::Theme->theme('master', \%arguments);
 
 The "master" is the name of the master template to apply to the arguments. The arguments will be passed to the theme in the way that arguments are normally passed to the filetype of the master template.
 
@@ -55,7 +55,7 @@ Since the typical final file type uses the MIME-type "text/html", the theme dire
 
 =over
 
-=item Contentment::Theme->theme($master, @args)
+=item Contentment::Theme->theme($master, \%args)
 
 This applies the requested theme master, C<$master>, using the current file type stored in C<Contentment::Response->top_kind> and the theme set in the "default_theme" key of the "Contentment::Plugin::Theme" setting.
 
@@ -66,6 +66,7 @@ The special parameter "theme_dir" is passed to every template during generation 
 sub theme {
     my $class  = shift;
     my $master = shift;
+    my $args   = shift || {};
 
     # Master must be given
     if (!defined($master)) {
@@ -94,7 +95,7 @@ sub theme {
         if ($gen->get_property('error')) {
 
             # Nope, no theme. Skip it.
-            Contentment::Log->debug("No theme found for kind '%s'", [$kind]);
+            Contentment::Log->debug(q(No theme found for kind '%s'), [$kind]);
             next THEME;
         } 
 
@@ -103,7 +104,7 @@ sub theme {
             [$kind,$gen]
         );
         $gen->generate(
-            @_,
+            %$args,
             theme_dir => $theme_dir,
         );
     }

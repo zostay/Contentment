@@ -3,11 +3,12 @@ package Contentment::Node::Blog;
 use strict;
 use warnings;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use base 'Contentment::Node::Revision';
 
 use Class::Date qw( now );
+use IO::NestedCapture qw( capture_out );
 
 =head1 NAME
 
@@ -77,6 +78,17 @@ sub begin {
     $vfs->add_layer(-1, [ 'Real', root => $docs ]);
 }
 
+sub mimetypes {
+    my $types = shift;
+
+    my $rss = MIME::Type->new(
+        extensions => [ qw( rss rdf ) ],
+        type       => 'application/rss+xml',
+    );
+
+    $types->addType($rss);
+}
+
 sub process_edit_form {
     Contentment::Security->check_permission(
         'Contentment::Node::Blog::edit_blog');
@@ -112,6 +124,15 @@ sub process_edit_form {
     }
 
     # else { do nothing }
+}
+
+sub blog_menu {
+    my $self = shift;
+    capture_out {
+        Contentment::Hooks->call('Contentment::Node::Blog::blog_menu');
+    };
+    my $fh = IO::NestedCapture->get_last_out;
+    return join '', <$fh>;
 }
 
 =head1 AUTHOR

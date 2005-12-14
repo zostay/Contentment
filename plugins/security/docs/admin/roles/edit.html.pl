@@ -7,6 +7,7 @@
 Contentment::Security->check_permission(
     'Contentment::Security::Manager::manage_roles');
 
+my $self = shift;
 my %args = @_;
 
 my $form = Contentment::Form->define({
@@ -49,6 +50,9 @@ elsif (my $id = $args{id} || $form->submission->results->{id}) {
         $args{id} || $form->submission->results->{id}
     );
 
+    $self->properties->{title}       = $role->title;
+    $self->properties->{description} = $role->description;
+
     print $form->render({
         id          => $role->id,
         title       => $role->title,
@@ -59,5 +63,8 @@ elsif (my $id = $args{id} || $form->submission->results->{id}) {
 
 else {
     # New
+    $self->properties->{title}       = 'New Role';
+    $self->properties->{description} = 'Create a new role.';
+
     $form->render;
 }

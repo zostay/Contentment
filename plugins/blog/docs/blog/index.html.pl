@@ -12,6 +12,4 @@ if (Contentment::Security->has_permission(
 }
 
 my @blogs = Contentment::Node::Blog->search;
-for my $blog (@blogs) {
-    Contentment::Theme->theme('blog', blog => $blog);
-}
+Contentment::Theme->theme('blogs', { blogs => \@blogs });

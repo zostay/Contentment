@@ -5,9 +5,8 @@ use warnings;
 
 use Cache::FileCache;
 use DateTime;
-use MIME::Types;
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 use IO::NestedCapture qw( capture_out );
 use Params::Validate qw( validate_with :types );
@@ -245,7 +244,8 @@ sub match {
     my $file = shift;
     
     my %properties      = %{ $file->properties_hash };
-    $properties{kind} ||= MIME::Types->new->mimeTypeOf($file->basename);
+    $properties{kind} ||= Contentment::MIMETypes
+        ->instance->mimeTypeOf($file->basename);
 
     return Contentment::Generator::Plain->new({
         source     => scalar($file->content),
@@ -261,7 +261,7 @@ Used to handle the "Contentment::Request::final_kind" hook.
 
 sub final_kind {
 	my $cgi = shift;
-	my $kind = MIME::Types->new->mimeTypeOf($cgi->path_info);
+	my $kind = Contentment::MIMETypes->instance->mimeTypeOf($cgi->path_info);
 	if ($kind) {
 		Contentment::Response->header->{-type} = $kind;
 		return $kind;
@@ -274,7 +274,7 @@ sub final_kind {
 
 =head1 SEE ALSO
 
-L<MIME::Types>
+L<Contentment::MIMETypes>
 
 =head1 AUTHOR
 

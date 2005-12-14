@@ -1,5 +1,5 @@
 name: Form
-version: 0.06
+version: 0.07
 description: A plugin for automating form rendering, validation, and processing.
 
 use_lib:

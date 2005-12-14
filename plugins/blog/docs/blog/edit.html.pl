@@ -6,6 +6,7 @@
 
 Contentment::Security->check_permission('Contentment::Node::Blog::edit_blogs');
 
+my $self = shift;
 my %args = @_;
 
 my $form = Contentment::Form->define({
