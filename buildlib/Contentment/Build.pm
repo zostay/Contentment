@@ -3,11 +3,9 @@ package Contentment::Build;
 use strict;
 use warnings;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
-my $build_pkg = eval { require Apache::TestMB }
-	? 'Apache::TestMB' : 'Module::Build';
-our @ISA = $build_pkg;
+use base eval { require Apache::TestMB } ? 'Apache::TestMB' : 'Module::Build';
 
 use File::Path;
 

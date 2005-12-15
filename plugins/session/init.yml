@@ -1,6 +1,6 @@
 name: Session
 description: Used to store client session information.
-version: 0.09
+version: 0.10
 
 use_lib:
  - lib

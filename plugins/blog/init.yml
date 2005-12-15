@@ -1,6 +1,6 @@
 name: Blog
 description: A simple weblog.
-version: 0.05
+version: 0.06
 order: 10
 
 use_lib:

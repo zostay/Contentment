@@ -19,11 +19,13 @@ my $build = Contentment::Build->new(
         'Digest'            => 0,
 		'File::System'      => 1.16,
 		'IO::NestedCapture' => 0,
+		'List::MoreUtils'   => 0,
 		'MIME::Types'       => 0,
 		'Oryx'              => 0.10,
 		'Pod::Simple'       => 0,
 		'Template'          => 2,
 		'Text::Balanced'    => 0,
+		'Test::Deep'        => 0,
 		'YAML'              => 0,
 	},
 	recommends         => {

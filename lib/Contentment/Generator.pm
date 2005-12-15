@@ -3,7 +3,7 @@ package Contentment::Generator;
 use strict;
 use warnings;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use IO::NestedCapture qw( capture_out );
 
@@ -112,7 +112,20 @@ sub generator {
 
     warn qq(Error loading "$generator_class": $@) if $@;
 
-    return $generator_class->new(@_);
+    my $generator = $generator_class->new(@_);
+	if (defined $generator) {
+		Contentment::Log->debug(
+			'Generator class %s returned a generator.', [$generator_class]);
+		return $generator;
+	}
+
+	else {
+		Contentment::Log->error(
+			'Generator class %s returned undef.', [$generator_class]);
+		Class::Exception->throw(
+			message => "Generator class $generator_class returned undef.",
+		);
+	}
 }
 
 =item $content = Contentment::Generator->content_of($generator, \%args)
@@ -127,6 +140,12 @@ This is a helper to stringify the generation of a generator in case you need to 
 sub content_of {
     my $class     = shift;
     my $generator = shift;
+
+	if (!defined $generator) {
+		Contentment::Exception->throw(
+			message => 'content_of() called with an undefined generator.',
+		);
+	}
 
     capture_out {
         $generator->generate(@_);
