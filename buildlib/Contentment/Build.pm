@@ -568,6 +568,7 @@ sub ACTION_upload_release_to_PAUSE {
     _STERLING_ONLY('Sterling will be ticked off if someone other than him uploads a Contentment release to CPAN. Stop it.');
 
     my $version = _get_version();
+    $version =~ s/_//; # ./Build dist doesn't do that
 
     require YAML;
 
@@ -589,8 +590,8 @@ sub ACTION_upload_release_to_PAUSE {
     my $ftp = Net::FTP->new('pause.perl.org')
         or die "Cannot connect to pause.perl.org: $@";
     
-    print "Logging in as $upload->{username}.\n";
-    $ftp->login($upload->{username}, $upload->{password})
+    print "Logging in as anonymous : hanenkamp\@cpan.org.\n";
+    $ftp->login('anonymous', 'hanenkamp@cpan.org')
         or die "Cannot login as anonymous on pause.perl.org: ",$ftp->message;
 
     print "Changing into directory /incoming.\n";
