@@ -83,8 +83,8 @@ sub ACTION_release {
         commit
         status_check
         tag
-        upload_release_to_CPAN
-        announce_release_to_Freshmeat
+        upload_release_to_PAUSE
+        announce_release_on_Freshmeat
     );
 
     for my $task (@tasks) {
@@ -654,7 +654,7 @@ sub ACTION_upload_release_to_PAUSE {
     }
 }
 
-sub ACTION_announce_release_to_Freshmeat {
+sub ACTION_announce_release_on_Freshmeat {
     my $self = shift;
 
     print STDERR "announce: Not yet implemented\n";
