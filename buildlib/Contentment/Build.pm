@@ -609,11 +609,13 @@ sub ACTION_upload_release_to_PAUSE {
     my $ua = LWP::UserAgent->new
         or die "Cannot initialize LWP::UserAgent: $!";
 
-    my $request = POST('http://pause.perl.org/pause/authenquery', {
-        HIDDENNAME                    => $upload->{username},
-        pause99_add_uri_upload        => "Contentment-$version.tar.gz",
-        SUBMIT_pause99_add_uri_upload => " Upload the checked file ",
-    });
+    my $request = HTTP::Request::Common::POST(
+        'http://pause.perl.org/pause/authenquery', {
+            HIDDENNAME                    => $upload->{username},
+            pause99_add_uri_upload        => "Contentment-$version.tar.gz",
+            SUBMIT_pause99_add_uri_upload => " Upload the checked file ",
+        },
+    );
     $request->authorization_base(@$upload{qw( username password )});
 
     print "Notifying PAUSE via HTTP POST of upload.\n";
