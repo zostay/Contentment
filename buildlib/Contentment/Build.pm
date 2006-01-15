@@ -83,8 +83,8 @@ sub ACTION_release {
         commit
         status_check
         tag
-        upload
-        announce
+        upload_release_to_CPAN
+        announce_release_to_Freshmeat
     );
 
     for my $task (@tasks) {
@@ -153,7 +153,7 @@ sub _has_anything_changed {
     my $command = "svn status -q $dir";
     print "$command\n";
     open STATUS, "$command|"
-        or die "Failed $command";
+        or die "Failed $command: $!";
 
     my %changes;
     while (<STATUS>) {
@@ -542,8 +542,29 @@ sub ACTION_tag {
     return 1;
 }
 
-sub ACTION_upload {
+# Some hardcoded checks to keep a random person from doing something bad if
+# they decide not to use their brain.
+sub _STERLING_ONLY {
+    my $msg = shift;
+
+    if ($ENV{LOGNAME} ne 'sterling') {
+        die "$msg ($ENV{LOGNAME})";
+    }
+
+    require Sys::Hostname;
+    my $hostname = Sys::Hostname::hostname();
+    if ($hostname !~ /^lockhart\b/) {
+        die "$msg ($hostname)";
+    }
+
+    # If they pass both those on a fluke, oh geez. Forget it. Why the hell are
+    # they running ./Build upload_release_to_PAUSE anyway?!
+}
+
+sub ACTION_upload_release_to_PAUSE {
     my $self = shift;
+
+    _STERLING_ONLY('Sterling will be ticked off if someone other than him uploads a Contentment release to CPAN. Stop it.');
 
     my $version = _get_version();
 
@@ -567,8 +588,8 @@ sub ACTION_upload {
     my $ftp = Net::FTP->new('pause.perl.org')
         or die "Cannot connect to pause.perl.org: $@";
     
-    print "Logging in as anonymous.\n";
-    $ftp->login('anonymous', 'hanenkamp@cpan.org')
+    print "Logging in as $upload->{username}.\n";
+    $ftp->login($upload->{username}, $upload->{password})
         or die "Cannot login as anonymous on pause.perl.org: ",$ftp->message;
 
     print "Changing into directory /incoming.\n";
@@ -618,7 +639,7 @@ sub ACTION_upload {
     }
 }
 
-sub ACTION_announce {
+sub ACTION_announce_release_to_Freshmeat {
     my $self = shift;
 
     print STDERR "announce: Not yet implemented\n";
