@@ -1,0 +1,11 @@
+name: Oryx
+version: 0.01
+description: Establishes a connection to storage for Oryx objects.
+required: 1
+order: -90
+
+use_lib:
+ - lib
+
+use:
+ - Contentment::Oryx

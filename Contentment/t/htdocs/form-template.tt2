@@ -1,0 +1,7 @@
+[% USE Dumper %]
+[% form.jshead %]
+[% form.start %]
+Username: [% form.field.username.field %]<br/>
+Password: [% form.field.password.field %]<br/>
+[% form.reset %] [% form.submit %]
+[% form.end %]

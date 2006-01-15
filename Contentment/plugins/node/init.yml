@@ -1,0 +1,15 @@
+name: Node
+version: 0.04
+description: The plugin providing nodes and such for Contentment.
+
+use_lib:
+ - lib
+
+use:
+ - Contentment::Node
+ - Contentment::Node::Manager
+ - Contentment::Node::Revision
+ - Contentment::Node::Collection
+
+hooks:
+  Contentment::install: Contentment::Node::install

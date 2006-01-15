@@ -1,0 +1,4 @@
+<div class="widget widget-tabular-choice">
+[% args.widget.label.render %]<br/>
+[% args.widget.render %]
+</div>

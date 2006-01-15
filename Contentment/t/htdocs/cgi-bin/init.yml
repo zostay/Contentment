@@ -1,0 +1,12 @@
+oryx_connection:
+ - dbi:SQLite:dbname=testdb
+# - dbm:Deep:datapath=/tmp
+
+plugins_dir: 
+ - ../../../plugins
+ - ../../plugins
+
+vfs:
+ - Real
+ - root
+ - .. 

@@ -1,0 +1,17 @@
+[% USE Generator %]
+<div class="entry">
+<h2><a href="blog/view.html?id=[% args.blog.id %]">[% args.blog.title %]</a></h2>
+<div class="content">
+[% USE Security -%]
+[% SET author = Security.lookup_principal(args.blog.author) -%]
+<div class="byline">Written by [% author.full_name %] on [% args.blog.pub_date.strftime("%A, %B %e, %Y @ %l:%M %p") %]</div>
+[% Generator.content_of(args.blog.generator) %]
+[% IF Security.has_permission('Contentment::Node::Blog::edit_blog') %]
+<div class="menu">
+[% args.blog.blog_menu %]
+<a href="blog/edit.html">Edit</a>
+<a href="blog/delete.html">Delete</a>
+</div>
+[% END %]
+</div>
+</div>

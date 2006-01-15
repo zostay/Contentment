@@ -1,0 +1,15 @@
+name: Site
+version: 0.01
+description: A plugin for storing multiple site configurations.
+
+use_lib:
+ - lib
+
+use:
+ - Contentment::Site
+
+hooks:
+  Contentment::Request::begin:
+    order: -50
+    sub: Contentment::Site::begin
+  Contentment::install: Contentment::Site::install

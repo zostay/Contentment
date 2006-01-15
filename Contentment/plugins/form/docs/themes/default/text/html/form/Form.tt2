@@ -1,0 +1,14 @@
+<div class="form">
+[% USE Form %]
+[% Form.begin %]
+
+[% FOREACH error = Form.submission.errors.keys %]
+<p class="error">[% Form.submission.errors.$error %]</p>
+[% END %]
+
+[% FOREACH widget = Form.widgets -%]
+[% Form.render_widget(widget) %]
+[%- END %]
+
+[% Form.end %]
+</div>

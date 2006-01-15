@@ -1,0 +1,17 @@
+name: Blog
+description: A simple weblog.
+version: 0.06
+order: 10
+
+use_lib:
+ - lib
+
+use:
+ - Contentment::Node::Blog
+
+hooks:
+  Contentment::install:
+    order: 10
+    sub: Contentment::Node::Blog::install
+  Contentment::begin: Contentment::Node::Blog::begin
+  Contentment::MIMETypes::register: Contentment::Node::Blog::mimetypes

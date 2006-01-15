@@ -1,0 +1,18 @@
+name: Test
+description: A test plugin.
+version: 0.01
+order: 10
+
+use_lib:
+ - lib
+
+use:
+ - Contentment::Node::Test
+
+hooks:
+  Contentment::VFS::simple:
+    name: /test
+    sub: Contentment::Node::Test::vfs
+  Contentment::install: 
+    order: 10
+    sub: Contentment::Node::Test::install

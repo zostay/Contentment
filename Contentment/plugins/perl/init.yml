@@ -1,0 +1,18 @@
+name: Perl
+description: Plugin for handling Perl components.
+version: 0.14
+order: 10
+
+use_lib:
+ - lib
+
+use:
+ - Contentment::Generator::PerlScript
+ - Contentment::Generator::POD
+ - Contentment::Transform::POD2HTML
+
+hooks:
+  Contentment::VFS::generator:
+    order: 0
+    sub: Contentment::Generator::PerlScript::match
+  Contentment::Transform::begin: Contentment::Transform::POD2HTML::begin

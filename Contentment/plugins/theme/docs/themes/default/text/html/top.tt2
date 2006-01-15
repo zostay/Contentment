@@ -1,0 +1,22 @@
+[% USE Contentment -%]
+[% USE Response -%]
+[% USE Site -%]
+[% SET gen = Response.generator -%]
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>[% gen.get_property('title') or gen.get_property('path') %]</title>
+<base href="[% Site.base_url %]"/>
+<link rel="STYLESHEET" type="text/css" href="/themes/default/style/main.css"/>
+[% IF gen.get_property('description') %]
+	<meta name="description" content="[% gen.get_property('description') %]"/>
+[% END %]
+</head>
+<body>
+<div id="content">
+[% PROCESS input %]
+</div>
+</body>
+</html>

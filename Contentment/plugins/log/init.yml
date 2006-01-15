@@ -1,0 +1,14 @@
+name: Log
+description: General log handler plugins.
+version: 0.02
+order: -80
+
+use_lib:
+ - lib
+
+use:
+ - Contentment::Log::Stderr
+
+hooks:
+  Contentment::Log::error:
+    sub: Contentment::Log::Stderr::log

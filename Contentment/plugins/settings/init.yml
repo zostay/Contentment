@@ -1,0 +1,16 @@
+name: Settings
+description: Used to store configuration. Required by Contentment.
+version: 0.10
+required: 1
+order: -90
+
+use_lib:
+ - lib
+
+use:
+ - Contentment::Setting
+
+hooks:
+  Contentment::remove: 
+    order: 90
+    sub: Contentment::Setting::remove

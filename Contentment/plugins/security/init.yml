@@ -1,0 +1,20 @@
+name: Security
+version: 0.07
+description: Contentment security system.
+
+use_lib:
+ - lib
+
+use:
+ - Contentment::Security
+ - Contentment::Security::Manager
+
+hooks:
+  Contentment::install:
+    sub: Contentment::Security::install
+    order: 10 
+  Contentment::begin: 
+    sub: Contentment::Security::begin
+    order: -50
+
+security_manager: Contentment::Security::Manager

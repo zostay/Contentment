@@ -1,0 +1,3 @@
+<div class="widget widget-textarea">
+[% args.widget.label.render %] [% args.widget.render %]
+</div>

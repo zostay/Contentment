@@ -1,0 +1,6 @@
+[% USE Theme %]
+[% IF args.blogs %]
+[% FOREACH blog_entry IN args.blogs.sort('pub_date').reverse %]
+[% Theme.theme('blog', blog = blog_entry) %]
+[% END %]
+[% END %]

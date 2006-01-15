@@ -1,0 +1,18 @@
+name: Plain
+description: A generator for plain files (binary or text).
+version: 0.11
+order: 0
+
+use_lib:
+ - lib
+
+use:
+ - Contentment::Generator::Plain
+
+hooks:
+  Contentment::VFS::generator:
+    order: 95
+    sub: Contentment::Generator::Plain::match
+  Contentment::Request::final_kind:
+    order: 95
+    sub: Contentment::Generator::Plain::final_kind

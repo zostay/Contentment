@@ -1,0 +1,19 @@
+name: Session
+description: Used to store client session information.
+version: 0.11
+
+use_lib:
+ - lib
+
+use:
+ - Contentment::Session
+
+hooks:
+  Contentment::Request::begin:
+    order: -30
+    sub: Contentment::Session::open_session
+  Contentment::Request::end:
+    order: 30
+    sub: Contentment::Session::close_session
+  Contentment::install: Contentment::Session::install
+  Contentment::remove: Contentment::Session::remove
