@@ -1,6 +1,0 @@
-cpan_user HANENKAMP
-
-sf_release_match   ^.+-([\d\._]+)$
-sf_release_replace $::v=$1;$::b=$::v=~s/_/./;$::v=~s/\b00?(\d\d?)/$1/g;$::v.=q( Beta)if$::b;q("$::v")
-
-release_subclass Module::Release::HANENKAMP
