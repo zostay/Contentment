@@ -3,7 +3,7 @@ package Contentment::Build;
 use strict;
 use warnings;
 
-our $VERSION = '0.011_028';
+our $VERSION = 0.011_029;
 
 use base eval { require Apache::TestMB } ? 'Apache::TestMB' : 'Module::Build';
 
@@ -83,8 +83,8 @@ sub ACTION_release {
         commit
         status_check
         tag
-        upload
-        announce
+        upload_release_to_CPAN
+        announce_release_to_Freshmeat
     );
 
     for my $task (@tasks) {
@@ -103,28 +103,13 @@ sub ACTION_test_upgrade {
 
     my $info = _info();
 
-    # Check to see if we've already tagged. If so, we won't bother to test the
-    # upgrades anymore, since it's obviously already been a success
-    my $command = "svn diff";
-    print "$command\n";
-    open DIFF, "$command|"
-        or die "Failed $command";
-
-    my $changes = 0;
-    while (<DIFF>) {
-        $changes++;
-    }
-
-    close DIFF;
-
-    if (!$changes) {
+    if (!_has_anything_changed()) {
         print "Skipping upgrade test because tagging has already happened.\n";
-        return 1;
     }
 
     # Check out the current tag in the tmp directory
     chdir File::Spec->tmpdir;
-    $command = "svn checkout $info->{TAG}/current";
+    my $command = "svn checkout $info->{TAG}/current";
     $self->do_system($command)
         or die "Failed $command for upgrade testing";
     chdir 'current';
@@ -160,6 +145,28 @@ sub ACTION_touch_versions {
     $self->depends_on('touch_plugin_versions');
 }
 
+sub _has_anything_changed {
+    my $dir = @_ ? join ' ', @_ : '.';
+
+    # Check to see if we've already tagged. If so, we won't bother to test the
+    # upgrades anymore, since it's obviously already been a success
+    my $command = "svn status -q $dir";
+    print "$command\n";
+    open STATUS, "$command|"
+        or die "Failed $command: $!";
+
+    my %changes;
+    while (<STATUS>) {
+        chomp;
+        my ($status, $file) = split /\s+/;
+        $changes{ $file } = $status;
+    }
+
+    close STATUS;
+
+    return wantarray ? %changes : scalar keys %changes;
+}
+
 my $_get_version;
 sub _get_version {
     return $_get_version if defined $_get_version;
@@ -193,7 +200,9 @@ sub _get_version {
 
         my $dev = $_get_version =~ s/_//;
 
-        $_get_version += 0.000_001;
+        if (_has_anything_changed()) {
+            $_get_version += 0.000_001;
+        }
 
         if ($dev) {
             my ($major, $minor_rev) = split /\./, $_get_version;
@@ -276,25 +285,16 @@ sub _update_version_of_yml {
 sub ACTION_touch_lib_versions {
     my $self = shift;
 
-    # Use Subversion to find the changed files
-    open STATUS, "svn status lib|"
-        or die "Failed to open Subversion status: $!";
-
-    # Find all the files that changed, always include the Contentment module
-    my @mods = ('lib/Contentment.pm');
-    while (<STATUS>) {
-        chomp;
-        my ($flags, $filename) = split /\s+/;
-
-        next if $filename =~ m{^lib/Contentment\.pm$};
-        next unless $filename =~ /\.pm$/;
-
-        if ($flags =~ /^[AM]/) {
-            push @mods, $filename;
-        }
+    # Find the list of modifications
+    my %mods = _has_anything_changed('lib', 'buildlib');
+    
+    # If anything has changed, modify lib/Contentment.pm
+    if (keys %mods) {
+        $mods{'lib/Contentment.pm'} = 'M';
     }
 
-    close STATUS;
+    # Compute the list of modifications
+    my @mods = grep { $mods{$_} =~ /^[AM]/ } keys %mods;
 
     my $new_version = _get_version();
 
@@ -308,14 +308,11 @@ sub ACTION_touch_lib_versions {
 sub ACTION_touch_plugin_versions {
     my $self = shift;
 
-    # Use Subversion to find the changed plugins and files in those plugins
-    open STATUS, "svn status plugins|"
-        or die "Failed to open Subversion status: $!";
-
+    # Find added/modified/deleted files
+    my %files = _has_anything_changed('plugins');
+    
     my %mods;
-    while (<STATUS>) {
-        chomp;
-        my ($flags, $filename) = split /\s+/;
+    while (my ($filename, $flags) = each %files) {
 
         # Determine which plugin
         my ($plugin) = $filename =~ m[^plugins/([^/]+)];
@@ -397,7 +394,6 @@ sub ACTION_commit {
     # Unfortunately, it appears that svn commit reports normal execution, even
     # if the user aborts, so we'll use the status_check test to confirm success.
     my $command = 'svn commit';
-    print "$command\n";
     $self->do_system($command);
 
     return 1;
@@ -406,24 +402,8 @@ sub ACTION_commit {
 sub ACTION_status_check {
     my $self = shift;
 
-    # Check the svn status to confirm everything has been committed
-    my $command = 'svn status';
-    print "$command\n";
-    open STATUS, "$command|"
-        or die "Cannot check Subversion status: $!";
-
-    my $problems;
-    while (<STATUS>) {
-        unless (/^\?\s+\S+/) {
-            $problems++;
-            print STDERR $_;
-        }
-    }
-
-    close STATUS;
-
     die "Cannot continue because of the above files are not yet committed."
-        if $problems;
+        if _has_anything_changed();
 }
 
 # my $info = _info()
@@ -511,8 +491,9 @@ sub ACTION_tag {
 
     my %found;
     while (<LIST>) {
-        my $tag = s/^$info->{TAG}\///;
-        $found{$tag}++;
+        chomp;
+        s/\/$//;
+        $found{$_}++;
     }
 
     close LIST;
@@ -543,7 +524,7 @@ sub ACTION_tag {
         # Commit the merge, we assume that the current tag is a tag and hasn't
         # been modified, therefore, no conflicts are possible.
         $command 
-            = "svn commit -m 'Merging $info->{BRANCH_TITLE} info current tag.'";
+            = "svn commit -m 'Merging $info->{BRANCH_TITLE} into current tag.'";
         $self->do_system($command)
                 or die "Failed to commit merge of $info->{BRANCH_TITLE}";
     };
@@ -569,18 +550,39 @@ sub ACTION_tag {
     return 1;
 }
 
-sub ACTION_upload {
+# Some hardcoded checks to keep a random person from doing something bad if
+# they decide not to use their brain.
+sub _STERLING_ONLY {
+    my $msg = shift;
+
+    if ($ENV{LOGNAME} ne 'sterling') {
+        die "$msg ($ENV{LOGNAME})";
+    }
+
+    require Sys::Hostname;
+    my $hostname = Sys::Hostname::hostname();
+    if ($hostname !~ /^lockhart\b/) {
+        die "$msg ($hostname)";
+    }
+
+    # If they pass both those on a fluke, oh geez. Forget it. Why the hell are
+    # they running ./Build upload_release_to_PAUSE anyway?!
+}
+
+sub ACTION_upload_release_to_PAUSE {
     my $self = shift;
 
+    _STERLING_ONLY('Sterling will be ticked off if someone other than him uploads a Contentment release to CPAN. Stop it.');
+
     my $version = _get_version();
+    $version =~ s/_//; # ./Build dist doesn't do that
 
     require YAML;
 
     # Skip it if we show it's already uploaded
     my $upload = YAML::LoadFile('upload.yml');
     if ($upload->{uploaded}{$version}) {
-        print "Contentment-$version.tar.gz was already uploaded.\n";
-        return 1;
+        print "Contentment-$version.tar.gz was already uploaded. Skipping.\n";
     }
     
     $self->depends_on('tag');
@@ -595,13 +597,17 @@ sub ACTION_upload {
     my $ftp = Net::FTP->new('pause.perl.org')
         or die "Cannot connect to pause.perl.org: $@";
     
-    print "Logging in as anonymous.\n";
+    print "Logging in as anonymous : hanenkamp\@cpan.org.\n";
     $ftp->login('anonymous', 'hanenkamp@cpan.org')
         or die "Cannot login as anonymous on pause.perl.org: ",$ftp->message;
 
     print "Changing into directory /incoming.\n";
     $ftp->cwd('/incoming')
         or die "Cannot cwd into /incoming: ",$ftp->message;
+
+    print "Chaning to binary mode.\n";
+    $ftp->binary
+        or die "Cannot change mode to binary: ",$ftp->message;
     
     print "Putting file Contentment-$version.tar.gz\n";
     $ftp->put("Contentment-$version.tar.gz")
@@ -614,12 +620,14 @@ sub ACTION_upload {
     my $ua = LWP::UserAgent->new
         or die "Cannot initialize LWP::UserAgent: $!";
 
-    my $request = POST('http://pause.perl.org/pause/authenquery', {
-        HIDDENNAME                    => $upload->{username},
-        pause99_add_uri_upload        => "Contentment-$version.tar.gz",
-        SUBMIT_pause99_add_uri_upload => " Upload the checked file ",
-    });
-    $request->authorization_base(@$upload{qw( username password )});
+    my $request = HTTP::Request::Common::POST(
+        'http://pause.perl.org/pause/authenquery', {
+            HIDDENNAME                    => $upload->{username},
+            pause99_add_uri_upload        => "Contentment-$version.tar.gz",
+            SUBMIT_pause99_add_uri_upload => " Upload the checked file ",
+        },
+    );
+    $request->authorization_basic(@$upload{qw( username password )});
 
     print "Notifying PAUSE via HTTP POST of upload.\n";
     my $response = $ua->request($request);
@@ -646,7 +654,7 @@ sub ACTION_upload {
     }
 }
 
-sub ACTION_announce {
+sub ACTION_announce_release_to_Freshmeat {
     my $self = shift;
 
     print STDERR "announce: Not yet implemented\n";

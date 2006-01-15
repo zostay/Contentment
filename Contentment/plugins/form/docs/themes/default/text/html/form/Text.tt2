@@ -1,3 +1,0 @@
-<div class="widget widget-text">
-[% args.widget.label.render %] [% args.widget.render %]<br/>
-</div>
