@@ -395,24 +395,8 @@ sub ACTION_commit {
 sub ACTION_status_check {
     my $self = shift;
 
-    # Check the svn status to confirm everything has been committed
-    my $command = 'svn status';
-    print "$command\n";
-    open STATUS, "$command|"
-        or die "Cannot check Subversion status: $!";
-
-    my $problems;
-    while (<STATUS>) {
-        unless (/^\?\s+\S+/) {
-            $problems++;
-            print STDERR $_;
-        }
-    }
-
-    close STATUS;
-
     die "Cannot continue because of the above files are not yet committed."
-        if $problems;
+        if _has_anything_changed();
 }
 
 # my $info = _info()
