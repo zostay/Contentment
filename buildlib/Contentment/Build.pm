@@ -548,13 +548,13 @@ sub _STERLING_ONLY {
     my $msg = shift;
 
     if ($ENV{LOGNAME} ne 'sterling') {
-        die "$msg (1)";
+        die "$msg ($ENV{LOGNAME})";
     }
 
     require Sys::Hostname;
     my $hostname = Sys::Hostname::hostname();
-    if ($hostname =~ /^lockhart\b/) {
-        die "$msg (2)";
+    if ($hostname !~ /^lockhart\b/) {
+        die "$msg ($hostname)";
     }
 
     # If they pass both those on a fluke, oh geez. Forget it. Why the hell are
