@@ -3,7 +3,7 @@ package Contentment::Security::Manager;
 use strict;
 use warnings;
 
-our $VERSION = '0.05';
+our $VERSION = 0.07;
 
 use Contentment::Hooks;
 use Contentment::Security::Principal;
@@ -67,7 +67,7 @@ sub _new_instance {
         code => \&Contentment::Security::Manager::end,
     );
 
-    return bless {}, $class;
+   return bless {}, $class;
 }
 
 # XXX The result of this method should probably be cached since this is pretty
@@ -148,7 +148,7 @@ sub _update_roles {
         });
     
         # This is a special role, it shouldn't be deleted.
-        defined $everybody_role
+        defined $authenticated_role
             or Contentment::Log->error(
                 'Special role "Authenticated" is missing!'
             );
@@ -163,13 +163,13 @@ sub _update_roles {
     } 
     else {
 
-        # Load the anonymouse role
+        # Load the anonymous role
         my ($anonymous_role) = Contentment::Security::Role->search({
             title => 'Anonymous',
         });
         
         # This is a special role, it shouldn't be deleted.
-        defined $everybody_role
+        defined $anonymous_role
             or Contentment::Log->error(
                 'Special role "Anonymous" is missing!'
             );
@@ -242,7 +242,10 @@ sub login {
         # Return success
         Contentment::Log->info('LOGIN SUCCESS by %s', [$username]);
         return 1;
-    } else {
+    } 
+    
+    # Password is not correct for user.
+    else {
         # Return failure
         Contentment::Log->info(
             'LOGIN FAILED by %s: incorrect username/password', [$username]);
@@ -295,13 +298,12 @@ sub _save_anonymous_profile {
 
         # Save these three fields with a colon as separated (and escape any
         # colons
-        my $saved_profile
-            = join ':', 
-                map { s/\\/\\\\/g; s/:/\\:/g; $_ } (
-                $principal->full_name,
-                $principal->email_address,
-                $principal->web_site,
-                );
+        my @fields = (
+            $principal->username || 'Anonymous',
+            $principal->full_name || '',
+            $principal->email_address || '',
+            $principal->web_site || '',
+        );
 
         # XXX Add a hook to allow for additional profile storage?
 
@@ -310,8 +312,9 @@ sub _save_anonymous_profile {
         my $q = Contentment::Request->cgi;
         my $cookie = $q->cookie(
             -name    => 'ANONPROFILE',
-            -value   => $saved_profile,
-            -expires => '30d');
+            -domain  => Contentment::Site->current_site->base_url->host,
+            -value   => \@fields,
+            -expires => '+30d');
         push @{ Contentment::Response->header->{'-cookie'} }, $cookie;
     }
 }
@@ -322,20 +325,18 @@ sub _load_anonymous_profile {
 
     # Check to see if there is a special anonymous profile cookie
     my $q = Contentment::Request->cgi;
-    my $profile = $q->cookie('ANONPROFILE');
+    my @profile = $q->cookie('ANONPROFILE');
 
     # If so, load that sucker up
-    if ($profile) {
+    if (@profile) {
         Contentment::Log->debug(
             'Refreshing scratch profile for anonymous user.',
         );
         my $principal = $self->get_principal;
 
-        # Note that we DO NOT USE YAML or any other such thing because we
-        # want this to be safe (NO REMOTE CODE EXECUTION VIA COOKIES!)
-        my ($full_name, $email_address, $web_site)
-            = map { s/\\\\/\\/g; s/\\:/:/g; $_} 
-                split /(?<!\\):/, $profile;
+        # Set the data stored in the cookie
+        my ($username, $full_name, $email_address, $web_site) = @profile;
+        $principal->profile->username($username);
         $principal->profile->full_name($full_name);
         $principal->profile->email_address($email_address);
         $principal->profile->web_site($web_site);

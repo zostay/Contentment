@@ -3,7 +3,7 @@ package Contentment;
 use strict;
 use warnings;
 
-our $VERSION = 0.011_027;
+our $VERSION = 0.011_028;
 
 use Carp;
 use Contentment::Hooks;
@@ -182,6 +182,7 @@ sub begin {
 		# Note that it's now installed and record the version.
 		Contentment::Log->info("Upgraded plugin %s from %s to %s",[$iter->name,$installed->{$iter->name},$plugin->{version}]);
 		$installed->{$iter->name} = $plugin->{version};
+        $settings->{'Contentment::Plugin::'.$iter->name} = $plugin;
 	}
 
 	# Save the install/upgrade settings.

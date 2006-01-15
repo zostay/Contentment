@@ -3,12 +3,13 @@ package Contentment::Exception;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = 0.011_028;
 
-use Exception::Class 
+use Exception::Class (
     'Contentment::Exception' => {
-        fields => [ 'status', 'title', 'details' ],
-    };
+        fields => [ 'status', 'title', 'details', 'generator' ],
+    }
+);
 
 =head1 NAME
 

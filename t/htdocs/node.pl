@@ -27,7 +27,7 @@ print 'node2 comment = ',$node2->comment,"\n";
 print 'node2 title = ',$node2->title,"\n";
 print 'node2 content = ',$node2->content,"\n";
 
-$node1 = $node1->clone({
+$node1 = $node1->revise({
     comment => 'Test 3',
     title   => 'Testing 3',
     content => 'This is yet another test.',
@@ -44,7 +44,7 @@ print 'node1 content = ',$node1->content,"\n";
 my @revisions = @{ $node1->revisions };
 
 for my $index (0 .. $#revisions) {
-    my $revision = $revisions[$index];
+    my $revision = Contentment::Node::Test->retrieve($revisions[$index]->id);
 
     print "revision[$index] comment = ",$revision->comment,"\n";
     print "revision[$index] title = ",$revision->title,"\n";

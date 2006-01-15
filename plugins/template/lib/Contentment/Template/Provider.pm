@@ -3,7 +3,7 @@ package Contentment::Template::Provider;
 use strict;
 use warnings;
 
-our $VERSION = '0.06';
+our $VERSION = 0.09;
 
 use Contentment::Log;
 use Contentment::Response;
@@ -60,7 +60,7 @@ sub fetch {
             [$generator]);
 
 		($data, $error) = $self->_compile({ 
-            text => scalar($generator->content) 
+            text => scalar($generator->source) 
         }) unless $error;
 		$data = $data->{data} unless $error;
 	} else {

@@ -3,16 +3,18 @@ package Contentment::Response;
 use strict;
 use warnings;
 
-our $VERSION = '0.13';
+our $VERSION = 0.011_028;
 
 use base 'Class::Singleton';
 
 use Carp;
+use Contentment::Exception;
 use Contentment::Generator;
 use Contentment::Hooks;
 use Contentment::Log;
 use Contentment::Request;
 use IO::NestedCapture ':subroutines';
+use URI;
 
 =head1 NAME
 
@@ -91,22 +93,30 @@ END_OF_HTML
 	return $error;
 }
 
+=item $generator = Contentment::Response-E<gt>redirect($url)
+
+=item $generator = Contentment::Response-E<gt>redirect($url, %query)
+
+This method is given a URL and will create a generator that returns a temporary redirect to that URL. The C<$url> may either be a L<URI> object or a string. The URL may be either absolute or relative. If the URL is relative, it will be converted to an absolute address using the C<base_url()> method of the current L<Contentment::Site>, thus the address should be relative to the current root path.
+
+If you wish, you may also add a set of query variables on the end of the list. These will be appended to the URL following a "?" and will be formatted and escaped for you.
+
+=cut
+
 sub redirect {
 	my $self = shift->instance;
 	my $url  = shift;
 
-	unless ($url =~ /^\w+:/) {
-		$url = Contentment->global_configuration->{base_url}.$url;
-	}
+    # If it's not a URI object, make it so
+    unless (ref $url) {
+        $url = URI->new($url);
+    }
 
-	my @query;
-	while (my ($key, $value) = splice @_, 0, 2) {
-		push @query, "$key=$value";
-	}
+    $url = $url->abs(Contentment::Site->current_site->base_url);
 
-	if (@query) {
-		$url .= '?'.join('&', @query);
-	}
+    if (@_) {
+        $url->query(@_);
+    }
 
 	my $redirect = Contentment::Generator->generator('Plain', {
         properties => {
@@ -116,9 +126,11 @@ sub redirect {
         },
         source => sub {
             Contentment::Response->header->{'-status'} = "302 Found";
-            Contentment::Response->header->{'-location'} = $url;
+            Contentment::Response->header->{'-location'} = $url->canonical->as_string;
         },
     });
+
+    Contentment::Log->debug("Created redirect generator to: $url");
 
 	return $redirect;
 }
@@ -158,7 +170,19 @@ sub resolve {
 		Contentment::Log->error(
             'Contentment::Response::resolve experienced an error while '
            .'searching for %s: %s', [$orig,$@]);
-		$path = $self->error($@);
+
+        if (my $x = Contentment::Exception->caught) {
+            $path = $self->error(
+                $x->status,
+                $x->title,
+                $x->message,
+                $x->details."\n".$x->trace,
+            );
+        }
+
+        else {
+            $path = $self->error($@);
+        }
 	} elsif (!$path) {
 		Contentment::Log->warning(
             'Contentment::Response::resolve found no match for %s.', [$orig]);
@@ -215,9 +239,21 @@ sub handle_cgi {
 		if ($@) {
 			Contentment::Log->error("Error generating %s: %s", [$generator, $@]);
 
-			my $error = $self->error(
-				500, 'Script Error', $@
-			);
+            my $error;
+            if (my $x = Contentment::Exception->caught) {
+                $error = $self->error(
+                    $x->status,
+                    $x->title,
+                    $x->message,
+                    $x->details."\n".$x->trace,
+                );
+            }
+
+            else {
+                $error = $self->error(
+                    500, 'Script Error', $@
+                );
+            }
 
 			$error->generate;
 		}
@@ -243,7 +279,22 @@ sub handle_cgi {
 			if ($@) {
 				Contentment::Log->error("Response post-process handler failure: %s", [$@]);
 				capture_in_out {
-					$self->error($@)->generate;
+                    my $error;
+
+                    if (my $x = Contentment::Exception->caught) {
+                        $error = $self->error(
+                            $x->status,
+                            $x->title,
+                            $x->message,
+                            $x->details."\n".$x->trace,
+                        );
+                    }
+
+                    else {
+                        $error = $self->error($@);
+                    }
+
+                    $error->generate;
 				};
 			}
 		}

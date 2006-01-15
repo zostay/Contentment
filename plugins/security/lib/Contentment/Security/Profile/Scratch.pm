@@ -3,7 +3,7 @@ package Contentment::Security::Profile::Scratch;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = 0.07;
 
 use base 'Class::Accessor';
 
@@ -18,6 +18,7 @@ This class defines a profile implementation (see L<Contentment::Security::Profil
 =cut
 
 __PACKAGE__->mk_accessors(qw(
+    username
     full_name
     email_address
     web_site
@@ -28,15 +29,11 @@ __PACKAGE__->mk_accessors(qw(
 sub new {
     my $class = shift;
     my $self = $class->SUPER::new(@_);
-    $self->information({}) unless $self->information;
-    $self->preferences({}) unless $self->preferences;
+    $self->username('Anonymous') unless $self->username;
+    $self->information({})      unless $self->information;
+    $self->preferences({})      unless $self->preferences;
     return $self;
 }
-
-# TODO Make the scratch profile username customizeable via a setting.
-# XXX Should this also be customizable? If so, how do we keep these usernames
-# from clobbering "real" profiles?
-sub username { 'Anonymous' }
 
 =head1 AUTHOR
 

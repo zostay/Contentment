@@ -3,7 +3,7 @@
 use strict;
 use Contentment;
 use File::System::Test;
-use Test::More tests => 157;
+use Test::More tests => 151;
 
 close STDERR;
 open STDERR, '>>t/logs/error_log' 
@@ -12,7 +12,7 @@ open STDERR, '>>t/logs/error_log'
 chdir "t/htdocs/cgi-bin";
 
 my @dirs = qw(
-    cgi-bin themes themes/default themes/default/image themes/default/style
+    cgi-bin themes themes/default themes/default/style
     themes/default/text themes/default/text/html test
 );
 

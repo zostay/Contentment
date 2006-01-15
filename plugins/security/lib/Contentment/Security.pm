@@ -3,7 +3,7 @@ package Contentment::Security;
 use strict;
 use warnings;
 
-our $VERSION = '0.05';
+our $VERSION = 0.07;
 
 use base 'Class::Singleton';
 
@@ -88,11 +88,11 @@ For most developers, all that's really needed is to know which permissions have 
   sub install {
       Contentment::Security->register_permissions(
           'Contentment::Plugin::MyPlugin::do_something' => {
-              title => 'Do Something",
+              title       => 'Do Something",
               description => "Allow person to do something.",
           },
           'Contentment::Plugin::MyPlugin::say_something' => {
-              title => "Say Something",
+              title       => "Say Something",
               description => "Allow a person to say something.",
           },
           # etc.
@@ -196,6 +196,7 @@ sub register_permissions {
 
         # If not, create it
         else {
+            Contentment::Log->info('Creating permission named "%s".', [$name]);
             $perm = Contentment::Security::Permission->create({
                 permission_name => $name,
                 title           => $param->{title},
@@ -297,7 +298,7 @@ sub lookup_principal {
 
 =item Contentment::Security::install
 
-Implementes the "Contentment::install" hook. It is responsible for installing all of the database objects associated with the Cotnentment security model and default security manager.
+Implements the "Contentment::install" hook. It is responsible for installing all of the database objects associated with the Contentment security model and default security manager.
 
 =cut
 
@@ -396,6 +397,9 @@ sub install {
         },
     );
 }
+
+# XXX THERE MUST BE AN UPGRADE() METHOD TO PRESERVE THE "security_manager"
+# SETTING.
 
 =item Contentment::Security::begin
 

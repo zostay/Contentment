@@ -5,7 +5,7 @@ use warnings;
 
 use base 'Contentment::Generator::POD';
 
-our $VERSION = '0.13';
+our $VERSION = 0.14;
 
 use Contentment::Exception;
 use Params::Validate qw( validate_with :types );
@@ -160,9 +160,10 @@ sub source {
     
     # Compile the Perl.
     my $code = $self->SUPER::source;
+    my $path = $self->{properties}{path} || '';
     my $sub  = eval <<"END_OF_SUB";
 sub {
-#line 1
+#line 1 $path
 $code
 }
 END_OF_SUB

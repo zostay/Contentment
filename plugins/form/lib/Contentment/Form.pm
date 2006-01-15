@@ -3,7 +3,7 @@ package Contentment::Form;
 use strict;
 use warnings;
 
-our $VERSION = '0.05';
+our $VERSION = 0.08;
 
 use base 'Class::Singleton';
 
@@ -313,7 +313,7 @@ sub define {
             },
         },
     );
-    
+
     # First, check to see if the last_submission is given for the same name. If
     # so we can skip most of the hard work and just use that definition!
     my $definition;
@@ -330,7 +330,7 @@ sub define {
         Contentment::Log->debug(
             'No last submission. Will have to create/find a definition.'
         );
-
+        
         # Find any previous definitions
         my @definitions = Contentment::Form::Definition->search({
             form_name => $p{name},

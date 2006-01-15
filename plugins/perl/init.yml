@@ -1,6 +1,6 @@
 name: Perl
 description: Plugin for handling Perl components.
-version: 0.13
+version: 0.14
 order: 10
 
 use_lib:

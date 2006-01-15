@@ -1,5 +1,5 @@
 name: Security
-version: 0.06
+version: 0.07
 description: Contentment security system.
 
 use_lib:

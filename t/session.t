@@ -9,7 +9,7 @@ SKIP: {
 
 	Apache::TestRequest::user_agent(cookie_jar => {});
 
-	GET('/session1.txt');
+    GET('/session1.txt');
 
 	my $body = GET_BODY('/session2.txt');
 

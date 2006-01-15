@@ -3,9 +3,11 @@ package Contentment::Node::Revision;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = 0.04;
 
 use base 'Oryx::Class';
+
+use Class::Date qw( now );
 
 =head1 NAME
 
@@ -23,7 +25,7 @@ This is the class to subclass if you want to create a node object. Once your cla
   use base qw( Contentment::Node::Revision );
 
   our $schema = {
-      associations => [{
+      attributes => [{
           name => 'my_field',
           type => 'String',
       }],
@@ -111,20 +113,43 @@ This creates a new node and a new revision under that node according the given C
 
 =cut
 
+# The $revise parameter is super-secret and is used by revise() to make sure we
+# don't create a node when revising.
 sub create {
-    my $class = shift;
+    my $class  = shift;
+    my $proto  = shift;
 
-    my $node = Contentment::Node->create;
-    my $self = $class->SUPER::create(@_);
+    # Create the object
+    my $self = $class->SUPER::create($proto);
 
-    $self->node($node);
-    push @{ $node->revisions }, $self;
-    $self->node->update;
-    $self->update;
+    # If we're creating a Contentment::Node::Revision (i.e., this is being
+    # called by Oryx::DB[IM]::Parent), create the node.
+    if ($class eq __PACKAGE__ && !$proto->{__node}) {
 
-    Contentment::Node::Manager->add_revision_to_current_collection($self);
+        # Create the node and set it for the revision and add the revision to
+        # the node
+        my $node = Contentment::Node->create;
+        $self->node($node);
+        push @{ $node->revisions }, $self;
+        $self->node->update;
+
+        # Confirm changes and set the updated_{on,by} fields
+        $self->update;
+
+        # Add the revision to the current collection
+        Contentment::Node::Manager->add_revision_to_current_collection($self);
+    }
 
     return $self;
+}
+
+sub update {
+    my $self = shift;
+
+    $self->updated_on(now);
+    $self->updated_by(Contentment::Security->get_principal->username);
+
+    return $self->SUPER::update;
 }
 
 =item $cloned_revision = $revision-E<gt>clone(\%args)
@@ -159,7 +184,7 @@ sub _all_attributes {
     return $attributes;
 }
 
-sub clone {
+sub revise {
     my $self              = shift;
     my $create_parameters = shift || {};
 
@@ -170,11 +195,17 @@ sub clone {
     }
 
     # Create the clone. Update the parent node.
-    my $clone = (ref $self)->SUPER::create($create_parameters);
-    $clone->node($self->node);
-    push @{ $clone->node->revisions }, $clone;
-    $clone->node->update;
-    $clone->update;
+    $create_parameters->{__create_revision} = 1;
+    my $clone = (ref $self)->create($create_parameters);
+
+    # Set the clone's node to the original's node
+    my $node = $self->PARENT('Contentment::Node::Revision')->node;
+    $clone->PARENT('Contentment::Node::Revision')->node($node);
+    $clone->PARENT('Contentment::Node::Revision')->update;
+
+    # Add the clone to the node's list of revision
+    push @{ $node->revisions }, $clone;
+    $node->update;
 
     # Make this revision the current one
     Contentment::Node::Manager->add_revision_to_current_collection($clone);

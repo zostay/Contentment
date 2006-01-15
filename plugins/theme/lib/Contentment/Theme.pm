@@ -3,7 +3,7 @@ package Contentment::Theme;
 use strict;
 use warnings;
 
-our $VERSION = '0.07';
+our $VERSION = 0.08;
 
 use Contentment::Log;
 use Contentment::Response;
@@ -59,7 +59,15 @@ Since the typical final file type uses the MIME-type "text/html", the theme dire
 
 This applies the requested theme master, C<$master>, using the current file type stored in C<Contentment::Response->top_kind> and the theme set in the "default_theme" key of the "Contentment::Plugin::Theme" setting.
 
-The special parameter "theme_dir" is passed to every template during generation to let it know of the template's base directory. This is relative to the base URL, so you may need to include a reference to the global variable "base_url" if you need an absolute base address for the client.
+The special parameter "theme_dir" is passed to every template during generation to let it know of the template's base directory. This is relative to the base URL, so you may need to include a reference to the site variable "base_url" if you need an absolute base address for the client:
+
+  my $site = Contentment::Site->current_site;
+  print $site->base_url;
+
+or using a Template Toolkit template:
+
+  [% USE Site %]
+  [% Site.base_url %]
 
 =cut
 

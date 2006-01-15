@@ -3,7 +3,7 @@ package Contentment::Form::Widget::TabularChoice;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = 0.08;
 
 use base 'Contentment::Form::Widget';
 
@@ -185,6 +185,11 @@ sub _button_column {
     my $size = shift;
     return $self->{button_column} < 0 ? $size + $self->{button_column}
                                       : $self->{button_column};
+}
+
+sub id {
+    my $self = shift;
+    return $self->{name};
 }
 
 sub render_begin {

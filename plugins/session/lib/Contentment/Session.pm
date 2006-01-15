@@ -3,7 +3,7 @@ package Contentment::Session;
 use strict;
 use warnings;
 
-our $VERSION = '0.10';
+our $VERSION = 0.11;
 
 use Contentment;
 use Data::UUID;
@@ -82,9 +82,9 @@ sub open_session {
 	if ($q) {
 		my $cookie = $q->cookie(
 			-name    => 'SESSIONID',
-			-domain  => $q->virtual_host,
+			-domain  => Contentment::Site->current_site->base_url->host,
 			-value   => $session_id,
-			-expires => '60m');
+			-expires => '+60m');
 		push @{ Contentment::Response->header->{'-cookie'} }, $cookie;
 	}
 

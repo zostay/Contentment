@@ -8,6 +8,7 @@ if (@files) {
 	my $num;
 	for my $file (@files) {
 		my $src = $file->lookup_source;
+        my $gen = $src->generator;
 		my $url = $src->path;
 		$url =~ s/\.\w+$/\.html/;
 
@@ -22,7 +23,7 @@ if (@files) {
 		}
 		print qq(
 			<li class="toc-item">
-			<a href="$url">).($src->get_property('title') || $src->path).q(</a> - ).$src->get_property('abstract').q(
+			<a href="$url">).($gen->get_property('title') || $gen->path).q(</a> - ).$gen->get_property('abstract').q(
 				</li>
 			);
 	}
