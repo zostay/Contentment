@@ -3,7 +3,7 @@ package Contentment::Build;
 use strict;
 use warnings;
 
-our $VERSION = '0.011_028';
+our $VERSION = 0.011_029;
 
 use base eval { require Apache::TestMB } ? 'Apache::TestMB' : 'Module::Build';
 
@@ -103,7 +103,7 @@ sub ACTION_test_upgrade {
 
     my $info = _info();
 
-    if (!_has_anythign_changed()) {
+    if (!_has_anything_changed()) {
         print "Skipping upgrade test because tagging has already happened.\n";
     }
 
@@ -146,8 +146,8 @@ sub ACTION_touch_versions {
 }
 
 sub _has_anything_changed {
-    my $dir = shift || ".";
-    
+    my $dir = @_ ? join ' ', @_ : '.';
+
     # Check to see if we've already tagged. If so, we won't bother to test the
     # upgrades anymore, since it's obviously already been a success
     my $command = "svn status -q $dir";
@@ -285,8 +285,15 @@ sub _update_version_of_yml {
 sub ACTION_touch_lib_versions {
     my $self = shift;
 
-    # Find the added and modified files
-    my %mods = _has_anything_changed('lib');
+    # Find the list of modifications
+    my %mods = _has_anything_changed('lib', 'buildlib');
+    
+    # If anything has changed, modify lib/Contentment.pm
+    if (keys %mods) {
+        $mods{'lib/Contentment.pm'} = 'M';
+    }
+
+    # Compute the list of modifications
     my @mods = grep { $mods{$_} =~ /^[AM]/ } keys %mods;
 
     my $new_version = _get_version();
@@ -517,7 +524,7 @@ sub ACTION_tag {
         # Commit the merge, we assume that the current tag is a tag and hasn't
         # been modified, therefore, no conflicts are possible.
         $command 
-            = "svn commit -m 'Merging $info->{BRANCH_TITLE} info current tag.'";
+            = "svn commit -m 'Merging $info->{BRANCH_TITLE} into current tag.'";
         $self->do_system($command)
                 or die "Failed to commit merge of $info->{BRANCH_TITLE}";
     };
@@ -597,6 +604,10 @@ sub ACTION_upload_release_to_PAUSE {
     print "Changing into directory /incoming.\n";
     $ftp->cwd('/incoming')
         or die "Cannot cwd into /incoming: ",$ftp->message;
+
+    print "Chaning to binary mode.\n";
+    $ftp->binary
+        or die "Cannot change mode to binary: ",$ftp->message;
     
     print "Putting file Contentment-$version.tar.gz\n";
     $ftp->put("Contentment-$version.tar.gz")
@@ -616,7 +627,7 @@ sub ACTION_upload_release_to_PAUSE {
             SUBMIT_pause99_add_uri_upload => " Upload the checked file ",
         },
     );
-    $request->authorization_base(@$upload{qw( username password )});
+    $request->authorization_basic(@$upload{qw( username password )});
 
     print "Notifying PAUSE via HTTP POST of upload.\n";
     my $response = $ua->request($request);
