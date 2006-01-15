@@ -83,8 +83,8 @@ sub ACTION_release {
         commit
         status_check
         tag
-        upload
-        announce
+        upload_release_to_CPAN
+        announce_release_to_Freshmeat
     );
 
     for my $task (@tasks) {
@@ -542,8 +542,29 @@ sub ACTION_tag {
     return 1;
 }
 
-sub ACTION_upload {
+# Some hardcoded checks to keep a random person from doing something bad if
+# they decide not to use their brain.
+sub _STERLING_ONLY {
+    my $msg = shift;
+
+    if ($ENV{LOGNAME} ne 'sterling') {
+        die "$msg (1)";
+    }
+
+    require Sys::Hostname;
+    my $hostname = Sys::Hostname::hostname();
+    if ($hostname =~ /^lockhart\b/) {
+        die "$msg (2)";
+    }
+
+    # If they pass both those on a fluke, oh geez. Forget it. Why the hell are
+    # they running ./Build upload_release_to_PAUSE anyway?!
+}
+
+sub ACTION_upload_release_to_PAUSE {
     my $self = shift;
+
+    _STERLING_ONLY('Sterling will be ticked off if someone other than him uploads a Contentment release to CPAN. Stop it.');
 
     my $version = _get_version();
 
@@ -618,7 +639,7 @@ sub ACTION_upload {
     }
 }
 
-sub ACTION_announce {
+sub ACTION_announce_release_to_Freshmeat {
     my $self = shift;
 
     print STDERR "announce: Not yet implemented\n";
