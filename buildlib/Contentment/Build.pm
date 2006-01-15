@@ -590,7 +590,7 @@ sub ACTION_upload_release_to_PAUSE {
         or die "Cannot connect to pause.perl.org: $@";
     
     print "Logging in as $upload->{username}.\n";
-    $ftp->login($upload->{username}, $upload->{password})
+    $ftp->login('anonymous', 'hanenkamp@cpan.org')
         or die "Cannot login as anonymous on pause.perl.org: ",$ftp->message;
 
     print "Changing into directory /incoming.\n";
