@@ -153,7 +153,7 @@ sub _has_anything_changed {
     my $command = "svn status -q $dir";
     print "$command\n";
     open STATUS, "$command|"
-        or die "Failed $command";
+        or die "Failed $command: $!";
 
     my %changes;
     while (<STATUS>) {
@@ -567,8 +567,8 @@ sub ACTION_upload {
     my $ftp = Net::FTP->new('pause.perl.org')
         or die "Cannot connect to pause.perl.org: $@";
     
-    print "Logging in as anonymous.\n";
-    $ftp->login('anonymous', 'hanenkamp@cpan.org')
+    print "Logging in as $upload->{username}.\n";
+    $ftp->login($upload->{username}, $upload->{password})
         or die "Cannot login as anonymous on pause.perl.org: ",$ftp->message;
 
     print "Changing into directory /incoming.\n";
