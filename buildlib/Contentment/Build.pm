@@ -103,28 +103,13 @@ sub ACTION_test_upgrade {
 
     my $info = _info();
 
-    # Check to see if we've already tagged. If so, we won't bother to test the
-    # upgrades anymore, since it's obviously already been a success
-    my $command = "svn diff";
-    print "$command\n";
-    open DIFF, "$command|"
-        or die "Failed $command";
-
-    my $changes = 0;
-    while (<DIFF>) {
-        $changes++;
-    }
-
-    close DIFF;
-
-    if (!$changes) {
+    if (!_has_anythign_changed()) {
         print "Skipping upgrade test because tagging has already happened.\n";
-        return 1;
     }
 
     # Check out the current tag in the tmp directory
     chdir File::Spec->tmpdir;
-    $command = "svn checkout $info->{TAG}/current";
+    my $command = "svn checkout $info->{TAG}/current";
     $self->do_system($command)
         or die "Failed $command for upgrade testing";
     chdir 'current';
@@ -160,6 +145,28 @@ sub ACTION_touch_versions {
     $self->depends_on('touch_plugin_versions');
 }
 
+sub _has_anything_changed {
+    my $dir = shift || ".";
+    
+    # Check to see if we've already tagged. If so, we won't bother to test the
+    # upgrades anymore, since it's obviously already been a success
+    my $command = "svn status -q $dir";
+    print "$command\n";
+    open STATUS, "$command|"
+        or die "Failed $command";
+
+    my %changes;
+    while (<STATUS>) {
+        chomp;
+        my ($status, $file) = split /\s+/;
+        $changes{ $file } = $status;
+    }
+
+    close STATUS;
+
+    return wantarray ? %changes : scalar keys %changes;
+}
+
 my $_get_version;
 sub _get_version {
     return $_get_version if defined $_get_version;
@@ -193,7 +200,9 @@ sub _get_version {
 
         my $dev = $_get_version =~ s/_//;
 
-        $_get_version += 0.000_001;
+        if (_has_anything_changed()) {
+            $_get_version += 0.000_001;
+        }
 
         if ($dev) {
             my ($major, $minor_rev) = split /\./, $_get_version;
@@ -276,25 +285,9 @@ sub _update_version_of_yml {
 sub ACTION_touch_lib_versions {
     my $self = shift;
 
-    # Use Subversion to find the changed files
-    open STATUS, "svn status lib|"
-        or die "Failed to open Subversion status: $!";
-
-    # Find all the files that changed, always include the Contentment module
-    my @mods = ('lib/Contentment.pm');
-    while (<STATUS>) {
-        chomp;
-        my ($flags, $filename) = split /\s+/;
-
-        next if $filename =~ m{^lib/Contentment\.pm$};
-        next unless $filename =~ /\.pm$/;
-
-        if ($flags =~ /^[AM]/) {
-            push @mods, $filename;
-        }
-    }
-
-    close STATUS;
+    # Find the added and modified files
+    my %mods = _has_anything_changed('lib');
+    my @mods = grep { $mods{$_} =~ /^[AM]/ } keys %mods;
 
     my $new_version = _get_version();
 
@@ -308,14 +301,11 @@ sub ACTION_touch_lib_versions {
 sub ACTION_touch_plugin_versions {
     my $self = shift;
 
-    # Use Subversion to find the changed plugins and files in those plugins
-    open STATUS, "svn status plugins|"
-        or die "Failed to open Subversion status: $!";
-
+    # Find added/modified/deleted files
+    my %files = _has_anything_changed('plugins');
+    
     my %mods;
-    while (<STATUS>) {
-        chomp;
-        my ($flags, $filename) = split /\s+/;
+    while (my ($filename, $flags) = each %files) {
 
         # Determine which plugin
         my ($plugin) = $filename =~ m[^plugins/([^/]+)];
@@ -397,7 +387,6 @@ sub ACTION_commit {
     # Unfortunately, it appears that svn commit reports normal execution, even
     # if the user aborts, so we'll use the status_check test to confirm success.
     my $command = 'svn commit';
-    print "$command\n";
     $self->do_system($command);
 
     return 1;
@@ -579,8 +568,7 @@ sub ACTION_upload {
     # Skip it if we show it's already uploaded
     my $upload = YAML::LoadFile('upload.yml');
     if ($upload->{uploaded}{$version}) {
-        print "Contentment-$version.tar.gz was already uploaded.\n";
-        return 1;
+        print "Contentment-$version.tar.gz was already uploaded. Skipping.\n";
     }
     
     $self->depends_on('tag');
