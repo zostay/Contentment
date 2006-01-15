@@ -484,8 +484,8 @@ sub ACTION_tag {
 
     my %found;
     while (<LIST>) {
-        my $tag = s/^$info->{TAG}\///;
-        $found{$tag}++;
+        s/^$info->{TAG}\///;
+        $found{$_}++;
     }
 
     close LIST;
