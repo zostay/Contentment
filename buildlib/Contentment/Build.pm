@@ -552,7 +552,7 @@ sub ACTION_tag {
 
     # Clean-up
     chdir '..';
-    rmpath('current');
+    rmtree('current');
     chdir $self->base_dir;
 
     # Die before we finish the process if we must
