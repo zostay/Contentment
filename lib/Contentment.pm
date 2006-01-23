@@ -10,7 +10,8 @@ use warnings;
 # Static::Simple: will serve static files from the application's root 
 # directory
 #
-use Catalyst qw/-Debug Static::Simple/;
+use Catalyst qw/-Debug DefaultView Static::Simple/;
+use File::Spec;
 
 our $VERSION = '0.01';
 
@@ -45,8 +46,18 @@ Catalyst based application.
 sub default : Private {
     my ( $self, $c ) = @_;
 
+    my $file = File::Spec->catfile('root', $c->request->path);
+    if (-f $file) {
+        $c->stash->{template} = $c->request->path;
+    }
+
+    else {
+        $c->res->status(404);
+        $c->error('File Not Found');
+    }
+
     # Hello World
-    $c->response->body( $c->welcome_message );
+#    $c->response->body( $c->welcome_message );
 }
 
 #
