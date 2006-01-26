@@ -7,7 +7,7 @@ SKIP: {
 	eval "use Apache::TestRequest 'GET_BODY'";
 	skip "Apache::Test is not installed.", 10 if $@;
 
-	my $body = GET_BODY('/settings.txt');
+	my $body = GET_BODY('/plugins/settings/settings.txt');
 	my @body = split /[\n\r]+/, $body;
 
 	is(shift(@body), 'testing_foo = foo');

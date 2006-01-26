@@ -24,6 +24,7 @@ my $build = Contentment::Build->new(
 		'MIME::Types'       => 0,
 		'Oryx'              => 0.16,
 		'Pod::Simple'       => 0,
+        'Readonly'          => 0,
 		'Template'          => 2,
 		'Text::Balanced'    => 0,
 		'Test::Deep'        => 0,

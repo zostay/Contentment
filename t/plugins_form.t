@@ -16,7 +16,7 @@ SKIP: {
 
     Apache::TestRequest::user_agent(cookie_jar => {});
 
-    my $body = parse_html(my $content = GET_BODY('/form.html'));
+    my $body = parse_html(my $content = GET_BODY('/plugins/form/form.html'));
 
     $s &= has_tag_with_attrs($body, 'form', {
         enctype => 'multipart/form-data',
@@ -80,7 +80,7 @@ SKIP: {
 
 #    diag("Using submission_id = $submission_id");
 
-    $content = POST_BODY('/form.html', [
+    $content = POST_BODY('/plugins/form/form.html', [
         FORM         => 't::test_form',
         ID           => $submission_id,
         ACTIVATE     => 1,

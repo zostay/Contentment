@@ -7,7 +7,7 @@ SKIP: {
 	eval "use Apache::TestRequest 'GET_BODY'";
 	skip "Apache::Test is not installed.", 5 if $@;
 
-	my $body = GET_BODY('/pod.html');
+	my $body = GET_BODY('/plugins/perl/pod.html');
 
 	like($body, qr{<h1>NAME</h1>});
 	like($body, qr{<p>Simple Test Case</p>});

@@ -1,0 +1,167 @@
+=head1 NAME
+
+Contentment::Index::Term - Interface for Index plugin terms
+
+=head1 SYNOPSIS
+
+  package Contentment::MyPlugin::Term;
+
+  use Scalar::Util qw( weaken );
+
+  sub new {
+      my ($class, $p) = @_;
+
+      my $self = bless {
+          name       => $p->{name},
+          index      => $p->{index},
+          generators => $p->{generators},
+      }, $class;
+
+      weaken $self->{index};
+
+      return $self;
+  }
+
+  sub name       { return shift->{name} }
+  sub index      { return shift->{index} }
+  sub generators { return shift->{generators} }
+
+=head1 DESCRIPTION
+
+Each term object must implement the features described here. The actual features available in a term depend partly upon the C<features()> method of the index object returning the term.
+
+=head2 METHODS
+
+These are the methods that all terms must define:
+
+=over
+
+=item $name = $term-E<gt>name
+
+This method will return the full string identifying the term. This string should uniquely identify the term within the index.
+
+=item $title = $term-E<gt>title
+
+This can be used to give the term a pretty name.
+
+=item $description = $term-E<gt>description
+
+This can used to give the term a description.
+
+=item $index = $term-E<gt>index
+
+This method will return the original index that spawned it.
+
+=item @generators = $term-E<gt>generators
+
+This method will return the list (possibly empty) of generators associated with this term. In the case of a term for an index with the C<$SUBTERMS> feature, this should only return the generators which identified directly by the current term.
+
+=back
+
+=head2 SEARCH METHODS
+
+A term for an index with the C<$SEARCH> feature does not need to define any additional methods.
+
+=head2 TERM LIST METHODS
+
+A term for an index with the C<$TERM_LIST> feature does not need to define any additional methods.
+
+=head2 FREEFORM METHODS
+
+A term for an index with the C<$FREEFORM_TERMS> feature does not need to define any additional methods.
+
+=head2 SUBTERM METHODS
+
+A term for an index with the C<$SUBTERMS> feature must define the following methods:
+
+=over
+
+=item @terms = $term-E<gt>subterms
+
+Returns a list (possibly empty) of all the subterms of the current term.
+
+=item @generators = $term-E<gt>all_generators
+
+Returns a list (possibly empty) of all generators held directly within this term and indirectly by being held within a subterm. Each generator should be returned exactly once.
+
+=back
+
+=head2 TERM LINKS METHODS
+
+A term for an index with the C<$TERM_LINKS> feature must define the following methods:
+
+=over
+
+=item @terms = $term-E<gt>related_terms
+
+Returns a list (possibly empty) of related terms.
+
+=back
+
+=head2 SYNONYM METHODS
+
+A term for an index with the C<$SYNONYMS> feature must define the following methods:
+
+=over
+
+=item @synonyms = $term-E<gt>synonyms
+
+Returns a list (possibly empty) of alternate strings that could be used as the name of the current term.
+
+=back
+
+=head2 QUANTITATIVE METHODS
+
+A term for an index with the C<$QUANTITATIVE> feature does not need to define any additional methods.
+
+=head2 REVERSIBLE METHODS
+
+A term for an index with the C<$REVERSE> feature does not need to define any additional methods.
+
+=head2 SCORED METHODS
+
+A term for an index with the C<$SCORE> feature must define the following methods:
+
+=over
+
+=item $score = $term-E<gt>score($generator)
+
+This method returns the score of the term match for the given generator. If the generator is not listed by the C<generators()> method, the score must be 0. Otherwise, the score must be a positive number less than or equal to 100.
+
+=item @scored_generators = $term-E<gt>scored_generators
+
+This method should return the same thing as the C<generators()> method, except that each element is not a generator, but a two element array. The first element of the array is the score (a positive number less than or equal to 100). The second element of the array is the generator object.
+
+=back
+
+=head2 EDIT METHODS
+
+A term for an index with the C<$EDIT> feature must define the following methods:
+
+=over
+
+=item $term-E<gt>add_generator($generator)
+
+This method adds the given generator to the list of generators returned by C<generators()> or throws an exception to indicate failure.
+
+=item $term-E<gt>remove_generator($generator)
+
+This method removes the given generator from the list of generators returned by C<generators()> or throws an exception to indicate failure.
+
+=head1 AUTHOR
+
+Andrew Sterling Hanenkamp, E<lt>hanenkamp@cpan.orgE<gt>
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright 2005 Andrew Sterling Hanenkamp E<lt>hanenkamp@cpan.orgE<gt>.  All 
+Rights Reserved.
+
+This module is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself. See L<perlartistic>.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.
+
+=cut

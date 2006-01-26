@@ -3,7 +3,7 @@ package Contentment::Build;
 use strict;
 use warnings;
 
-our $VERSION = 0.011_029;
+our $VERSION = '0.011_030';
 
 use base eval { require Apache::TestMB } ? 'Apache::TestMB' : 'Module::Build';
 
@@ -79,10 +79,9 @@ sub ACTION_release {
         test
         test_upgrade
         disttest
-        touch_versions
         commit
-        status_check
         tag
+        status_check
         upload_release_to_PAUSE
         announce_release_on_Freshmeat
     );
@@ -148,8 +147,6 @@ sub ACTION_touch_versions {
 sub _has_anything_changed {
     my $dir = @_ ? join ' ', @_ : '.';
 
-    # Check to see if we've already tagged. If so, we won't bother to test the
-    # upgrades anymore, since it's obviously already been a success
     my $command = "svn status -q $dir";
     print "$command\n";
     open STATUS, "$command|"
@@ -177,7 +174,7 @@ sub _get_version {
         or die "Failed to open Subversion diff of lib/Contentment.pm: $!";
 
     while (<VERDIFF>) {
-        if (($_get_version) = /^\+our \$VERSION = ([\d\._]+);$/) {
+        if (($_get_version) = /^\+our \$VERSION = '?([\d\._]+)'?;$/) {
             last;
         }
     }
@@ -191,7 +188,7 @@ sub _get_version {
             or die "Failed to open lib/Contentment.pm: $!";
 
         while (<VERCONT>) {
-            if (($_get_version) = /our \$VERSION = ([\d\._]+);$/) {
+            if (($_get_version) = /our \$VERSION = '?([\d\._]+)'?;$/) {
                 last;
             }
         }
@@ -230,7 +227,7 @@ sub _update_version_of_pm {
 
     while (<INPM>) {
         if (/^our \$VERSION =/) {
-            print OUTPM "our \$VERSION = $version;\n";
+            print OUTPM "our \$VERSION = '$version';\n";
         }
 
         else {
@@ -476,8 +473,7 @@ sub _info {
 sub ACTION_tag {
     my $self = shift;
 
-    # This should only run if there are no more modifications to commit about
-    $self->depends_on('status_check');
+    $self->depends_on('commit');
 
     # Get the essential information
     my $version = _get_version();
@@ -575,7 +571,6 @@ sub ACTION_upload_release_to_PAUSE {
     _STERLING_ONLY('Sterling will be ticked off if someone other than him uploads a Contentment release to CPAN. Stop it.');
 
     my $version = _get_version();
-    $version =~ s/_//; # ./Build dist doesn't do that
 
     require YAML;
 

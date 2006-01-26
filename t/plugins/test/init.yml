@@ -1,6 +1,6 @@
 name: Test
 description: A test plugin.
-version: 0.01
+version: 0.02
 order: 10
 
 use_lib:
@@ -8,6 +8,9 @@ use_lib:
 
 use:
  - Contentment::Node::Test
+ - Contentment::Test::Indexer
+ - Contentment::Test::Index
+ - Contentment::Test::Term
 
 hooks:
   Contentment::VFS::simple:
@@ -16,3 +19,4 @@ hooks:
   Contentment::install: 
     order: 10
     sub: Contentment::Node::Test::install
+  Contentment::Index::begin: Contentment::Test::Indexer::register_indexer

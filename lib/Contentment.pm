@@ -3,7 +3,7 @@ package Contentment;
 use strict;
 use warnings;
 
-our $VERSION = 0.011_029;
+our $VERSION = '0.011_030';
 
 use Carp;
 use Contentment::Hooks;
@@ -223,7 +223,7 @@ sub load_plugin {
 	for my $use (@uses) {
 		Contentment::Log->debug("%s: use %s", [$plugin_dir,$use]);
 		eval "use $use";
-		die $@ if $@;
+		die qq(Couldn't use "$use": $@) if $@;
 	}
 
 	# Check for a variable named "hooks" and setup each hook.

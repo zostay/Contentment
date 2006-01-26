@@ -1,0 +1,282 @@
+=head1 NAME
+
+Contentment::Index::Index - Interface for Index plugin indexes
+
+=head1 SYNOPSIS
+
+  package Contentment::MyPlugin::Index;
+
+  use Contentment::Index qw( :features );
+
+  # This may or may not be useful depending on the index, but we use it here
+  # for simplicity.
+  use base qw( Class::Singleton );
+
+  sub name {
+      return "Contentment::MyPlugin::Index";
+  }
+
+  sub title {
+      return "My Index";
+  }
+
+  sub description {
+      return "It sure is a nice one.";
+  }
+
+  sub features {
+      return $SEARCH | $LIST_TERMS;
+  }
+
+  sub search {
+      my $self = shift;
+      
+      return
+         map  { [ 1, $_ ] }
+         grep { defined $_ }
+         map  { Contentment::MyPlugin::Term->find($_) } @_;
+  }
+
+  sub terms {
+      my $self = shift;
+
+      return Contentment::MyPlugin::Term->list($_);
+  }
+
+=head1 DESCRIPTION
+
+An index describes an individual collection of terms. Every index must define a few methods. The index may define other methods, depending upon the value returned by the C<features()> method.
+
+=head2 GENERAL METHODS
+
+Every index must define these methods:
+
+=over
+
+=item $name = $index-E<gt>name
+
+Returns the name of the index. This should be a unique identifier for the index.
+
+=item $title = $index-E<gt>title
+
+Returns a pretty name for the index.
+
+=item $description = $index-E<gt>description
+
+Returns a short description of the index.
+
+=item $features = $index-E<gt>features
+
+Returns a scalar value describing the features of the index and the terms the index returns. The scalar is a bit field used with numeric constants defined by L<Contentment::Index> (and exported via the ":features" tag).
+
+Here is a short description of each of the features. Sections following and the method sections of L<Contentment::Index::Term> describe the individual methods that must be defined to implement each feature.
+
+=over
+
+=item $FEATURELESS
+
+This is the contant value indicating that the index has no features. This is pretty useless since a featureless index isn't capable of doing anything.
+
+=item $SEARCH
+
+This is probably the most basic and common feature. A searchable index allows for a simple text search to attempt to find one or more terms in an index. A search is usually aggregated across many or all available searchable indexes.
+
+=item $LIST_TERMS
+
+Indexes with this feature are able to return a list of all possible terms.
+
+=item $FREEFORM_TERMS
+
+Indexes with this feature are able to create new terms on the fly given a string name.
+
+=item $SUBTERMS
+
+An index with subterms means that a term may have a parent and may be a container terms as children.
+
+=item $TERM_LINKS
+
+Term links allow for showing terms related to a given term. This allows for "see also" relationships.
+
+=item $SYNONYMS
+
+Synonyms are names that alias to the same term. This way multiple strings may be used to refer to the same term.
+
+=item $QUANTITATIVE
+
+A quantitative index is one that indexes upon numbers, dates, or other quantitative elements. The index presents metadata to describe the possible ranges and types of quantities that are applicable.
+
+=item $REVERSE
+
+A reversible index is one for which terms may be looked up by generator.
+
+=item $SCORE
+
+A scored index is one for which a match need not be a boolean fact, either matched or not. Rather a scored index is one for which each match may be scored in a range.
+
+=item $EDIT
+
+An edittable index is one that provides a standard interface for adding and removing generators to and from terms.
+
+=back
+
+=back
+
+=head2 SEARCH METHODS
+
+These methods must be defined by any index with the C<$SEARCH> feature.
+
+=over
+
+=item @terms = $index-E<gt>search(@strings)
+
+Given a set of strings, this method should return an array of terms that match any of the given strings. 
+
+If there are no matches, the method should return an empty list. 
+
+=back
+
+=head2 TERM LIST METHODS
+
+These methods must be defined by any index with the C<$LIST_TERMS> feature.
+
+=over
+
+=item @terms = $index-E<gt>terms
+
+This returns a list of term objects implementing the interface described by L<Contentment::Index::Term>.
+
+=back
+
+=head2 FREEFORM METHODS
+
+These methods must be defined by any index with the C<$FREEFORM_TERMS> feature.
+
+=over
+
+=item $term = $index-E<gt>create_term($string, $generator)
+
+Given a string term name and a reference to a generator, the method returns a term object implementing the interface described by L<Contentment::Index::Term>.
+
+=back
+
+=head2 SUBTERM METHODS
+
+No additional methods must be defined by an index with the C<$SUBTERMS> feature.
+
+=head2 TERM LINK METHODS
+
+No additional methods must be defined by an index with the C<$TERM_LINKS> feature.
+
+=head2 SYNONYM METHODS
+
+No additional methods must be defined by an index with the C<$SYNONYMS> feature.
+
+=head2 QUANTITATIVE METHODS
+
+Quantitative terms come in one of the following string formats:
+
+=over
+
+=item "=$value"
+
+The term represents quantities that exactly match C<$value>.
+
+=item "<$value"
+
+The term represents quantities that are less than C<$value>.
+
+=item ">$value"
+
+The term represents quantities that are greater than C<$value>.
+
+=item "<=$value"
+
+The term represents quantities that are less than or equal to C<$value>.
+
+=item ">=$value"
+
+The term represents quantities that are greater than or equal to C<$value>.
+
+=item "($min-$max)"
+
+The term represents quantities that are between C<$min> and C<$max>, but do not include C<$min> and C<$max>
+
+=item "[$min-$max)"
+
+The term represents quantities that are between C<$min> and C<$max> or equal to C<$min>, but not those equal to C<$max>.
+
+=item "($min-$max]"
+
+The term represents quantities that are between C<$min> and C<$max> or equal to C<$max>, but not those equal to C<$min>.
+
+=item "[$min-$max]"
+
+The term represents quantities that are between C<$min> and C<$max> or equal to C<$min> or C<$max>.
+
+=back
+
+An index with the C<$QUANTITATIVE> feature must define the following methods.
+
+=over
+
+=item $type = $index-E<gt>quantitative_type
+
+This method returns the type of quantitative terms used by this index. The must be one of the following values, which are exported via the ":types" tag of L<Contentment::Index>:
+
+=over
+
+=item $INTEGER
+
+The quantities are integers, i.e., each value is a string of decimal digits.
+
+=item $FLOAT
+
+The quantities are floats, i.e., they will be in a decimal point format.
+
+=item $DATETIME
+
+The quantites are date/time values specified in ISO8601 format.
+
+=back
+
+=back
+
+=head2 REVERSIBLE METHODS
+
+An index with the C<$REVERSE> feature must define the following methods:
+
+=over
+
+=item @terms = $index-E<gt>for_generator($generator)
+
+Given a generator, this method will return the terms that are directly associated that generator.
+
+=back
+
+=head2 SCORED METHODS
+
+An index with the C<$SCORE> feature does not need to define any additional index methods.
+
+=head2 EDIT METHODS
+
+An index with the C<$EDIT> feature does not need to define any additional index methods.
+
+=head1 AUTHOR
+
+Andrew Sterling Hanenkamp, E<lt>hanenkamp@cpan.orgE<gt>
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright 2005 Andrew Sterling Hanenkamp E<lt>hanenkamp@cpan.orgE<gt>.  All 
+Rights Reserved.
+
+This module is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself. See L<perlartistic>.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.
+
+=cut
+
+1
