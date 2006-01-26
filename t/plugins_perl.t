@@ -7,12 +7,12 @@ SKIP: {
 	eval "use Apache::TestRequest 'GET'";
 	skip "Apache::Test is not installed.", 3 if $@;
 
-	my $res = GET('/perl.txt');
+	my $res = GET('/plugins/perl/perl.txt');
 	my $body = $res->content;
 
 	# test that the string start right, since CGI usually adds "; encoding=..."
 	# on to the end
 	like($res->header('Content-Type'), qr{^text/plain});
 	like($body, qr/^Hello World!/m);
-	like($body, qr{^path = /perl\.pl}m);
+	like($body, qr{^path = /plugins/perl/perl\.pl}m);
 }

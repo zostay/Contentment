@@ -5,9 +5,9 @@ use Test::More tests => 6;
 
 SKIP: {
 	eval "use Apache::TestRequest 'GET_BODY'";
-	skip "Apache::Test is not installed.", 1 if $@;
+	skip "Apache::Test is not installed.", 6 if $@;
 
-	my $body = GET_BODY('/theme.html');
+	my $body = GET_BODY('/plugins/theme/theme.html');
 
 	like($body, qr{<div id="content">\s*Hello Theme!});
 	like($body, qr{^/themes is a directory}m);

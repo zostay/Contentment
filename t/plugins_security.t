@@ -9,7 +9,7 @@ SKIP: {
 
     Apache::TestRequest::user_agent(cookie_jar => {});
 
-    my $body = GET_BODY('/security.txt');
+    my $body = GET_BODY('/plugins/security/security.txt');
 
     like($body, qr{^type = anonymous}m);
     like($body, qr{^username = Anonymous}m);
@@ -21,7 +21,7 @@ SKIP: {
     like($body, qr{^information\.foo = 1}m);
     like($body, qr{^preferences\.bar = 1}m);
 
-    $body = GET_BODY('/security.txt');
+    $body = GET_BODY('/plugins/security/security.txt');
 
     like($body, qr{^type = authenticated}m);
     like($body, qr{^username = admin}m);
@@ -37,7 +37,7 @@ SKIP: {
     my ($auth_bar) = $body =~ $auth_re_bar;
     ok($auth_bar++ >= 1);
 
-    $body = GET_BODY('/security.txt');
+    $body = GET_BODY('/plugins/security/security.txt');
 
     like($body, qr{^type = anonymous}m);
     like($body, qr{^username = Anonymous}m);
@@ -49,7 +49,7 @@ SKIP: {
     like($body, qr{^information\.foo = 1}m);
     like($body, qr{^preferences\.bar = 1}m);
     
-    $body = GET_BODY('/security.txt');
+    $body = GET_BODY('/plugins/security/security.txt');
 
     like($body, qr{^type = authenticated}m);
     like($body, qr{^username = admin}m);
@@ -61,7 +61,7 @@ SKIP: {
     like($body, qr{^information\.foo = $auth_foo}m);
     like($body, qr{^preferences\.bar = $auth_bar}m);
 
-    $body = GET_BODY('/security-lookup.txt');
+    $body = GET_BODY('/plugins/security/security-lookup.txt');
 
     like($body, qr{^type = authenticated}m);
     like($body, qr{^username = admin}m);

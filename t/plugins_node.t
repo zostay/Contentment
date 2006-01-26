@@ -9,7 +9,7 @@ SKIP: {
     eval "use Apache::TestRequest 'GET_BODY'";
     skip "Apache::Test is not installed.", 17 if $@;
 
-    my $body = GET_BODY('/node.txt');
+    my $body = GET_BODY('/plugins/node/node.txt');
     
     like($body, qr{^node1 comment = Test 1}m);
     like($body, qr{^node1 title = Testing 1}m);

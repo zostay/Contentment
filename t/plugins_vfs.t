@@ -3,7 +3,7 @@
 use strict;
 use Contentment;
 use File::System::Test;
-use Test::More tests => 151;
+use Test::More tests => 212;
 
 close STDERR;
 open STDERR, '>>t/logs/error_log' 
@@ -12,14 +12,19 @@ open STDERR, '>>t/logs/error_log'
 chdir "t/htdocs/cgi-bin";
 
 my @dirs = qw(
-    cgi-bin themes themes/default themes/default/style
-    themes/default/text themes/default/text/html test
+    cgi-bin themes themes/default themes/default/style themes/default/text
+    themes/default/text/html test plugins plugins/form plugins/index
+    plugins/node plugins/perl plugins/security plugins/session plugins/settings
+    plugins/template plugins/theme plugins/vfs
 );
 
 my @files = qw(
-    foo.txt form-template.tt2 form.html.pl generator.pl index.html node.pl
-    perl.pl pod.pod security-lookup.pl security.pl session1.pl session2.pl
-    settings.pl template.tt2 theme.pl themes/default/style/main.css
+    plugins/vfs/foo.txt plugins/form/form.html.pl generator.pl index.html 
+    plugins/node/node.pl plugins/perl/perl.pl plugins/perl/pod.pod 
+    plugins/security/security-lookup.pl plugins/security/security.pl 
+    plugins/session/session1.pl plugins/session/session2.pl
+    plugins/settings/settings.pl plugins/template/template.tt2 
+    plugins/theme/theme.pl themes/default/style/main.css
     themes/default/text/html/toc-hier.pl themes/default/text/html/toc.pl
     themes/default/text/html/top.tt2 test/Testing_2 test/Testing_3
 );
@@ -36,8 +41,8 @@ for my $path (@dirs, @files) {
     is_object_sane($root->lookup($path));
 }
 
-ok(defined $root->child('foo.txt'));
-ok(!defined $root->child('foo2.txt'));
+ok(defined $root->child('plugins'));
+ok(!defined $root->child('plugins2'));
 
 for my $path (@dirs, @files) {
     my $obj = $root->lookup($path);
