@@ -1,7 +1,10 @@
 name: Plain
 description: A generator for plain files (binary or text).
-version: 0.11
-order: 0
+version: 0.12
+
+depends_on:
+ - Log
+ - VFS
 
 use_lib:
  - lib

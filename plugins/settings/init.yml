@@ -1,8 +1,11 @@
 name: Settings
 description: Used to store configuration. Required by Contentment.
-version: 0.10
+version: 0.11
 required: 1
-order: -90
+
+depends_on:
+ - Log
+ - Oryx
 
 use_lib:
  - lib

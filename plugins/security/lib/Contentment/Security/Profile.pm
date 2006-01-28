@@ -1,9 +1,9 @@
-package Conte3ntment::Security::Profile;
+package Contentment::Security::Profile;
 
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.08';
 
 =head1 NAME
 

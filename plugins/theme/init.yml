@@ -1,7 +1,10 @@
 name: Theme
-version: 0.08
+version: 0.09
 description: The theme plugin attempts to wrap content in pretty themes.
-order: 0
+
+depends_on:
+ - Log
+ - Settings
 
 use_lib:
  - lib

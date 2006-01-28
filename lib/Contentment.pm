@@ -3,7 +3,7 @@ package Contentment;
 use strict;
 use warnings;
 
-our $VERSION = '0.011_030';
+our $VERSION = '0.011_031';
 
 use Carp;
 use Contentment::Hooks;
@@ -13,6 +13,7 @@ use Contentment::Response;
 use Contentment::Request;
 use Cwd ();
 use File::Spec;
+use List::Util qw( reduce );
 use YAML ();
 
 =head1 NAME
@@ -38,23 +39,19 @@ sub global_configuration {
 	return $global_init;
 }
 
-=item Contentment-E<gt>begin
-
-Perform the initialization tasks for Contentment. Including running all hooks registered for "C<Contentment::begin>".
-
-=cut
-
-sub begin {
-	# TODO Determine if assuming the cgi-bin is the cwd is a good idea.
-	
+# %plugins = _find_plugins()
+#
+# Loads all the plugin init.yml files and stores those as the values of the
+# %plugins hash. The keys will be set to the value of the "name" key in the
+# init.yml file.
+#
+sub _find_plugins {
 	# We assume the the directory the CGI is running in is the current working
 	# directory. We assume we will find a file named "init.yml" there that will
 	# contain the initial configuration for Contentment.
 	my $cwd         = Cwd::getcwd;
 	my $init_config = File::Spec->catfile($cwd, 'init.yml');
 	$global_init    = YAML::LoadFile($init_config);
-
-	# Load Plugins Phase #1: Find the plugins.
 
 	# Find the directory/directories to start searching for plugins.
 	my @plugins_dir = ($global_init->{plugins_dir});
@@ -103,9 +100,6 @@ sub begin {
 			# Remember the plugin directory location.
 			$init->{plugin_dir} = $full_plugin_dir;
 
-			# Set the order to 0 if not given
-			$init->{order} ||= 0;
-			
 			# Use the installed init settings, if already installed. This allows
 			# the user to change the way the plugin operates after installation.
 			eval {
@@ -122,11 +116,168 @@ sub begin {
 		closedir PLUGINS;
 	}
 
-	# Load Plugins Phase #2: Load the plugins.
-	
+    return %plugins;
+}
+
+# _resolve_dependencies(\%plugins)
+#
+# Takes the %plugins hash and determines the appropriate order for the plugins
+# to be dealt with. Dependencies are figured for just load order.
+#
+# Basically, any order explicitly set will be kept as is, but any plugin that
+# has a dependency on something else will be sure to have an order at least one
+# greater than the order of all its dependencies.
+#
+sub _resolve_dependencies {
+    my $plugins = shift;
+
+    my $plugin;
+
+    # Normalize depends_on
+    for $plugin (values %$plugins) {
+        if (defined $plugin->{depends_on} && !ref $plugin->{depends_on}) {
+            $plugin->{depends_on} = [ $plugin->{depends_on} ];
+        }
+
+        if (!defined $plugin->{depends_on}) {
+            $plugin->{depends_on} = [];
+        }
+    }
+
+    # Delete any plugin that has a dependency that doesn't exist.
+    my $changed = 1;
+    while ($changed) {
+        $changed = 0;
+
+        for $plugin (values %$plugins) {
+            for my $dependency (@{ $plugin->{depends_on} }) {
+                if (!defined $plugins->{ $dependency }) {
+                    Contentment::Log->warning(
+                        "Plugin $plugin->{name} requires unavailable ",
+                        "dependency $dependency. Will not load.",
+                    );
+                    delete $plugins->{ $plugin->{name} };
+
+                    # Iterate again to cascade to additional dependencies.
+                    $changed++;
+                }
+            }
+
+        }
+    }
+
+    # Find all plugins without a set order and without dependencies and set the
+    # order to 0.
+    my (@ordered, @free);
+    for $plugin (values %$plugins) {
+        if (defined $plugin->{order}) {
+            push @ordered, $plugin;
+        }
+
+        elsif (!@{ $plugin->{depends_on} }) {
+#            print STDERR "Setting $plugin->{name} to 0.\n";
+            $plugin->{order} = 0;
+            push @ordered, $plugin;
+        }
+
+        else {
+            push @free, $plugin;
+        }
+    }
+
+    # Loop until there are no more @free
+    while (@free) {
+        # Loop while @free is changing
+        my $free_size = 0;
+        while ($free_size != @free) {
+            $free_size = @free;
+
+            # Loop through remaining untouched plugins
+            my @new_free;
+            for $plugin (@free) {
+                # Skip this one if it already has an order (which can happen if
+                # the LOOP_BREAKER is invoked below).
+                next if defined $plugin->{order};
+
+                # Determine if all dependencies have an order, and if so, pick
+                # the maximum:
+                my $max 
+                    = reduce { !defined $a || !defined $b ? undef
+                             : $a > $b                    ? $a 
+                             :                              $b }
+                      map    { $plugins->{$_}{order} }
+                      @{ $plugin->{depends_on} };
+
+                # If all orders defined, set this order to the max + 1
+                if (defined $max) {
+#                    print STDERR "Setting $plugin->{name} to $max + 1\n";
+                    $plugin->{order} = $max + 1;
+                }
+
+                # Otherwise, wait for the next iteration
+                else {
+#                    print STDERR "Not ordering $plugin->{name} ( ",
+#                        join(' ', @{ $plugin->{depends_on} }), " )\n";
+                    push @new_free, $plugin;
+                }
+            }
+
+            @free = @new_free;
+        }
+
+        # If there are any left, we need to break a loop.
+        #
+        # For each free node, check to see if it is in a loop. (It is possible
+        # for a free node to be dependent on a loop instead.)
+        LOOP_BREAKER: 
+        for $plugin (@free) {
+            
+            my (@open, %closed);
+            
+            # This is a list of nodes left to search.
+            @open = @{ $plugin->{depends_on} };
+
+            # The list of nodes already passed.
+            $closed{ $plugin->{name} }++;
+
+            # Keep searching until we've exhausted the open list.
+            while (my $dependency = pop @open) {
+                
+                # The node we're searching was already hit: it is in a loop.
+                if ($closed{ $dependency }) {
+                    # Note the problem in the log.
+                    Contentment::Log->error(
+                        "Detected a depdency loop in $dependency plugin."
+                    );
+
+                    # We cannot resolve a loop, so we will just set the looping
+                    # dependency to order = 0 and hope that's good enough.
+                    $plugins->{ $dependency }{order} = 0;
+
+                    # This should allow us to clear up this loop
+                    last LOOP_BREAKER;
+                }
+            }
+        }
+    }
+
+    # Log the orders found
+    for my $plugin (values %$plugins) {
+        Contentment::Log->debug(
+            "Order $plugin->{name} = $plugin->{order} ( ",
+            join(' ', @{ $plugin->{depends_on} })," )",
+        );
+    }
+}
+
+# _load_plugins(\%plugins)
+#
+# Loads the Perl modules associated with the plugin.
+sub _load_plugins {
+    my $plugins = shift;
+
 	# Sort the plugins by their given load order.
-	# TODO Make this a "depends" instead.
-	my @plugins = sort { $a->{order} <=> $b->{order} } values %plugins;
+	my @plugins = sort { $a->{order} <=> $b->{order} } values %$plugins;
 	
 	# Load each plugin in order
 	for my $plugin (@plugins) {
@@ -134,8 +285,14 @@ sub begin {
 		eval { Contentment->load_plugin($plugin) };
 		Contentment::Log->error("Failed loading plugin %s: %s", [$plugin->{name},$@]) if $@;
 	}
+}
 
-	# Load Plugind Phase #3: Install/Upgrade/Remove the plugins.
+# _install_plugins(\%plugins)
+#
+# Find new plugins that need to be installed and install them.
+#
+sub _install_plugins {
+    my $plugins = shift;
 
 	# Get ready to figure out what's installed and not
 	my $settings = Contentment::Setting->instance;
@@ -151,7 +308,7 @@ sub begin {
 		}
 
 		# Run the handler.
-		my $plugin = $plugins{$iter->name};
+		my $plugin = $$plugins{$iter->name};
 		eval {
 			$iter->call($plugin);
 		};
@@ -167,10 +324,21 @@ sub begin {
 		$settings->{'Contentment::Plugin::'.$iter->name} = $plugin;
 	}
 
+	# Save the install settings.
+	$settings->{'Contentment::installed'} = $installed;
+}
+
+sub _upgrade_plugins {
+    my $plugins = shift;
+
+	# Get ready to figure out what's installed and not
+	my $settings = Contentment::Setting->instance;
+	my $installed = $settings->{'Contentment::installed'};
+
 	# Now check for upgrades.
-	$iter = Contentment::Hooks->call_iterator('Contentment::upgrade');
+	my $iter = Contentment::Hooks->call_iterator('Contentment::upgrade');
 	while ($iter->next) {
-		my $plugin = $plugins{$iter->name};
+		my $plugin = $$plugins{$iter->name};
 		
 		# If the installed version is the same as this version, skip this
 		# handler.
@@ -185,8 +353,32 @@ sub begin {
         $settings->{'Contentment::Plugin::'.$iter->name} = $plugin;
 	}
 
-	# Save the install/upgrade settings.
+	# Save the upgrade settings.
 	$settings->{'Contentment::installed'} = $installed;
+}
+
+
+=item Contentment-E<gt>begin
+
+Perform the initialization tasks for Contentment. Including running all hooks registered for "C<Contentment::begin>".
+
+=cut
+
+sub begin {
+	# Plugins Phase #1: Find the plugins.
+    my %plugins = _find_plugins();
+
+    # Plugins Phase #2: Sort out dependencies.
+    _resolve_dependencies(\%plugins);
+
+	# Plugins Phase #3: Load the plugins.
+    _load_plugins(\%plugins);
+	
+	# Plugins Phase #4: Install plugins.
+    _install_plugins(\%plugins);
+
+    # Plugins Phase #5: Upgrade plugins.
+    _upgrade_plugins(\%plugins);
 
 	# Now that all is installed, initialize all the begin handlers
 	Contentment::Log->debug("Calling hook Contentment::begin");
@@ -268,7 +460,6 @@ sub load_plugin {
 			name => $plugin_init->{name},
 		);
 	}
-
 
 	# Create empty remove hook so removals work properly
 	unless ($plugin_init->{hooks}{'Contentment::remove'}) {

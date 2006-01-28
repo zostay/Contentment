@@ -1,8 +1,10 @@
 name: Oryx
-version: 0.01
+version: 0.02
 description: Establishes a connection to storage for Oryx objects.
 required: 1
-order: -90
+
+depends_on:
+ - Log
 
 use_lib:
  - lib

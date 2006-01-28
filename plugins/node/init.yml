@@ -1,6 +1,10 @@
 name: Node
-version: 0.04
+version: 0.05
 description: The plugin providing nodes and such for Contentment.
+
+depends_on:
+ - Log
+ - Oryx
 
 use_lib:
  - lib

@@ -1,7 +1,12 @@
 name: Test
 description: A test plugin.
 version: 0.02
-order: 10
+
+depends_on:
+ - Index
+ - Log
+ - Node
+ - VFS
 
 use_lib:
  - lib

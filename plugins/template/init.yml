@@ -1,7 +1,10 @@
 name: Template
-version: 0.09
+version: 0.1
 description: Allows Contentment tools to use Template Toolkit templates.
-order: 10
+
+depends_on:
+ - Log
+ - VFS
 
 use_lib:
  - lib

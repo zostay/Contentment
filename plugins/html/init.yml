@@ -1,7 +1,11 @@
 name: HTML
 description: This plugin handles HTML file handling.
-version: 0.07
-order: 10
+version: 0.08
+
+depends_on:
+ - Log
+ - Plain
+ - VFS
 
 use_lib:
  - lib

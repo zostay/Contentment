@@ -1,7 +1,9 @@
 name: Transform
-version: 0.06
+version: 0.07
 description: The transformation plugin translates documents of one kind to another.
-order: 0
+
+depends_on:
+ - Log
 
 use_lib:
  - lib

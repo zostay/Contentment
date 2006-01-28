@@ -1,7 +1,13 @@
 name: Perl
 description: Plugin for handling Perl components.
-version: 0.14
-order: 10
+version: 0.15
+
+depends_on:
+ - Log
+ - Plain
+ - Settings
+ - Transform
+ - VFS
 
 use_lib:
  - lib

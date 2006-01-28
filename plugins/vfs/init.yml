@@ -1,8 +1,11 @@
 name: VFS
 description: Used to find files. Required by Contentment.
-version: 0.17
+version: 0.18
 required: 1
-order: -50
+
+depends_on:
+ - Index
+ - Log
 
 use_lib:
  - lib

@@ -3,7 +3,7 @@ package Contentment::Log;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.011_031';
 
 use Carp;
 use Contentment::Hooks;
@@ -31,7 +31,7 @@ sub default_logger {
 			'default_logger',
 		);
 
-		while (my $msg = pop @queue) {
+		while (my $msg = shift @queue) {
 			Contentment::Hooks->call("Contentment::Log::error", $msg);
 		}
 	} else {

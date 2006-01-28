@@ -1,7 +1,13 @@
 name: Blog
 description: A simple weblog.
-version: 0.06
-order: 10
+version: 0.07
+
+depends_on:
+ - Log
+ - Node
+ - Security
+ - Settings
+ - VFS
 
 use_lib:
  - lib

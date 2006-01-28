@@ -3,7 +3,7 @@ package Contentment::Build;
 use strict;
 use warnings;
 
-our $VERSION = '0.011_030';
+our $VERSION = '0.011_031';
 
 use base eval { require Apache::TestMB } ? 'Apache::TestMB' : 'Module::Build';
 
@@ -46,9 +46,9 @@ sub ACTION_test {
 
     # We are using Apache::Test
     if ($self->can('run_tests')) {
-        $self->depends_on('code');
-        my $success = $self->depends_on('run_tests');
-        $self->depends_on('test_clean');
+        $self->ACTION_code;
+        my $success = $self->ACTION_run_tests;
+        $self->ACTION_test_clean;
 
         # Make this work like the normal Module::Build: die when tests fail.
         unless ($success) {

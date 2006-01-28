@@ -1,6 +1,11 @@
 name: Site
-version: 0.01
+version: 0.02
 description: A plugin for storing multiple site configurations.
+
+depends_on:
+ - Log
+ - Oryx
+ - Settings
 
 use_lib:
  - lib

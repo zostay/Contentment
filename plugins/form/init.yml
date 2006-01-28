@@ -1,10 +1,17 @@
 name: Form
-version: 0.08
+version: 0.09
 description: A plugin for automating form rendering, validation, and processing.
+
+depends_on:
+ - Log
+ - Oryx
+ - Security
+ - Settings
+ - Theme
+ - VFS
 
 use_lib:
  - lib
-
 
 use:
  - Contentment::Form
