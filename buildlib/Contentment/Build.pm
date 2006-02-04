@@ -3,36 +3,137 @@ package Contentment::Build;
 use strict;
 use warnings;
 
-our $VERSION = '0.011_031';
+our $VERSION = '0.011_032';
 
-use base eval { require Apache::TestMB } ? 'Apache::TestMB' : 'Module::Build';
+use base qw( Module::Build );
+our @ISA;
 
 use File::Copy;
 use File::Path;
 use File::Spec;
 
-sub ACTION_test {
-	my $self = shift;
+# Apache::TestMB is entirely too narrow-minded for my purposes. Thus, I've
+# stolen the bits I need from it and will just need to update if the internals
+# of it's API make significant changes in the future.
+#
+# The primary purpose of all my fancy build script finagling is to allow for
+# lots of automatic testing and to contain the automatic release process. I'm
+# the only developer that should be releasing anything, but I wanted to include
+# it as part of the build script because it's an obvious place for it and it'll
+# make it easier for somebody else in the future to use.
+#
+# I originally tried Module::Release, but it's really also too narrow-minded.
+# Therefore, I learned what I could from it and then did my own thing.
+#
+# -- Sterling, February 4, 2006
 
-	print "Creating test version of CGI script: t/htdocs/cgi-bin/contentment.cgi\n";
+BEGIN {
+    eval 'use Apache::Test';
+    if (!$@) {
+        eval 'sub found_apache_test { 1 }';
+    }
 
-	open IN, 'htdocs/cgi-bin/contentment.cgi'
-		or die "Cannot open htdocs/cgi-bin/contentment.cgi: $!";
-	open OUT, '>t/htdocs/cgi-bin/contentment.cgi'
-		or die "Cannot open t/htdocs/cgi-bin/contentment.cgi: $!";
+    else {
+        eval 'sub found_apache_test { 0 }';
+    }
+}
 
-	while (<IN>) {
-		if (/^use Contentment;/) {
-			print OUT qq{use lib '../../../blib/lib';\n};
+sub apache_test_script { 't/TEST_APACHE' }
+
+sub ACTION_apache_generate_test_scripts {
+    my $self = shift;
+
+    print 'Creating test version of CGI script: ',
+          "t/htdocs/cgi-bin/contentment.cgi\n";
+
+    open IN, 'htdocs/cgi-bin/contentment.cgi'
+        or die "Cannot open htdocs/cgi-bin/contentment.cgi: $!";
+    open OUT, '>t/htdocs/cgi-bin/contentment.cgi'
+        or die "Cannot open t/htdocs/cgi-bin/contentment.cgi: $!";
+
+    while (<IN>) {
+        if (/^use Contentment;/) {
+            print OUT qq{use lib '../../../blib/lib';\n};
 #            print OUT qq{use lib '../../lib';\n};
-		}
-		
-		print OUT $_;
-	}
+        }
+        
+        print OUT $_;
+    }
 
-	close IN;
-	close OUT;
+    close IN;
+    close OUT;
 
+    $self->make_executable('t/htdocs/cgi-bin/contentment.cgi');
+
+    $self->add_to_cleanup('t/htdocs/cgi-bin/contentment.cgi');
+
+    my $content = <<'END_OF_SCRIPT';
+#line 72 buildlib/Contentment/Build.pm
+use strict;
+use warnings;
+
+my $apache_test = Apache::TestRunContentment->new;
+$apache_test->run(@ARGV);
+
+package Apache::TestRunContentment;
+
+use base 'Apache::TestRunPerl';
+
+sub pre_configure {
+    my $self = shift;
+
+    push @{ $self->{argv} }, glob 't/http/*.t';
+}
+
+1
+
+END_OF_SCRIPT
+
+    my $file = $self->localize_file_path($self->apache_test_script);
+
+    my $basic_cfg = Apache::Test::basic_config();
+    $basic_cfg->write_perlscript($file, $content);
+    $self->add_to_cleanup($self->apache_test_script);
+}
+
+sub _bliblib {
+    my $self = shift;
+    return (
+        '-I', File::Spec->catdir($self->base_dir, $self->blib, 'lib'),
+        '-I', File::Spec->catdir($self->base_dir, $self->blib, 'arch'),
+    );
+}
+
+sub ACTION_apache_test_clean {
+    my $self = shift;
+    $self->depends_on('apache_generate_test_scripts');
+    $self->do_system($self->perl, $self->_bliblib,
+                     $self->localize_file_path($self->apache_test_script),
+                     '-clean');
+}
+
+sub ACTION_apache_test {
+    my $self = shift;
+    $self->depends_on('apache_generate_test_scripts');
+    my $success 
+        = $self->do_system($self->perl, $self->_bliblib,
+                     $self->localize_file_path($self->apache_test_script),
+                     '-bugreport', '-verbose='. ($self->verbose || 0 ));
+
+    die "Some tests failed!" unless $success;
+}
+
+sub ACTION_standard_test {
+    my $self = shift;
+
+    $self->test_files(glob "t/standard/*.t");
+
+    $self->SUPER::ACTION_test(@_);
+}
+
+sub ACTION_test {
+    my $self = shift;
+    
     # Clean-up the database if requested, but only once because of the
     # test_upgrade that might happen later
     if (delete $self->{args}{'cleandb'}) {
@@ -40,25 +141,36 @@ sub ACTION_test {
         unlink "t/htdocs/cgi-bin/testdb";
     }
 
-	$self->make_executable('t/htdocs/cgi-bin/contentment.cgi');
+    $self->ACTION_standard_test;
 
-	$self->add_to_cleanup('t/htdocs/cgi-bin/contentment.cgi');
+    if ($self->found_apache_test) {
+        $self->depends_on('code');
+        $self->depends_on('apache_test_clean');
+        $self->ACTION_apache_test;
+    }
+}
 
-    # We are using Apache::Test
-    if ($self->can('run_tests')) {
-        $self->ACTION_code;
-        my $success = $self->ACTION_run_tests;
-        $self->ACTION_test_clean;
+sub ACTION_list_tests {
+    my $self = shift;
 
-        # Make this work like the normal Module::Build: die when tests fail.
-        unless ($success) {
-            die "Failed while running tests.";
-        }
+    # We have two test sets:
+    #  - HTTP     : tests in t/http
+    #  - Standard : tests in t/standard
+
+    # HTTP tests
+    print "HTTP Tests:\n";
+    print "-" x 70,"\n";
+    my $tests = $self->test_files(glob "t/http/*.t");
+    for my $test (@$tests) {
+        print "$test\n";
     }
 
-    # We are not using Apache::Test
-    else {
-        $self->SUPER::ACTION_test(@_);
+    # Standard tests
+    print "\nStandard Tests:\n";
+    print "-" x 70,"\n";
+    $tests = $self->test_files(glob "t/standard/*.t");
+    for my $test (@$tests) {
+        print "$test\n";
     }
 }
 
@@ -97,20 +209,36 @@ sub ACTION_release {
     }
 }
 
+sub do_svn {
+    my $self = shift;
+
+    $self->do_system('svn', @_);
+}
+
+sub read_svn {
+    my $self = shift;
+
+    my $command = "svn ".join(' ', @_);
+    print "$command\n";
+    open my $fh, "$command|"
+        or die "Failed to open pipe to $command for reading: $!";
+
+    return $fh;
+}
+
 sub ACTION_test_upgrade {
     my $self = shift;
 
-    my $info = _info();
+    my $info = $self->_info();
 
-    if (!_has_anything_changed()) {
+    if (!$self->_has_anything_changed()) {
         print "Skipping upgrade test because tagging has already happened.\n";
     }
 
     # Check out the current tag in the tmp directory
     chdir File::Spec->tmpdir;
-    my $command = "svn checkout $info->{TAG}/current";
-    $self->do_system($command)
-        or die "Failed $command for upgrade testing";
+    $self->do_svn('checkout', "$info->{TAG}/current")
+        or die "Failed to checkout $info-{TAG}/current for upgrade testing";
     chdir 'current';
 
     # Run the tests there to recreate a testdb
@@ -145,41 +273,41 @@ sub ACTION_touch_versions {
 }
 
 sub _has_anything_changed {
+    my $self = shift;
     my $dir = @_ ? join ' ', @_ : '.';
 
-    my $command = "svn status -q $dir";
-    print "$command\n";
-    open STATUS, "$command|"
-        or die "Failed $command: $!";
+    my $STATUS = $self->read_svn('status', '-q', $dir);
 
     my %changes;
-    while (<STATUS>) {
+    while (<$STATUS>) {
         chomp;
-        my ($status, $file) = split /\s+/;
+        my ($status, $file) = unpack "A7 A*", $_;
         $changes{ $file } = $status;
     }
 
-    close STATUS;
+    close $STATUS
+        or die "Failed to get svn status of $dir: $!";
 
     return wantarray ? %changes : scalar keys %changes;
 }
 
 my $_get_version;
 sub _get_version {
+    my $self = shift;
     return $_get_version if defined $_get_version;
 
     # Read the diff for Contentment to see if the VERSION has been updated
     # already and use that if it has
-    open VERDIFF, "svn diff lib/Contentment.pm|"
-        or die "Failed to open Subversion diff of lib/Contentment.pm: $!";
+    my $VERDIFF = $self->read_svn('diff', 'lib/Contentment.pm');
 
-    while (<VERDIFF>) {
+    while (<$VERDIFF>) {
         if (($_get_version) = /^\+our \$VERSION = '?([\d\._]+)'?;$/) {
             last;
         }
     }
 
-    close VERDIFF;
+    close $VERDIFF
+        or die "Failed to open svn diff of lib/Contentment.pm: $!";
 
     # If the diff didn't contain a new version, let's get the old version and
     # increment it
@@ -197,9 +325,11 @@ sub _get_version {
 
         my $dev = $_get_version =~ s/_//;
 
-        if (_has_anything_changed()) {
+        if ($self->_has_anything_changed()) {
             $_get_version += 0.000_001;
         }
+
+        $_get_version = sprintf "%.06f", $_get_version;
 
         if ($dev) {
             my ($major, $minor_rev) = split /\./, $_get_version;
@@ -283,7 +413,7 @@ sub ACTION_touch_lib_versions {
     my $self = shift;
 
     # Find the list of modifications
-    my %mods = _has_anything_changed('lib', 'buildlib');
+    my %mods = $self->_has_anything_changed('lib', 'buildlib');
     
     # If anything has changed, modify lib/Contentment.pm
     if (keys %mods) {
@@ -293,7 +423,7 @@ sub ACTION_touch_lib_versions {
     # Compute the list of modifications
     my @mods = grep { $mods{$_} =~ /^[AM]/ } keys %mods;
 
-    my $new_version = _get_version();
+    my $new_version = $self->_get_version();
 
     print "Contentment version $new_version:\n";
 
@@ -306,7 +436,7 @@ sub ACTION_touch_plugin_versions {
     my $self = shift;
 
     # Find added/modified/deleted files
-    my %files = _has_anything_changed('plugins');
+    my %files = $self->_has_anything_changed('plugins');
     
     my %mods;
     while (my ($filename, $flags) = each %files) {
@@ -330,8 +460,6 @@ sub ACTION_touch_plugin_versions {
         }
     }
 
-    close STATUS;
-
     # Find versions for each plugin
     my %versions;
     for my $plugin (keys %mods) {
@@ -339,16 +467,16 @@ sub ACTION_touch_plugin_versions {
         # For each modified plugin, read the diff on the init.yml to see if
         # version: has been updated already and use that if it has
         my $new_version;
-        open VERDIFF, "svn diff plugins/$plugin/init.yml|"
-            or die "Failed to open Subversion diff of plugins/$plugin/init.yml: $!";
+        my $VERDIFF = $self->read_svn('diff', "plugins/$plugin/init.yml");
 
-        while (<VERDIFF>) {
+        while (<$VERDIFF>) {
             if (($new_version) = /^\+version: ([\d\.]+)/) {
                 last;
             }
         }
 
-        close VERDIFF;
+        close $VERDIFF
+            or die "Failed to open diff of plugins/$plugin/init.yml: $!";
 
         # If the diff didn't contain a new version, let's get the old version
         # and increment it
@@ -363,7 +491,7 @@ sub ACTION_touch_plugin_versions {
             $new_version = $init->{version} + 0.01;
         }
 
-        $versions{$plugin} = $new_version;
+        $versions{$plugin} = sprintf '%.02f', $new_version;
     }
 
     while (my ($plugin, $group) = each %mods) {
@@ -390,8 +518,8 @@ sub ACTION_commit {
 
     # Unfortunately, it appears that svn commit reports normal execution, even
     # if the user aborts, so we'll use the status_check test to confirm success.
-    my $command = 'svn commit';
-    $self->do_system($command);
+    $self->do_svn('commit')
+        or die "Failed to commit: $!";
 
     return 1;
 }
@@ -400,10 +528,10 @@ sub ACTION_status_check {
     my $self = shift;
 
     die "Cannot continue because of the above files are not yet committed."
-        if _has_anything_changed();
+        if $self->_has_anything_changed();
 }
 
-# my $info = _info()
+# my $info = $self->_info()
 #
 # This returns useful information about the current repository, to make sure
 # that tagging and various actions properly consider branches. This method will
@@ -429,19 +557,18 @@ sub ACTION_status_check {
 #            ROOT/tags/Contentment/BRANCH_TITLE
 #
 sub _info {
-    my $command = 'svn info';
-    print "$command\n";
-    open INFO, "$command|"
-        or die "Could not get Subversion info: $!";
+    my $self = shift;
+    my $INFO = $self->read_svn('info');
 
     my $info;
-    while (<INFO>) {
+    while (<$INFO>) {
         if (($info) = /^URL:\s*(.*)$/) {
             last;
         }
     }
 
-    close INFO;
+    close $INFO
+        or die "Failed to open Subversion info: $!";
 
     die "Please checkout the trunk or a branch---not a tag."
         if $info =~ /\/tags\//;
@@ -476,23 +603,21 @@ sub ACTION_tag {
     $self->depends_on('commit');
 
     # Get the essential information
-    my $version = _get_version();
-    my $info = _info();
+    my $version = $self->_get_version();
+    my $info = $self->_info();
 
     # List the tags made to make sure we haven't already done this
-    my $command = "svn list $info->{TAG}";
-    print "$command\n";
-    open LIST, "$command|"
-        or die "Failed to perform a Subversion list of $info->{TAG}: $!";
+    my $LIST = $self->read_svn('list', $info->{TAG});
 
     my %found;
-    while (<LIST>) {
+    while (<$LIST>) {
         chomp;
         s/\/$//;
         $found{$_}++;
     }
 
-    close LIST;
+    close $LIST
+        or die "Cannot open Subversion list $info->{TAG}: $!";
 
     # Did we already do the versioning?
     if ($found{$version}) {
@@ -504,25 +629,23 @@ sub ACTION_tag {
 
     # Check out the current tag in the tmp directory
     chdir File::Spec->tmpdir;
-    $command = "svn checkout $info->{TAG}/current";
-    $self->do_system($command)
-        or die "Failed $command for merging";
+    $self->do_svn('checkout', "$info->{TAG}/current")
+        or die "Failed checkout of $info->{TAG}/current for merging";
     chdir 'current';
 
     # If these fail we want to make sure we still clean-up
     eval {
 
         # Merge the current branch into the current tag
-        $command = "svn merge $info->{TAG}/current $info->{BRANCH}";
-        $self->do_system($command)
-            or die "Failed $command";
+        $self->do_svn('merge', "$info->{TAG}/current", $info->{BRANCH})
+            or die "Failed merge of $info->{TAG}/current with $info->{BRANCH}";
 
         # Commit the merge, we assume that the current tag is a tag and hasn't
         # been modified, therefore, no conflicts are possible.
-        $command 
-            = "svn commit -m 'Merging $info->{BRANCH_TITLE} into current tag.'";
-        $self->do_system($command)
-                or die "Failed to commit merge of $info->{BRANCH_TITLE}";
+        $self->do_svn('commit', 
+            '-m', "Merge $info->{BRANCH_TITLE} $version into current tag.")
+                or die "Failed to commit merge of ".
+                       "$info->{BRANCH_TITLE} $version";
     };
 
     my $ERROR = $@;
@@ -538,9 +661,8 @@ sub ACTION_tag {
     }
 
     # Finally, finish by tagging the branch with it's version number
-    $command = "svn copy -m 'Tagging $info->{BRANCH_TITLE} as $version.' "
-              ."$info->{BRANCH} $info->{TAG}/$version";
-    $self->do_system($command)
+    $self->do_svn('copy', '-m', "Tagging $info->{BRANCH_TITLE} as $version.",
+        $info->{BRANCH}, "$info->{TAG}/$version")
            or die "Failed to tag $info->{BRANCH_TITLE} as $version";
 
     return 1;
@@ -570,7 +692,7 @@ sub ACTION_upload_release_to_PAUSE {
 
     _STERLING_ONLY('Sterling will be ticked off if someone other than him uploads a Contentment release to CPAN. Stop it.');
 
-    my $version = _get_version();
+    my $version = $self->_get_version();
 
     require YAML;
 
@@ -653,6 +775,39 @@ sub ACTION_announce_release_on_Freshmeat {
     my $self = shift;
 
     print STDERR "announce: Not yet implemented\n";
+}
+
+sub ACTION_manifest {
+    my $self = shift;
+
+    my %files;
+
+    my $LIST = $self->read_svn('list', '-R');
+
+    while (<$LIST>) {
+        chomp;
+        $files{ $_ } ++ if -f;
+    }
+
+    close $LIST
+        or die "Failed to open Subversion file list: $!";
+
+    my %mods = $self->_has_anything_changed;
+    while (my ($filename, $mod) = each %mods) {
+        if ($mod =~ /^A/ && -f $filename) {
+            $files{ $filename } ++;
+        }
+    }
+
+    open MANIFEST, ">MANIFEST"
+        or die "Failed to open MANIFEST for overwriting: $!";
+
+    for my $name (sort keys %files) {
+        print MANIFEST $name,"\n";
+        print "Added to MANIFEST: ",$name,"\n";
+    }
+
+    close MANIFEST;
 }
 
 1

@@ -3,7 +3,7 @@ package Contentment::Index;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.03';
 
 use base qw( Class::Singleton Exporter );
 
@@ -146,7 +146,7 @@ sub indexes {
     }
 
     if (defined $features) {
-        return grep { $features & $_->features == $features } @indexes;
+        return grep { ($features & $_->features) == $features } @indexes;
     }
 
     else {

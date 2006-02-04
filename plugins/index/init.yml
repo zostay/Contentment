@@ -1,5 +1,5 @@
 name: Index
-version: 0.02
+version: 0.03
 description: Plugin describing how index, category, and taxonomy systems may be described.
 
 depends_on:
