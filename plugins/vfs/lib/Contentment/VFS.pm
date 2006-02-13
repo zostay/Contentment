@@ -11,7 +11,7 @@ use Contentment::Request;
 use File::Spec;
 use File::System;
 
-our $VERSION = '0.17';
+our $VERSION = '0.19';
 
 use base 'File::System::Passthrough';
 
@@ -48,7 +48,7 @@ When someone looks up a path starting with the name you register, the handler wi
 
 The handler will be passed a single argument, the relative path under the named path that was requested. (A lone slash ("/") will be passed if the user asks for the name you registered).
 
-  my $vfs = Contentment::VFS->instance;
+  my $vfs = $context->vfs;
 
   # The /node handler will be passed "/"
   my $obj = $vfs->lookup('/node');
@@ -87,7 +87,7 @@ This is a hash of the properties to set on the file system object (in addition t
 
 The VFS class is a singleton object that can be referenced by doing:
 
-  $vfs = Contentment::VFS->instance;
+  $vfs = $context->vfs;
 
 Once you have a C<$vfs> object, you can use it to lookup files and directories. Whenever possible, the VFS delegates work directly to L<File::System::Object>, so see that documentation for the basic details. Any additional functionality is described in this document.
 
@@ -95,7 +95,7 @@ Once you have a C<$vfs> object, you can use it to lookup files and directories. 
 
 =over
 
-=item $vfs = Contentment::VFS-E<gt>instance
+=item $vfs = $context-E<gt>vfs
 
 Returns a reference to the VFS singleton object.
 
@@ -133,15 +133,15 @@ sub _simple_lookup {
         if ($short_path =~ s/^$name//) {
             $short_path = "/$short_path" unless $short_path =~ m{^/};
         
-            Contentment::Log->debug(
-                'Asking simple VFS handler named %s for %s',
-                [$name,$short_path]);
+#            Contentment::Log->debug(
+#                'Asking simple VFS handler named %s for %s',
+#                [$name,$short_path]);
 
             my $file_args = $iter->call($short_path);
 
             if ($file_args) {
-                Contentment::Log->debug('Found a simple VFS file for %s',
-                    [$path]);
+#                Contentment::Log->debug('Found a simple VFS file for %s',
+#                    [$path]);
 
                 $file_args->{path} = $path;
                 return bless {
@@ -901,6 +901,24 @@ sub unmount {
 
 =back
 
+=head2 CONTEXT
+
+This class adds the following methods to the context:
+
+=over
+
+=item $vfs = $context-E<gt>vfs
+
+Returns the VFS object.
+
+=cut
+
+sub Contentment::Context::vfs {
+    return Contentment::VFS->instance;
+}
+
+=back
+
 =head2 HOOK HANDLERS
 
 =over
@@ -912,12 +930,13 @@ Handles the "Contentment::Response::resolve" handler. Looks for a file in the VF
 =cut
 
 sub resolve {
-	my $path = shift;
-	my $vfs = Contentment::VFS->instance;
+	my $path    = shift;
+    my $context = Contentment->context;
+	my $vfs     = $context->vfs;
 
     # Default to the request path_info, if no $path argument is given
 	unless ($path) {
-		my $q = Contentment::Request->cgi;
+		my $q = $context->cgi;
 		$path = $q->path_info;
 	}
 
@@ -943,8 +962,8 @@ sub resolve {
         
         # The path doesn't end in a "/", redirect them so that it does.
         else {
-			return Contentment::Response->redirect(
-                "$path/", %{ Contentment::Request->cgi->Vars }
+			return $context->response->redirect(
+                "$path/", %{ $context->cgi->Vars }
             );
 		}
 	} 

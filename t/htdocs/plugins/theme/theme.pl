@@ -1,7 +1,6 @@
 print "Hello Theme!\n";
 
-use Contentment::VFS;
-my $vfs = Contentment::VFS->instance;
+my $vfs = $context->vfs;
 
 my $themes = $vfs->lookup('/themes');
 print "/themes is a directory\n" 

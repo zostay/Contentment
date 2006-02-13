@@ -3,7 +3,7 @@ package Contentment::Form::Submission;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.10';
 
 use base 'Oryx::Class';
 
@@ -70,10 +70,12 @@ sub create {
 
     my $uuid = Data::UUID->new;
 
+    my $context = Contentment->context;
+
     # Set defaults
     $args->{submission_id} = $uuid->create_str;
-    $args->{session_id}    = Contentment::Session->instance_id;
-    $args->{username}      = Contentment::Security->get_principal->username;
+    $args->{session_id}    = $context->session_id;
+    $args->{username}      = $context->security->get_principal->username;
     $args->{results}       = {};
     $args->{errors}        = {};
     $args->{is_activated}  = 0;

@@ -3,7 +3,7 @@ package Contentment::Template::Provider;
 use strict;
 use warnings;
 
-our $VERSION = 0.09;
+our $VERSION = '0.11';
 
 use Contentment::Log;
 use Contentment::Response;
@@ -32,7 +32,12 @@ sub fetch {
             ||= Template::Config->parser($self->{PARAMS})
             ||  return (Template::Config->error(), 
                         Template::Constants::STATUS_ERROR);
-        my $parsedoc = $parser->parse($$name, {});
+
+        my $parsedoc = $parser->parse($$name, {})
+                       || Contentment::Exception->throw(
+                              message => "Failed to parse template: ".
+                                         $parser->error,
+                          );
             
 		my $data = Template::Document->new($parsedoc);
         $data->blocks->{input} = sub { join '', <STDIN> };
@@ -49,7 +54,7 @@ sub fetch {
 
     # Otherwise, assume a path and try to resolve
     else {
-		$generator = Contentment::Response->resolve($name);
+		$generator = Contentment->context->response->resolve($name);
 	}
 
 	Contentment::Log->debug("Resolved %s template to %s", [$name,$generator]);

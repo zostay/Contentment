@@ -1,2 +1,1 @@
-my $session = Contentment::Session->instance;
-$session->{foo} = 1;
+$context->session->{foo} = 1;

@@ -3,9 +3,7 @@ package Contentment::Security;
 use strict;
 use warnings;
 
-our $VERSION = 0.07;
-
-use base 'Class::Singleton';
+our $VERSION = '0.09';
 
 use Contentment::Log;
 use Contentment::Security::Permission;
@@ -33,7 +31,7 @@ Plugins can use this class to check the permissions available to the current pri
       my $vote = shift;
 
       # throw an exception if they can't moderate comments
-      Contentment::Security->check_permission(
+      Contentment->context->security->check_permission(
           'Contentment::Plugin::Moderation::moderate_comment');
 
       $self->{vote} += $vote;
@@ -86,7 +84,10 @@ At the start of each request, the security manager that has been configured for 
 For most developers, all that's really needed is to know which permissions have been granted for the current request. You must register your permissions before using them. Do so with the C<register_permissions()> method:
 
   sub install {
-      Contentment::Security->register_permissions(
+      my $context  = shift;
+      my $security = $context->security;
+
+      $security->register_permissions(
           'Contentment::Plugin::MyPlugin::do_something' => {
               title       => 'Do Something",
               description => "Allow person to do something.",
@@ -108,7 +109,8 @@ To check which permissions have been granted to the current request, just use th
 
       # check to see if the current user can do_something(). If not, this will
       # throw an exception.
-      Contentment::Security->check_permission(
+      my $context = Contentment->context;
+      $context->security->check_permission(
           'Contentment::Plugin::MyPlugin::do_something');
 
       $class->{do} = "something";
@@ -118,7 +120,7 @@ For developers needing more fine-grained control, you can also use the C<has_per
        
 Finally, if you need to figure out what the current principal is or access the profile associated with the principal, use the L<get_principal()> method.
 
-  my $principal = Contentment::Security->get_principal;
+  my $principal = $security->get_principal;
   print "User ",$princpal->username," has the following roles:\n";
   for my $role (@{ $princpal->roles }) {
       print " * ",$role->title,"\n";
@@ -134,19 +136,15 @@ Here is the documentation for each method of C<Contentment::Security>.
 
 =over
 
-=item $secman = Contentment::Security->security_manager
-
-Returns the security manager implementation being used.
-
 =cut
 
 # Initialize Class::Singleton
-sub _new_instance {
+sub new {
     my $class = shift;
+    my $ctx   = shift;
 
     # Load the plugin settings
-    my $settings 
-        = Contentment::Setting->instance->{'Contentment::Plugin::Security'};
+    my $settings = $ctx->settings->{'Contentment::Plugin::Security'};
     my $security_manager_class 
         = $settings->{'security_manager'}
             || 'Contentment::Security::Manager';
@@ -156,17 +154,7 @@ sub _new_instance {
     }, $class;
 }
 
-sub instance {
-    my $proto = shift;
-    my $class = ref $proto || $proto;
-    return $class->SUPER::instance(@_);
-}
-
-sub security_manager {
-    return shift->instance->{security_manager};
-}
-
-=item @permissions = Contentment::Security->register_permissions(%perms)
+=item @permissions = $security-E<gt>register_permissions(%perms)
 
 This method registers all the given permissions and returns a list of L<Contentment::Security::Permission> object created (or found) for the permissions registered.
 
@@ -177,7 +165,7 @@ See L</"SECURITY FOR PLUGINS"> for an example of this method in use.
 =cut
 
 sub register_permissions {
-    my $class = shift;
+    my $self = shift;
    
     # This array is to store the result 
     my @perms;
@@ -212,20 +200,20 @@ sub register_permissions {
     return @perms;
 }
 
-=item $test = Contentment::Security->has_permission($perm)
+=item $test = $security-E<gt>has_permission($perm)
 
 Returns a true value if the current principal has the permission named C<$perm> or false otherwise.
 
 =cut
 
 sub has_permission {
-    my $class = shift;
-    my $perm  = shift;
-    my $permissions = $class->get_principal->permissions;
+    my $self = shift;
+    my $perm = shift;
+    my $permissions = $self->get_principal->permissions;
     return ($permissions->{$perm} || $permissions->{SuperUser}) ? 1 : q{};
 }
 
-=item Contentment::Security-E<gt>check_permission($perm)
+=item $security-E<gt>check_permission($perm)
 
 This method uses C<has_permission()> to determine if the current request has been granted the named permission. If not, an exception is thrown.
 
@@ -243,18 +231,18 @@ sub check_permission {
     }
 }
 
-=item Contentment::Security-E<Gt>check_permissions(@perm)
+=item $security-E<gt>check_permissions(@perm)
 
 This method uses C<has_permission()> to determine if the current request has been granted at least one of the named permissions. If not, an exception is thrown.
 
 =cut
 
 sub check_permissions {
-    my $class = shift;
+    my $self = shift;
 
     my $permission = 1;
     for my $perm (@_) {
-        $permission &= $class->has_permission($perm);
+        $permission &= $self->has_permission($perm);
     }
 
     unless ($permission) {
@@ -265,34 +253,64 @@ sub check_permissions {
     }
 }
 
-=item $principal = Contentment::Security-E<gt>get_principal
+=item $principal = $security-E<gt>get_principal
 
-Returns the principal object associated with the current request. This is basically short for:
-
-  $principal = Contentment::Security->security_manager->get_principal
+Returns the principal object associated with the current request.
 
 =cut
 
 sub get_principal {
-    my $class = shift;
-    return $class->security_manager->get_principal;
+    my $self = shift;
+    return $self->{security_manager}->get_principal;
 }
 
-=item $principal = Contentment::Security-E<gt>lookup_principal($username)
+=item $principal = $security-E<gt>lookup_principal($username)
 
 Returns the principal object associated with the given username or C<undef> if no match is found.
 
 =cut
 
 sub lookup_principal {
-    my $class    = shift;
+    my $self     = shift;
     my $username = shift;
-    return $class->security_manager->lookup_principal($username);
+    return $self->{security_manager}->lookup_principal($username);
 }
 
 =back
 
-=head1 HOOK HANDLERS
+=head2 CONTEXT
+
+This class adds the following context methods:
+
+=over
+
+=item $security = $context->security
+
+This method returns the main security object for the application.
+
+=cut
+
+sub Contentment::Context::security {
+    my $context = shift;
+    return defined $context->{security} ? $context->{security} :
+        Contentment::Exception->throw(message => "Security is not available.");
+}
+
+=item $security_manager = $context->security_manager
+
+This method returns the security manager for the application.
+
+=cut
+
+sub Contentment::Context::security_manager {
+    my $context = shift;
+    return defined $context->{security} ? $context->{security}->{security_manager} : 
+        Contentment::Exception->throw(message => "Security manager is not available.");
+}
+
+=back
+
+=head2 HOOK HANDLERS
 
 =over
 
@@ -303,8 +321,12 @@ Implements the "Contentment::install" hook. It is responsible for installing all
 =cut
 
 sub install {
+    my $context = shift;
+    my $storage = $context->storage;
+
+    my $self = $context->{security} = Contentment::Security->new($context);
+
     # Create the tables
-    my $storage = $Contentment::Oryx::storage;
     $storage->deployClass('Contentment::Security::Permission');
     $storage->deployClass('Contentment::Security::Profile::Persistent');
     $storage->deployClass('Contentment::Security::Role');
@@ -378,7 +400,7 @@ sub install {
     $superuser_profile->update;
     $superuser_profile->commit;
 
-    Contentment::Security->register_permissions(
+    $self->register_permissions(
         'Contentment::Security::Manager::login' => {
             title => 'login',
             description => 'May login.',
@@ -398,8 +420,19 @@ sub install {
     );
 }
 
-# XXX THERE MUST BE AN UPGRADE() METHOD TO PRESERVE THE "security_manager"
-# SETTING.
+=item Contentment::Security::upgrade
+
+This is a handler for the "Contentment::upgrade" hook. It is responsible for making sure any changes to the "security_manager" setting is transferred during upgrades.
+
+=cut
+
+sub upgrade {
+    my $context      = shift;
+    my $old_settings = shift;
+    my $new_settings = shift;
+
+    $new_settings->{'security_manager'} = $old_settings->{'security_manager'};
+}
 
 =item Contentment::Security::begin
 
@@ -408,11 +441,13 @@ This handles the "Contentment::begin" hook and instantiates the security manager
 =cut
 
 sub begin {
-    Contentment::Security->security_manager;
+    my $context = shift;
 
-    my $vfs = Contentment::VFS->instance;
-    my $setting = Contentment::Setting->instance;
-    my $plugin_data = $setting->{'Contentment::Plugin::Security'};
+    $context->{security} ||= Contentment::Security->new($context);
+
+    my $vfs = $context->vfs;
+    my $settings = $context->settings;
+    my $plugin_data = $settings->{'Contentment::Plugin::Security'};
     my $docs = File::Spec->catdir($plugin_data->{plugin_dir}, 'docs');
     $vfs->add_layer(-1, [ 'Real', 'root' => $docs ]);
 }

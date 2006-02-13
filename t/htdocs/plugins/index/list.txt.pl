@@ -1,4 +1,4 @@
-my $index = Contentment::Index->index('Contentment::Test::Index');
+my $index = $context->catalog->index('Contentment::Test::Index');
 
 for my $term ($index->terms) {
     print " - ",$term->title,"\n";

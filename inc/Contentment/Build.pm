@@ -3,7 +3,7 @@ package Contentment::Build;
 use strict;
 use warnings;
 
-our $VERSION = '0.011_032';
+our $VERSION = '0.011_033';
 
 use base qw( Module::Build );
 our @ISA;
@@ -67,8 +67,32 @@ sub ACTION_apache_generate_test_scripts {
 
     $self->add_to_cleanup('t/htdocs/cgi-bin/contentment.cgi');
 
+    print 'Creating test version of FastCGI script: ',
+          "t/htdocs/cgi-bin/contentment.fcgi\n";
+
+    open IN, 'htdocs/cgi-bin/contentment.fcgi'
+        or die "Cannot open htdocs/cgi-bin/contentment.fcgi: $!";
+    open OUT, '>t/htdocs/cgi-bin/contentment.fcgi'
+        or die "Cannot open t/htdocs/cgi-bin/contentment.fcgi: $!";
+
+    while (<IN>) {
+        if (/^use Contentment;/) {
+            print OUT qq{use lib '../../../blib/lib';\n};
+#            print OUT qq{use lib '../../lib';\n};
+        }
+        
+        print OUT $_;
+    }
+
+    close IN;
+    close OUT;
+
+    $self->make_executable('t/htdocs/cgi-bin/contentment.fcgi');
+
+    $self->add_to_cleanup('t/htdocs/cgi-bin/contentment.fcgi');
+
     my $content = <<'END_OF_SCRIPT';
-#line 72 buildlib/Contentment/Build.pm
+#line 72 inc/Contentment/Build.pm
 use strict;
 use warnings;
 
@@ -83,6 +107,34 @@ sub pre_configure {
     my $self = shift;
 
     push @{ $self->{argv} }, glob 't/http/*.t';
+}
+
+sub new_test_config {
+    my $self = shift;
+
+    my $config = $self->SUPER::new_test_config;
+
+    my $argv = $self->{argv};
+    my @untouched_args;
+    for my $arg (@$argv) {
+        if ($arg eq '--cgi') {
+            $config->{vars}{defines} = 'CGI';
+        }
+
+        elsif ($arg eq '--fastcgi') {
+            $config->{vars}{defines} = 'FASTCGI';
+        }
+
+        else {
+            push @untouched_args, $arg;
+        }
+    }
+
+    $self->{argv} = \@untouched_args;
+
+    $config->{vars}{defines} ||= 'CGI';
+
+    return $config;
 }
 
 1
@@ -112,20 +164,62 @@ sub ACTION_apache_test_clean {
                      '-clean');
 }
 
-sub ACTION_apache_test {
+sub ACTION_apache_cgi_test {
     my $self = shift;
-    $self->depends_on('apache_generate_test_scripts');
+    $self->depends_on('apache_test_clean');
+    $self->depends_on('code');
+
+    my $config = Apache::Test::config();
+    $ENV{TEST_HOSTPORT} = $config->hostport;
+
     my $success 
         = $self->do_system($self->perl, $self->_bliblib,
                      $self->localize_file_path($self->apache_test_script),
+                     '--cgi',
                      '-bugreport', '-verbose='. ($self->verbose || 0 ));
 
     die "Some tests failed!" unless $success;
 }
 
+sub ACTION_apache_fast_cgi_test {
+    my $self = shift;
+
+    my $success = eval "require FCGI";
+    if (!$success) {
+        if ($@) {
+            print "Skipping FastCGI tests: $@";
+        }
+        else {
+            print "Skipping FastCGI tests: FastCGI may not be installed.\n"
+        }
+        return 0;
+    }
+
+    $self->depends_on('apache_test_clean');
+    $self->depends_on('code');
+
+    my $config = Apache::Test::config();
+    $ENV{TEST_HOSTPORT} = $config->hostport;
+
+    $success 
+        = $self->do_system($self->perl, $self->_bliblib,
+                     $self->localize_file_path($self->apache_test_script),
+                     '--fastcgi',
+                     '-bugreport', '-verbose='. ($self->verbose || 0 ));
+
+    die "Some tests failed!" unless $success;
+}
+
+sub ACTION_apache_test {
+    my $self = shift;
+    $self->ACTION_apache_cgi_test;
+    $self->ACTION_apache_fast_cgi_test;
+}
+
 sub ACTION_standard_test {
     my $self = shift;
 
+    $self->depends_on('code');
     $self->test_files(glob "t/standard/*.t");
 
     $self->SUPER::ACTION_test(@_);
@@ -144,8 +238,6 @@ sub ACTION_test {
     $self->ACTION_standard_test;
 
     if ($self->found_apache_test) {
-        $self->depends_on('code');
-        $self->depends_on('apache_test_clean');
         $self->ACTION_apache_test;
     }
 }
@@ -306,6 +398,8 @@ sub _get_version {
         }
     }
 
+    while (<$VERDIFF>) {} # consume the rest to prevent broken pipe errors
+
     close $VERDIFF
         or die "Failed to open svn diff of lib/Contentment.pm: $!";
 
@@ -413,7 +507,7 @@ sub ACTION_touch_lib_versions {
     my $self = shift;
 
     # Find the list of modifications
-    my %mods = $self->_has_anything_changed('lib', 'buildlib');
+    my %mods = $self->_has_anything_changed('lib', 'inc');
     
     # If anything has changed, modify lib/Contentment.pm
     if (keys %mods) {
@@ -421,7 +515,12 @@ sub ACTION_touch_lib_versions {
     }
 
     # Compute the list of modifications
-    my @mods = grep { $mods{$_} =~ /^[AM]/ } keys %mods;
+    my @mods;
+    while (my ($filename, $mod) = each %mods) {
+        if (-f $filename && $mod =~ /^[AM]/) {
+            push @mods, $filename;
+        }
+    }
 
     my $new_version = $self->_get_version();
 
@@ -474,6 +573,8 @@ sub ACTION_touch_plugin_versions {
                 last;
             }
         }
+
+        while (<$VERDIFF>) {} # consume the rest to prevent broken pipe errors
 
         close $VERDIFF
             or die "Failed to open diff of plugins/$plugin/init.yml: $!";
@@ -621,7 +722,7 @@ sub ACTION_tag {
 
     # Did we already do the versioning?
     if ($found{$version}) {
-        print "Tags already made. Skip tagging.";
+        print "Tags already made. Skip tagging.\n";
         return 1;
     }
 
@@ -780,7 +881,7 @@ sub ACTION_announce_release_on_Freshmeat {
 sub ACTION_manifest {
     my $self = shift;
 
-    my %files;
+    my %files = ( 'META.yml' => 1 );
 
     my $LIST = $self->read_svn('list', '-R');
 

@@ -1,5 +1,5 @@
 name: Node
-version: 0.05
+version: 0.06
 description: The plugin providing nodes and such for Contentment.
 
 depends_on:

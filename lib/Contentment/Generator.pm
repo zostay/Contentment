@@ -3,7 +3,7 @@ package Contentment::Generator;
 use strict;
 use warnings;
 
-our $VERSION = '0.05';
+our $VERSION = '0.011_033';
 
 use IO::NestedCapture qw( capture_out );
 
@@ -114,8 +114,8 @@ sub generator {
 
     my $generator = $generator_class->new(@_);
 	if (defined $generator) {
-		Contentment::Log->debug(
-			'Generator class %s returned a generator.', [$generator_class]);
+#		Contentment::Log->debug(
+#			'Generator class %s returned a generator.', [$generator_class]);
 		return $generator;
 	}
 

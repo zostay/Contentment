@@ -1,5 +1,5 @@
 name: Form
-version: 0.09
+version: 0.10
 description: A plugin for automating form rendering, validation, and processing.
 
 depends_on:

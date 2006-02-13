@@ -6,7 +6,7 @@ use warnings;
 use Cache::FileCache;
 use DateTime;
 
-our $VERSION = '0.11';
+our $VERSION = '0.13';
 
 use IO::NestedCapture qw( capture_out );
 use Params::Validate qw( validate_with :types );
@@ -263,7 +263,7 @@ sub final_kind {
 	my $cgi = shift;
 	my $kind = Contentment::MIMETypes->instance->mimeTypeOf($cgi->path_info);
 	if ($kind) {
-		Contentment::Response->header->{-type} = $kind;
+		Contentment->context->response->header->{-type} = $kind;
 		return $kind;
 	} else {
 		return undef;

@@ -4,7 +4,7 @@
 =end meta
 =cut
 
-my $form = Contentment::Form->define(
+my $form = $context->form->define(
     name     => 't::test_form',
     enctype  => 'multipart/form-data',
     activate => 1,

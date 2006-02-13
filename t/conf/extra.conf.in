@@ -11,8 +11,17 @@ RewriteLogLevel 2
 	Options FollowSymLinks
 
 	RewriteEngine on
+
+    <IfDefine CGI>
 	RewriteRule "^$"		"cgi-bin/contentment.cgi/index.html" [L]
 	RewriteRule "(.*)$"		"cgi-bin/contentment.cgi/$1"         [L]
+    </IfDefine>
+
+    <IfDefine FASTCGI>
+	RewriteRule "^$"		"cgi-bin/contentment.fcgi/index.html" [L]
+	RewriteRule "(.*)$"		"cgi-bin/contentment.fcgi/$1"         [L]
+    </IfDefine>
+
 </Directory>
 
 <Directory @documentroot@/cgi-bin/>
@@ -22,5 +31,8 @@ RewriteLogLevel 2
 	RewriteEngine off
 
 	Options ExecCGI
-	AddHandler cgi-script .cgi
+	AddHandler cgi-script     cgi
+    <IfModule mod_fastcgi.c>
+    AddHandler fastcgi-script fcgi
+    </IfModule>
 </Directory>

@@ -3,10 +3,10 @@ package Contentment::Template::Plugin::Response;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.11';
 
 use base qw/ Contentment::Response Template::Plugin /;
 
-sub new { Contentment::Response->instance }
+sub new { Contentment->context->response }
 
 1

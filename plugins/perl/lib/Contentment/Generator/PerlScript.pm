@@ -5,7 +5,7 @@ use warnings;
 
 use base 'Contentment::Generator::POD';
 
-our $VERSION = 0.14;
+our $VERSION = '0.16';
 
 use Contentment::Exception;
 use Params::Validate qw( validate_with :types );
@@ -163,6 +163,7 @@ sub source {
     my $path = $self->{properties}{path} || '';
     my $sub  = eval <<"END_OF_SUB";
 sub {
+my \$context = Contentment->context;
 #line 1 $path
 $code
 }

@@ -6,6 +6,6 @@ use warnings;
 use Contentment::Form;
 use base qw/ Template::Plugin /;
 
-our $VERSION = '0.06';
+our $VERSION = '0.11';
 
-sub new { Contentment::Form->form; }
+sub new { Contentment->context->form->form; }

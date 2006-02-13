@@ -1,6 +1,6 @@
 =head1 NAME
 
-Contentment::Index::Indexer - Interface for Index plugin indexers
+Contentment::Indexer - Interface for Index plugin indexers
 
 =head1 SYNOPSIS
 
@@ -34,7 +34,8 @@ Contentment::Index::Indexer - Interface for Index plugin indexers
   }
 
   sub register {
-      Contentment::Index->register_index(
+      my $context = shift;
+      $context->catalog->register_indexer(
           Contentment::MyPlugin::Indexer->instance
       );
   }
@@ -47,11 +48,11 @@ An indexer plugin must provide two functions:
 
 =item @indexes = $indexer-E<gt>indexes
 
-Returns a list of containing zero or more indexes. This should include all indexes and this method is used for searches or index listing. Each of these should implement the interface described in L<Contentment::Index::Index>.
+Returns a list of containing zero or more indexes. This should include all indexes and this method is used for searches or index listing. Each of these should implement the interface described in L<Contentment::Index>.
 
 =back
 
-Finally, your plugin will need to call the C<register_index()> method (probably via the L<Contentment::Index::begin> hook) of L<Contentment::Index> so that the Index plugin knows how to find your indexer.
+Finally, your plugin will need to call the C<register_indexer()> method (probably via the L<Contentment::Catalog::begin> hook) of L<Contentment::Catalog> so that the Index plugin knows how to find your indexer.
 
 =head1 AUTHOR
 

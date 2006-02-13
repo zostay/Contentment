@@ -4,7 +4,7 @@
 =end meta
 =cut
 
-my $form = Contentment::Form->define({
+my $form = $context->form->define({
     name      => 'Contentment::Security::Manager::login_form',
     action    => 'Contentment::Security::Manager::process_login_form',
     activate  => 1,
@@ -26,7 +26,7 @@ my $form = Contentment::Form->define({
 });
 
 if ($form->submission->is_finished) {
-    Contentment::Response->redirect('index.html')->generate;
+    $context->response->redirect('index.html')->generate;
 }
 
 else {

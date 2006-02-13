@@ -1,5 +1,5 @@
 name: Security
-version: 0.08
+version: 0.09
 description: Contentment security system.
 
 depends_on:
@@ -19,6 +19,9 @@ hooks:
   Contentment::install:
     sub: Contentment::Security::install
     order: 10 
+  Contentment::upgrade:
+    sub: Contentment::Security::upgrade
+    order: 10
   Contentment::begin: 
     sub: Contentment::Security::begin
     order: -50

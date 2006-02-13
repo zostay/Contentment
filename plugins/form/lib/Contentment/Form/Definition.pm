@@ -3,7 +3,7 @@ package Contentment::Form::Definition;
 use strict;
 use warnings;
 
-our $VERSION = '0.07';
+our $VERSION = '0.10';
 
 use base qw/ Oryx::Class Class::Accessor /;
 
@@ -128,16 +128,19 @@ sub render {
         $self->submission->commit;
     }
 
-    Contentment::Form->instance->{definition} = $self;
+    my $context = Contentment->context;
+    my $form    = $context->form;
+
+    $form->{definition} = $self;
 
     if ($self->template) {
         my $generator = Contentment::Generator->generator(@{ $self->template });
         $generator->generate(%$vars, form => $self);
     } else {
-        Contentment::Theme->theme('form/Form', { %$vars, form => $self });
+        $context->theme('form/Form', { %$vars, form => $self });
     }
 
-    delete Contentment::Form->instance->{definition};
+    delete $form->{definition};
 
     return;
 }
@@ -233,12 +236,12 @@ sub render_widget {
 
     $class =~ s/^Contentment::Form::Widget:://;
 
+    my $context = Contentment->context;
+
     capture_out {
-        Contentment::Theme->theme("form/Pre-Widget");
-        Contentment::Theme->theme("form/$class", {
-            widget => $widget,
-        });
-        Contentment::Theme->theme("form/Post-Widget");
+        $context->theme("form/Pre-Widget");
+        $context->theme("form/$class", { widget => $widget });
+        $context->theme("form/Post-Widget");
     };
 
     my $fh = IO::NestedCapture->get_last_out;

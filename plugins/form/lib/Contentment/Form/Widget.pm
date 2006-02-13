@@ -3,7 +3,7 @@ package Contentment::Form::Widget;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.10';
 
 =head1 NAME
 
@@ -28,7 +28,7 @@ This tells the widget to render the beginning part of the widget. It basically l
 =cut
 
 sub _results {
-    return Contentment::Form->form->submission->results;
+    return Contentment->context->form->form->submission->results;
 }
 
 sub begin {

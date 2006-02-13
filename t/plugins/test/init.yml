@@ -24,4 +24,4 @@ hooks:
   Contentment::install: 
     order: 10
     sub: Contentment::Node::Test::install
-  Contentment::Index::begin: Contentment::Test::Indexer::register_indexer
+  Contentment::Catalog::begin: Contentment::Test::Indexer::register_indexer

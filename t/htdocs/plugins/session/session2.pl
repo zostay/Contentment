@@ -1,2 +1,2 @@
-my $session = Contentment::Session->instance;
+my $session = $context->session;
 print "foo = $session->{foo}\n";

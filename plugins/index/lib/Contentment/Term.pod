@@ -1,6 +1,6 @@
 =head1 NAME
 
-Contentment::Index::Term - Interface for Index plugin terms
+Contentment::Term - Interface for Index plugin terms
 
 =head1 SYNOPSIS
 

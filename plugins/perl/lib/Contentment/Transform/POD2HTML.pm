@@ -3,7 +3,7 @@ package Contentment::Transform::POD2HTML;
 use strict;
 use warnings;
 
-our $VERSION = '0.08';
+our $VERSION = '0.16';
 
 use Contentment;
 use Contentment::Setting;
@@ -26,6 +26,8 @@ sub _handle_element_start {
 	my $attr = shift;
 
 	my $ofh = select $self->{output_fh};
+
+    my $context = Contentment->context;
 
 	SWITCH: {
 		/^Document$/ && do {
@@ -76,9 +78,9 @@ sub _handle_element_start {
 					my $file = $attr->{to};
 					$file =~ s/::/\//g;
 						
-					my $settings = Contentment::Setting->instance;
+					my $settings = $context->settings;
 					for my $pod_base (@{ $settings->{'Contentment::Transform::POD2HTML::pod_bases'} }) {
-						if (Contentment::Response->resolve("$pod_base/$file.html")) {
+						if ($context->response->resolve("$pod_base/$file.html")) {
 							$link = "$pod_base/$file.html";
 							last;
 						}
@@ -265,7 +267,8 @@ Handles the "Contentment::Transform::begin" hook and registers the transformatio
 =cut
 
 sub begin {
-	my $transform = shift;
+    my $context   = shift;
+	my $transform = $context->transformer;
 	$transform->add_transformation(
 		\&Contentment::Transform::POD2HTML::transform,
 		'text/x-perl' => 'text/html' => 0);

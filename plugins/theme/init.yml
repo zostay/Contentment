@@ -1,5 +1,5 @@
 name: Theme
-version: 0.09
+version: 0.10
 description: The theme plugin attempts to wrap content in pretty themes.
 
 depends_on:
@@ -13,10 +13,11 @@ use:
  - Contentment::Theme
 
 hooks:
-  Contentment::Response::end:
+  Contentment::upgrade: Contentment::Theme::upgrade
+  Contentment::begin: Contentment::Theme::begin
+  Contentment::Response::filter:
     order: 70
     sub: Contentment::Theme::apply_theme
-  Contentment::begin: Contentment::Theme::begin
 
 default_theme: default
 default_template: top

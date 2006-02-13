@@ -1,2 +1,2 @@
-Contentment::Security->security_manager->logout;
-Contentment::Response->redirect('index.html')->generate;
+$context->security->security_manager->logout;
+$context->resposne->redirect('index.html')->generate;

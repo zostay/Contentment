@@ -3,7 +3,7 @@ package Contentment::Node;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.06';
 
 use base 'Oryx::Class';
 
@@ -145,8 +145,9 @@ This handles the "Contentment::install" hook. It deploys the L<Contentment::Node
 =cut
 
 sub install {
+    my $context = shift;
+    my $storage = $context->storage;
     # Create the tables
-    my $storage = $Contentment::Oryx::storage;
     $storage->deployClass('Contentment::Node');
     $storage->deployClass('Contentment::Node::Revision');
     $storage->deployClass('Contentment::Node::Collection');

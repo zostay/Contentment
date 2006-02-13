@@ -3,10 +3,10 @@ package Contentment::Template::Plugin::Request;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.11';
 
 use base qw/ Contentment::Request Template::Plugin /;
 
-sub new { Contentment::Request->instance }
+sub new { Contentment->context->request }
 
 1

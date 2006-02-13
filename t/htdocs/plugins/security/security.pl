@@ -3,7 +3,7 @@ kind => 'text/plain'
 =end meta
 =cut
 
-my $principal = Contentment::Security->get_principal;
+my $principal = $context->security->get_principal;
 
 $principal->information->{foo}++;
 $principal->preferences->{bar}++;
@@ -23,8 +23,8 @@ if ($principal->type eq 'anonymous') {
     $principal->profile->email_address('test.a.monkey@cpan.org');
     $principal->profile->web_site('http://search.cpan.org/');
 
-    Contentment::Security->security_manager->login('admin', 'secret');
+    $context->security_manager->login('admin', 'secret');
 }
 else {
-    Contentment::Security->security_manager->logout;
+    $context->security_manager->logout;
 }

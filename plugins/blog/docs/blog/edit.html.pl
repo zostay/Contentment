@@ -4,12 +4,12 @@
 =end meta
 =cut
 
-Contentment::Security->check_permission('Contentment::Node::Blog::edit_blogs');
+$context->security->check_permission('Contentment::Node::Blog::edit_blogs');
 
 my $self = shift;
 my %args = @_;
 
-my $form = Contentment::Form->define({
+my $form = $context->form->define({
     name     => 'Contentment::Node::Blog::edit_form',
     action   => 'Contentment::Node::Blog::process_edit_form',
     activate => 1,
@@ -38,7 +38,7 @@ my $form = Contentment::Form->define({
 });
 
 if ($form->submission->is_finished) {
-    Contentment::Response->redirect('blog/index.html')->generate;
+    $context->response->redirect('blog/index.html')->generate;
 }
 
 elsif (my $id = $args{id} || $form->submission->results->{id}) {

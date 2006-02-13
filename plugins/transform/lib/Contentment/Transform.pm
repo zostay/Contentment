@@ -3,7 +3,7 @@ package Contentment::Transform;
 use strict;
 use warnings;
 
-our $VERSION = '0.06';
+our $VERSION = '0.08';
 
 use Contentment;
 use Contentment::Hooks;
@@ -21,7 +21,7 @@ Contentment::Transform - Applies file content transformation
   use Contentment::Transform;
   use IO::NestedCapture 'capture_in_out';
 
-  my $transformer = Contentment::Transform->instance;
+  my $transformer = $context->transformer;
 
   my $in = IO::NestedCapture->get_next_in;
   # print the input to $in...
@@ -50,18 +50,11 @@ When searching for the best choice of transformers to get from original kind A t
 
 =cut
 
-my $instance;
-sub instance {
-	return $instance if $instance;
-
-	my $class = shift;
-
-	$instance = my $self = bless {}, $class;
-
-	return $self;
+sub new {
+    my $class = shift;
+    return bless { transformation_id => 1 }, $class;
 }
 
-my $transformation_id = 1;
 sub add_transformation {
 	my $self        = shift;
 	my $code        = shift;
@@ -73,7 +66,7 @@ sub add_transformation {
 
 	Contentment::Log->debug("Transformation adding %s -> %s at cost %d.", [$input_kind, $output_kind, $cost]);
 	push @{ $self->{$input_kind} }, {
-		id          => $transformation_id++,
+		id          => $self->{transformation_id}++,
 		input_kind  => $input_kind,
 		output_kind => $output_kind,
 		cost        => $cost,
@@ -135,7 +128,7 @@ ASTAR:
 	}
 }
 
-=item $transform-E<gt>apply_transformation(%args)
+=item $transformer-E<gt>apply_transformation(%args)
 
 Attempts to transform the input in C<STDIN> from one type to another and places that output on C<STDOUT>. Currently accepts two arguments in C<%args>:
 
@@ -157,12 +150,14 @@ sub apply_transformation {
 	my $self = shift;
 	my %args  = @_;
 
+    my $context = Contentment->context;
+
 	# Step 1: Determine the original kind.
-	my $original_kind = $args{from} || Contentment::Response->top_kind;
+	my $original_kind = $args{from} || $context->response->top_kind;
 	Contentment::Log->debug("Transformation #1: original kind is %s", [$original_kind]);
 
 	# Step 2: Determine the final kind.
-	my $final_kind = $args{to} || Contentment::Request->final_kind;
+	my $final_kind = $args{to} || $context->request->final_kind;
 	Contentment::Log->debug("Transformation #2: final kind is %s", [$final_kind]);
 
 	if ($final_kind eq '') {
@@ -187,8 +182,8 @@ sub apply_transformation {
 	my $transforms = $self->shortest_path($original_kind, $final_kind);
 
 	unless (defined $transforms and @$transforms > 0) {
-		Contentment::Log->error("Oop! Now way to get from %s kind to %s kind.", [$original_kind, $final_kind]);
-		Contentment::Log->error("Outputting original untransformed, this could get ugly.");
+		Contentment::Log->warning("Oops! Now way to get from %s kind to %s kind.", [$original_kind, $final_kind]);
+		Contentment::Log->warning("Outputting original untransformed, this could get ugly.");
 
 		print <STDIN>;
 	} else {
@@ -217,9 +212,29 @@ sub apply_transformation {
 		}
 
 		print <$output>;
-		Contentment::Response->top_kind($final_kind);
+		Contentment->context->response->top_kind($final_kind);
 	}
 }
+
+=head2 CONTEXT
+
+This class adds the following methods to the context:
+
+=over
+
+=item $transformer = $context-E<gt>transformer
+
+Returns the current instance of the transformation object.
+
+=cut
+
+sub Contentment::Context::transformer {
+    my $context = shift;
+    return defined $context->{transformer} ? $context->{transformer} :
+        Contentment::Exceptoin->throw(message => "Transformer not available.");
+}
+
+=back
 
 =head2 HOOK HANDLERS
 
@@ -227,13 +242,14 @@ sub apply_transformation {
 
 =item Contentment::Transform::transform
 
-This handler is for the "Contentment::Response::end" hook.
+This handler is for the "Contentment::Response::filter" hook.
 
 =cut
 
 sub transform {
-	my $transform = Contentment::Transform->instance;
-	$transform->apply_transformation;
+    my $context = shift;
+	$context->transformer->apply_transformation;
+    delete $context->{transformer};
 }
 
 =item Contentment::Transform::begin
@@ -243,9 +259,10 @@ This handler is the for the "Contentment::begin" hook and is used to call the "C
 =cut
 
 sub begin {
-	Contentment::Hooks->call(
-		"Contentment::Transform::begin", Contentment::Transform->instance
-	);
+    my $context = shift;
+    $context->{transformer} = Contentment::Transform->new;
+
+	Contentment::Hooks->call("Contentment::Transform::begin", $context);
 }
 
 =back
@@ -256,7 +273,7 @@ sub begin {
 
 =item Contentment::Transform::begin
 
-Handlers for this hook receive a C<Contentment::Transform> instance on which they can register transformations.
+Handlers for this hook receive the current context as the only argument. The purpose of this hook is to allow handlers the opportunity to register transformers.
 
 =back
 

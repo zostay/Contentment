@@ -1,6 +1,6 @@
 name: Session
 description: Used to store client session information.
-version: 0.12
+version: 0.13
 
 depends_on:
  - Log
@@ -16,6 +16,7 @@ hooks:
   Contentment::Request::begin:
     order: -30
     sub: Contentment::Session::open_session
+  Contentment::Response::begin: Contentment::Session::save_cookie
   Contentment::Request::end:
     order: 30
     sub: Contentment::Session::close_session

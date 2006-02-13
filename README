@@ -27,6 +27,19 @@ Basic installation is via the typical Module::Build formula:
   ./Build test
   ./Build install
 
+If you have Apache::Test installed and run into trouble while testing because
+Apache::Test asks for locations of httpd and apxs and bugs out, the solution is
+to run:
+
+  t/TEST_APACHE
+
+and wait for it to start the web server. You can either let the tests run or
+Ctrl+C at this point and then again run:
+
+  ./Build test
+
+This is the work-around until I can find the root problem and disarm it.
+
 COPYRIGHT AND LICENSE
 
 Copyright 2005 Andrew Sterling Hanenkamp. All Rights Reserved.

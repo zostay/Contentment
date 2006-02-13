@@ -1,6 +1,6 @@
 name: Perl
 description: Plugin for handling Perl components.
-version: 0.15
+version: 0.16
 
 depends_on:
  - Log

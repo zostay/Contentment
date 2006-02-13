@@ -1,5 +1,5 @@
 name: Transform
-version: 0.07
+version: 0.08
 description: The transformation plugin translates documents of one kind to another.
 
 depends_on:
@@ -12,7 +12,7 @@ use:
  - Contentment::Transform
 
 hooks:
-  Contentment::Response::end:
+  Contentment::Response::filter:
     order: -30
     sub: Contentment::Transform::transform
   Contentment::begin: Contentment::Transform::begin

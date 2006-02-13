@@ -4,13 +4,13 @@
 =end meta
 =cut
 
-Contentment::Security->check_permission(
+$context->security->check_permission(
     'Contentment::Security::Manager::manage_users');
     
 my $self = shift;
 my %args = @_;
 
-my $form = Contentment::Form->define({
+my $form = $context->form->define({
     name      => 'Contentment::Security::Profile::Persistent::edit_form',
     action    => 
         'Contentment::Security::Profile::Persistent::process_edit_form',
@@ -41,7 +41,7 @@ my $form = Contentment::Form->define({
             name  => 'web_site',
             class => 'Text',
         },
-        Contentment::Security->has_permission(
+        $context->security->has_permission(
             'Contentment::Security::Manager::asign_roles') ?
         (
             roles => {
@@ -60,7 +60,7 @@ my $form = Contentment::Form->define({
 });
 
 if ($form->submission->is_finished) {
-    Contentment::Response->redirect('admin/users/index.html')->generate;
+    $context->response->redirect('admin/users/index.html')->generate;
 }
 
 elsif (my $id = $args{id} || $form->submission->results->{id}) {
@@ -77,7 +77,7 @@ elsif (my $id = $args{id} || $form->submission->results->{id}) {
         full_name     => $profile->full_name,
         email_address => $profile->email_address,
         web_site      => $profile->web_site,
-        Contentment::Security->has_permission(
+        $context->security->has_permission(
             'Contentment:Security::Manager::assign_roles')
         ? (roles         => [ map { $_->id } @{ $profile->roles } ])
         : (),

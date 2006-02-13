@@ -3,9 +3,7 @@ package Contentment::Form;
 use strict;
 use warnings;
 
-our $VERSION = 0.08;
-
-use base 'Class::Singleton';
+our $VERSION = '0.10';
 
 use Contentment::Exception;
 use Contentment::Form::Definition;
@@ -37,7 +35,7 @@ Contentment::Form - forms API for Contentment
   [% form.end %]
   END_OF_TEMPLATE
 
-  my $form = Contentment::Form->define({
+  my $form = $context->form->define({
       name     => 'Contentment::Security::Manager::login_form',
       method   => 'POST',
       action   => 'Contentment::Security::Manager::process_login_form',
@@ -66,7 +64,7 @@ Contentment::Form - forms API for Contentment
   });
 
   if ($form->submission->is_finished) {
-      Contentment::Response->redirect('index.html')->generate;
+      $context->response->redirect('index.html')->generate;
   }
 
   else {
@@ -125,13 +123,12 @@ The C<Contentment::Form> class defines the following methods:
 
 =cut
 
-sub instance {
-    my $proto = shift;
-    my $class = ref $proto || $proto;
-    return $class->SUPER::instance(@_);
+sub new {
+    my $class = shift;
+    return bless {}, $class;
 }
 
-=item $form = Contentment::Form-E<gt>define(\%args)
+=item $form = $context-E<gt>form-E<gt>define(\%args)
 
 This method is used to construct a form's definition. The form definition is stored the the L<Contentment::Form::Definition> class.
 
@@ -160,7 +157,7 @@ The action subroutine should expect a single argument, the data constructed by t
   sub form_action {
       my $results = shift;
 
-      Contentment::Security::Manager->login(
+      Contentment->context->security_manager->login(
           $results->{username},
           $results->{password},
       );
@@ -279,7 +276,7 @@ my @differing_reasons = (
 );
 
 sub define {
-    my $self = shift->instance;
+    my $self = shift;
     my %p = validate_with(
         params => \@_,
         spec   => {
@@ -294,7 +291,7 @@ sub define {
             },
             template => {
                 type    => ARRAYREF,
-                default => undef,
+                default => '',
             },
             widgets => {
                 type => ARRAYREF,
@@ -314,15 +311,17 @@ sub define {
         },
     );
 
-    # First, check to see if the last_submission is given for the same name. If
+    # First, check to see if the this_submission is given for the same name. If
     # so we can skip most of the hard work and just use that definition!
     my $definition;
-    if (my $last_submission = $self->last_submission($p{name})) {
+    my $this_submission = $self->this_submission;
+    if (defined $this_submission
+    && $this_submission->definition->form_name eq $p{name}) {
         Contentment::Log->debug(
             'Found a last submission for %s definition.',
             [$p{name}]
         );
-        $definition = $last_submission->definition;
+        $definition = $this_submission->definition;
     }
 
     # Otherwise, we need to do the hard work to load the definition...
@@ -424,7 +423,7 @@ sub define {
         push @{ $self->{submissions_from_define} }, $submission;
 
         # We don't need the above trick when loading a submission for
-        # processing later, because last_submission will point to it for the
+        # processing later, because this_submission will point to it for the
         # duration of the request.
     }
 
@@ -466,31 +465,50 @@ sub define {
     return $definition;
 }
 
-=item $submission = Contentment::Form-E<gt>last_submission($name);
+=item $submission = $context-E<gt>form-E<gt>this_submission
 
-This method attempts to find the most recent submission for the form named C<$name>. This is done by returning the submission processed by the current request with the given C<$name>.
+This method returns C<undef> unless this request processed a submission. In that case, it returns the submission object processed.
 
 =cut
 
-sub last_submission {
-    my $self = shift->instance;
-    my $name = shift;
+sub this_submission {
+    my $self = shift;
 
-    return defined $self->{last_submission} 
-        && $self->{last_submission}->definition->form_name eq $name
-            ? $self->{last_submission}
+    return defined $self->{this_submission}
+            ? $self->{this_submission}
             : undef;
 }
 
-=item $definition = Contentment::Form-E<gt>form
+=item $definition = $context-E<gt>form-E<gt>this_definition
 
 This method returns the form that is currently being rendered or C<undef> if no form is being rendered.
 
 =cut
 
 sub form {
-    return shift->instance->{definition};
+    my $self = shift;
+    return $self->{definition};
 }
+
+=head2 CONTEXT
+
+This package adds the following context methods:
+
+=over
+
+=item $form = $context->form
+
+Returns an instance of the L<Contentment::Form> class used to process and define forms for the current request.
+
+=cut
+
+sub Contentment::Context::form {
+    my $ctx = shift;
+    return defined $ctx->{form} ? $ctx->{form} :
+        Contentment::Exception->throw(message => "Form is not available.");
+}
+
+=back
 
 =head2 HOOK HANDLERS
 
@@ -503,7 +521,8 @@ Handles teh Contentment::install hook. Deploys the submission and definition cla
 =cut
 
 sub install {
-    my $storage = $Contentment::Oryx::storage;
+    my $context = shift;
+    my $storage = $context->storage;
     $storage->deployClass('Contentment::Form::Definition');
     $storage->deployClass('Contentment::Form::Submission');
 }
@@ -515,12 +534,16 @@ This handler is for the "Contentment::begin" hook. It adds the F<docs> folder to
 =cut
 
 sub begin {
+    my $context = shift;
+
     Contentment::Log->debug("Calling hook handler Contentment::Form::begin");
-    my $vfs = Contentment::VFS->instance;
-    my $setting = Contentment::Setting->instance;
-    my $plugin_data = $setting->{'Contentment::Plugin::Form'};
+    my $vfs = $context->vfs;
+    my $settings = $context->settings;
+    my $plugin_data = $settings->{'Contentment::Plugin::Form'};
     my $docs = File::Spec->catdir($plugin_data->{plugin_dir}, 'docs');
     $vfs->add_layer(-1, [ 'Real', 'root' => $docs ]);
+
+    $context->{form} = Contentment::Form->new;
 }
 
 =item Contentment::Form::process
@@ -530,8 +553,11 @@ This handler is for the "Contentment::Request::begin" hook. It checks to see if 
 =cut
 
 sub process {
-    my $self = Contentment::Form->instance;
-    my $cgi  = shift;
+    my $self = Contentment::Form->new;
+    my $ctx  = shift;
+    my $cgi  = $ctx->cgi;
+
+    $ctx->{form} = $self;
 
     # With every form they must give us the FORM argument.
     if (my $form_name = $cgi->param('FORM')) {
@@ -597,7 +623,7 @@ sub process {
         # XXX When this happens we need store the submission, redirect the user
         # to a login prompt, when the user successfully logs in we should come
         # back and finish the submission as if we never left.
-        my $principal = Contentment::Security->get_principal;
+        my $principal = Contentment->context->security->get_principal;
         if ($submission->username ne $principal->username) {
             Contentment::Exception->throw(
                 message => 
@@ -612,7 +638,7 @@ sub process {
             );
         }
 
-        if ($submission->session_id ne Contentment::Session->instance_id) {
+        if ($submission->session_id ne $ctx->session_id) {
             Contentment::Exception->throw(
                 message =>
                     'Your session has expired. You need to login again.',
@@ -714,7 +740,7 @@ sub process {
         Contentment::Log->debug('Setting current_submission to submission '
             .'with submission ID %s', [$submission_id]);
 
-        $self->{last_submission} = $submission;
+        $self->{this_submission} = $submission;
 
         $submission->update;
         $submission->commit;

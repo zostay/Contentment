@@ -3,4 +3,4 @@ kind => "text/plain"
 =end meta
 =cut
 print "Hello World!\n";
-print "path = ",Contentment::Response->generator->get_property('path'),"\n";
+print "path = ",$context->response->generator->get_property('path'),"\n";

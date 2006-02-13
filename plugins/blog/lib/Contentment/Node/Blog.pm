@@ -3,7 +3,7 @@ package Contentment::Node::Blog;
 use strict;
 use warnings;
 
-our $VERSION = '0.05';
+our $VERSION = '0.08';
 
 use base 'Contentment::Node::Revision';
 
@@ -56,9 +56,10 @@ sub generator {
 }
 
 sub install {
+    my $context = shift;
     __PACKAGE__->storage->deployClass(__PACKAGE__);
 
-    Contentment::Security->register_permissions(
+    $context->security->register_permissions(
         'Contentment::Node::Blog::view_blog' => {
             title       => 'view blog',
             description => 'User is allowed to view blog entries.',
@@ -71,9 +72,10 @@ sub install {
 }
 
 sub begin {
-    my $vfs = Contentment::VFS->instance;
-    my $setting = Contentment::Setting->instance;
-    my $plugin_data = $setting->{'Contentment::Plugin::Blog'};
+    my $context = shift;
+    my $vfs = $context->vfs;
+    my $settings = $context->settings;
+    my $plugin_data = $settings->{'Contentment::Plugin::Blog'};
     my $docs = File::Spec->catdir($plugin_data->{plugin_dir}, 'docs');
     $vfs->add_layer(-1, [ 'Real', root => $docs ]);
 }
@@ -90,7 +92,7 @@ sub mimetypes {
 }
 
 sub process_edit_form {
-    Contentment::Security->check_permission(
+    Contentment->context->security->check_permission(
         'Contentment::Node::Blog::edit_blog');
 
     my $submission = shift;
@@ -116,7 +118,7 @@ sub process_edit_form {
                 title       => $results->{title},
                 description => $results->{description},
                 pub_date    => now,
-                author      => Contentment::Security->get_principal->username,
+                author      => Contentment->context->security->get_principal->username,
                 generator_class => 'HTML',
                 content     => $results->{content},
             });

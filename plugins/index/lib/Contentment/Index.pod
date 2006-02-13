@@ -1,12 +1,12 @@
 =head1 NAME
 
-Contentment::Index::Index - Interface for Index plugin indexes
+Contentment::Index - Interface for Index plugin indexes
 
 =head1 SYNOPSIS
 
   package Contentment::MyPlugin::Index;
 
-  use Contentment::Index qw( :features );
+  use Contentment::Catalog qw( :features );
 
   # This may or may not be useful depending on the index, but we use it here
   # for simplicity.
@@ -67,9 +67,9 @@ Returns a short description of the index.
 
 =item $features = $index-E<gt>features
 
-Returns a scalar value describing the features of the index and the terms the index returns. The scalar is a bit field used with numeric constants defined by L<Contentment::Index> (and exported via the ":features" tag).
+Returns a scalar value describing the features of the index and the terms the index returns. The scalar is a bit field used with numeric constants defined by L<Contentment::Catalog> (and exported via the ":features" tag).
 
-Here is a short description of each of the features. Sections following and the method sections of L<Contentment::Index::Term> describe the individual methods that must be defined to implement each feature.
+Here is a short description of each of the features. Sections following and the method sections of L<Contentment::Term> describe the individual methods that must be defined to implement each feature.
 
 =over
 
@@ -143,7 +143,7 @@ These methods must be defined by any index with the C<$LIST_TERMS> feature.
 
 =item @terms = $index-E<gt>terms
 
-This returns a list of term objects implementing the interface described by L<Contentment::Index::Term>.
+This returns a list of term objects implementing the interface described by L<Contentment::Term>.
 
 =back
 
@@ -155,7 +155,7 @@ These methods must be defined by any index with the C<$FREEFORM_TERMS> feature.
 
 =item $term = $index-E<gt>create_term($string, $generator)
 
-Given a string term name and a reference to a generator, the method returns a term object implementing the interface described by L<Contentment::Index::Term>.
+Given a string term name and a reference to a generator, the method returns a term object implementing the interface described by L<Contentment::Term>.
 
 =back
 
@@ -221,7 +221,7 @@ An index with the C<$QUANTITATIVE> feature must define the following methods.
 
 =item $type = $index-E<gt>quantitative_type
 
-This method returns the type of quantitative terms used by this index. The must be one of the following values, which are exported via the ":types" tag of L<Contentment::Index>:
+This method returns the type of quantitative terms used by this index. The must be one of the following values, which are exported via the ":types" tag of L<Contentment::Catalog>:
 
 =over
 

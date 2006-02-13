@@ -4,7 +4,7 @@
 =end meta
 =cut
 
-Contentment::Security->check_permission(
+$context->security->check_permission(
     'Contentment::Security::Manager::manage_roles');
 
 print qq(<p><a href="admin/roles/edit.html">New Role</a></p>);

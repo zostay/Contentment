@@ -3,7 +3,7 @@ package Contentment::Node::Manager;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.06';
 
 use base 'Class::Singleton';
 
@@ -13,7 +13,7 @@ Contentment::Node::Manager - Node collection manager and utility
 
 =head1 DESCRIPTION
 
-This class holds the singleton object responsible for determining what node collection is in use by the current request.
+This class defines the object responsible for determining what node collection is in use by the current request.
 
 As of this writing, the implementation is simplistic and always defines the node collection created during install as the current one.
 
@@ -23,7 +23,7 @@ This class supports the following methods
 
 =over
 
-=item $collection = Contentment::Node::Manager-E<gt>get_current_collection
+=item $collection = $manager-E<gt>get_current_collection
 
 Fetch the node collection in use for thise request. In general, you probably don't want to mess with this object too much directly. The internals are kind of icky, which is why the L<Contentment::Node::Manager> class exists after all.
 
@@ -42,7 +42,7 @@ sub get_current_collection {
     }
 }
 
-=item Contentment::Node::Manager-E<gt>add_revision_to_current_collection($revision)
+=item $manager-E<gt>add_revision_to_current_collection($revision)
 
 This method attaches the given revision to the node collection. Any other revisions from the same node will be removed from the node collection.
 
@@ -75,7 +75,7 @@ sub add_revision_to_current_collection {
     $collection->commit;
 }
 
-=item Contentment::Node::Manager->remove_revision_from_current_collection($revision)
+=item $manager->remove_revision_from_current_collection($revision)
 
 Removes this revision from the node collection. This will make the revision (and entire node) appear to be deleted (as far as most of Contentment is concerned) without actually removing the record from the database.
 
@@ -101,6 +101,22 @@ sub remove_revision_from_current_collection {
     $collection->update;
     $collection->commit;
 }
+
+=back
+
+=head2 CONTEXT
+
+This class defines the following methods:
+
+=over
+
+=item $manager = $context->nodes
+
+This method returns the object by which the L<Contentment::Node::Manager> API may be reached.
+
+=cut
+
+sub Contentment::Context::nodes { 'Contentment::Node::Manager' }
 
 =back
 

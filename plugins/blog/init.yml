@@ -1,6 +1,6 @@
 name: Blog
 description: A simple weblog.
-version: 0.07
+version: 0.08
 
 depends_on:
  - Log

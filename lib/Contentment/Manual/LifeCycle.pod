@@ -1,0 +1,118 @@
+=head1 NAME
+
+Contentment::Manual::LifeCycle - Description of the Contentment request life-cycle
+
+=head1 DESCRIPTION
+
+The goal of this document is to describe the general life-cycle of the Contentment process and Contentment requests. There are three general phases to a Contentment process: startup, request-handling, and cleanup.
+
+=head2 STARTUP
+
+The startup process of Contentment happens during the call to C<L<Contentment>-E<gt>begin>. This is subdivided into five steps:
+
+=over
+
+=item 1.
+
+B<Find Plugins.> During the first step, Contentment searches all plugin repositories for F<init.yml> files for plugins to load. This prepares the way for the next step.
+
+=item 2.
+
+B<Resolve Dependencies.> All of the C<depends_on> dependencies in each F<init.yml> is considered and converted into an C<order> setting. The C<order> determines what oder the plugins will be handled in the next step. The ordering handled such that those plugins with no dependencies will be handled earliest, while those with dependencies will be handled after all their dependencies have been loaded. Any dependency loops are broken and the system will attempt to load those plugins anyway.
+
+=item 3.
+
+B<Load Plugins.> In the order determined during the last step, each plugins libraries are loaded. This handles the C<use_lib> and C<use> settings for each F<init.yml> file.
+
+=item 4.
+
+B<Install Plugins.> Any plugin that is discovered that has not yet been installed will have the "Contentment::install" hook run for that plugin. (An empty implementation of the hook is used, if none is defined.) The plugin is then marked as installed.
+
+=item 5.
+
+B<Update Plugins.> Any plugin that is discovered whose version has changed since it was last examined will have the "Contentment::upgrade" hook run for that plugin. (An empty implementation of the hook is used, if none is defined.) The plugin is then marked as being installed to the lastest version.
+
+=back
+
+At the end of the call to C<L<Contentment>-E<gt>begin>, the "Contentment::begin" hook is called, signalling the start of the second phase of the Contentment process.
+
+=head2 REQUEST HANDLING
+
+Depending on the platform in use, a Contentment process may either handle a single request per process (CGI) or multiple requests per process (FastCGI/mod_perl/LWP). Request handling can best be described in terms of the hooks called during the process.
+
+Here is the list of all the hooks called:
+
+  Contentment::Request::begin
+  Contentment::Response::resolve
+  Contentment::Response::begin
+  Contentment::Response::filter
+  Contentment::Response::end
+  Contentment::Request::end
+
+Between the "Contentment::Response::begin" and "Contentment::Response::end" hooks, the generator returned by the "Contentment::Response::resolve" hook is called.
+
+The intention of the various hooks:
+
+=over
+
+=item Contentment::Request::begin
+
+Handlers for this hook may be used to manipulate the request itself or to associate additional information with the request in the context. 
+
+This hook is used by the Session plugin to load any session data associated with the SESSIONID cookie. The Security plugin loads any information about the current user, roles, and permissions at this time. The Site plugin associates information about the detected or default site with the context, based upon the request.
+
+=item Contentment::Response::resolve
+
+Handlers for this hook determine which generator object is used to generate the main output for the response.
+
+The VFS plugin uses this hook to see if any of the given paths match any file in the virtual file system.
+
+=item Contentment::Response::begin
+
+Handlers for this hook may output data available on the standard input of the generator. 
+
+At the time of this writing, no plugin has used this functionality.
+
+=item Contentment::Response::filter
+
+Handlers for this hook may modify the output of the generator or the output of another "Contentment::Response::filter" hook handler.
+
+The Transform plugin uses this hook to apply data transformations on the output of the generator. The Theme plugin uses this hook to wrap the output of any generator within a custom layout.
+
+=item Contentment::Response::end
+
+Handlers for this hook have the last chance there is to modify the request. The actual output is already set and cannot be modified, but any headers or other parameters may be modified.
+
+The Security plugin uses this hook to save a cookie containing information about anonymous users.
+
+=item Contentment::Request::end
+
+Handlers for this hook may be used to save or otherwise clean-up information used during the request or response process.
+
+The Session plugin uses this hook to save any changes to the session data. The Security plugin uses this hook to save any changes to the user profile.
+
+=back
+
+=head2 CLEANUP
+
+The cleanup phase currently consists entirely of a call to C<L<Contentment>-E<gt>end>, which calls the "Contentment::end" hook.
+
+=head1 AUTHOR
+
+Andrew Sterling Hanenkamp, E<lt>hanenkamp@cpan.orgE<gt>
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright 2005 Andrew Sterling Hanenkamp E<lt>hanenkamp@cpan.orgE<gt>.  All 
+Rights Reserved.
+
+This module is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself. See L<perlartistic>.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.
+
+=cut
+
+1

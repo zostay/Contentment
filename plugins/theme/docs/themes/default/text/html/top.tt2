@@ -9,7 +9,7 @@
 <head>
 <title>[% gen.get_property('title') or gen.get_property('path') %]</title>
 <base href="[% Site.base_url %]"/>
-<link rel="STYLESHEET" type="text/css" href="/themes/default/style/main.css"/>
+<link rel="STYLESHEET" type="text/css" href="themes/default/style/main.css"/>
 [% IF gen.get_property('description') %]
 	<meta name="description" content="[% gen.get_property('description') %]"/>
 [% END %]

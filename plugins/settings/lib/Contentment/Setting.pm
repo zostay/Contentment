@@ -3,7 +3,7 @@ package Contentment::Setting;
 use strict;
 use warnings;
 
-our $VERSION = '0.08';
+our $VERSION = '0.12';
 
 use base 'Oryx::Class';
 
@@ -30,21 +30,25 @@ our $schema = {
 	],
 };
 
+# XXX Due to the fact that this plugin is required by Contentment as soon as it
+# is loaded, we just automatically deploy it. Perhaps this ought to be a core
+# fixture because of this, but I've made it a plugin because it depends upon
+# the database and anything that depends on the database should be plugged IMO.
 __PACKAGE__->auto_deploy(1);
 
-sub remove {
-	__PACKAGE__->storage->util->dropTable(__PACKAGE__->table);
-}
+=head2 CONTEXT
+
+This class adds the following methods to the context:
 
 =over
 
-=item $settings = Contentment::Setting-E<gt>instance
+=item $settings = $context-E<gt>settings
 
 Returns a reference to a hash containing all the settings. Settings are permanently saved to the database when changed.
 
 This hash can be used to store most complex types. It uses L<YAML> to encode all the values, which can encode just about anything.
 
-However, there are a few caveats to be creaful about:
+However, there are a few caveats to be careful about:
 
 =over
 
@@ -54,9 +58,9 @@ References to blessed items or types other than scalars, hashes, or arrays might
 
 =item *
 
-Be careful modifying deep parts of the code without tellings the settings. For example:
+Be careful modifying deep parts of the code without explicitly notifying the settings object. For example:
 
-  my $settings = Contentment::Setting->instance;
+  my $settings = $context->settings;
   my %hash = ( foo => 1, bar => 2 );
 
   # Works great!
@@ -71,15 +75,17 @@ Be careful modifying deep parts of the code without tellings the settings. For e
   # Make sure you always notify the hash of deep changes:
   $settings->{blah} = \%hash;
 
-=back
-
 =cut
 
-sub instance {
+sub Contentment::Context::settings {
 	my $class = shift;
 	tie my %hash, 'Contentment::Setting::Tie';
 	return \%hash;
 }
+
+=back
+
+=cut
 
 package Contentment::Setting::Tie;
 

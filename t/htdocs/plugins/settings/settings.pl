@@ -1,6 +1,4 @@
-use Contentment::Setting;
-
-my $settings = Contentment::Setting->instance;
+my $settings = $context->settings;
 
 $settings->{testing_foo} = 'foo';
 $settings->{testing_bar} = 2;

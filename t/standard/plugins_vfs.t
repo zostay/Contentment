@@ -38,7 +38,7 @@ my @files = qw(
 # TODO I need a simple VFS test to replace the two dropped above.
 
 Contentment->begin;
-my $root = Contentment::VFS->instance;
+my $root = Contentment->context->vfs;
 
 # Checking initial file system root
 is_root_sane($root);

@@ -3,7 +3,7 @@ package Contentment::Log;
 use strict;
 use warnings;
 
-our $VERSION = '0.011_031';
+our $VERSION = '0.011_033';
 
 use Carp;
 use Contentment::Hooks;
@@ -231,6 +231,25 @@ for my $error_logger (@error_loggers) {
 		});
 	};
 }
+
+=back
+
+=head2 CONTEXT
+
+This package adds the following context methods:
+
+=over
+
+=item $log = $context-E<gt>log
+
+This is a shortcut for "Contentment::Log":
+
+  $context->log->debug("This is a debug message.");
+
+=cut
+
+sub Contentment::Context::log { 'Contentment::Log' }
+
 
 =back
 

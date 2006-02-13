@@ -1,5 +1,5 @@
 name: Index
-version: 0.03
+version: 0.04
 description: Plugin describing how index, category, and taxonomy systems may be described.
 
 depends_on:
@@ -9,7 +9,7 @@ use_lib:
  - lib
 
 use:
- - Contentment::Index
+ - Contentment::Catalog
 
 hooks:
-  Contentment::begin: Contentment::Index::begin
+  Contentment::begin: Contentment::Catalog::begin

@@ -4,7 +4,7 @@
 =end meta
 =cut
 
-Contentment::Security->check_permission(
+$context->security->check_permission(
     'Contentment::Security::Manager::manage_users');
 
 print qq(<p><a href="admin/users/edit.html">New User</a></p>);

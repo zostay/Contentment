@@ -3,7 +3,7 @@ package Contentment::Site;
 use strict;
 use warnings;
 
-our $VERSION = 0.01;
+our $VERSION = '0.03';
 
 use base 'Oryx::Class';
 
@@ -15,7 +15,7 @@ Contentment::Site - A plugin for managing site information
 
 =head1 SYNOPSIS
 
-  my $site = Contentment::Site->current_site;
+  my $site = $context->current_site;
 
   my $base_url = $site->base_url;
   print qq(<a href="$base_url/my/absolute/link.html">Absolute Link</a>\n);
@@ -234,7 +234,7 @@ sub current_site {
     my $self = shift;
     
     # Get information about the current request
-    my $q           = Contentment::Request->cgi;
+    my $q           = Contentment->context->cgi;
     my $scheme      = $q->https ? 'https' : 'http';
     my $server_name = $q->server_name;
     my $server_port = $q->server_port;
@@ -277,6 +277,38 @@ sub current_site {
 
 =back
 
+=head2 CONTEXT
+
+This class adds the following methods to the context:
+
+=over
+
+=item $site = $context-E<gt>current_site
+
+Returns a reference to the L<Contentment::Site> instance for the current site.
+
+=cut
+
+sub Contentment::Context::current_site {
+    my $context = shift;
+    return Contentment::Site->current_site;
+}
+
+=item @sites = $context-E<gt>sites(\%params)
+
+Returns a list of site instances. If the optional C<%params> hash is not given or is empty, all sites will be returned. Otherwise, this method returns the sites found by calling the C<search()> method, like so:
+
+  my @sites = Contentment::Site->search(\%params);
+
+=cut
+
+sub Contentment::Context::sites {
+    my $context = shift;
+    return Contentment::Site->search(@_);
+}
+
+=back
+
 =head2 HOOK HANDLERS
 
 =over
@@ -298,9 +330,10 @@ This handles the "Contentment::Request::begin" hook. It checks to see if a defau
 =cut
 
 sub begin {
-    my $q = shift;
+    my $ctx = shift;
+    my $q   = $ctx->cgi;
 
-    my $settings        = Contentment::Setting->instance;
+    my $settings        = $ctx->settings;
     my $plugin_settings = $settings->{'Contentment::Plugin::Site'};
 
     # We've not created it yet

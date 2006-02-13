@@ -3,9 +3,10 @@ package Contentment;
 use strict;
 use warnings;
 
-our $VERSION = '0.011_032';
+our $VERSION = '0.011_033';
 
 use Carp;
+use Contentment::Context;
 use Contentment::Hooks;
 use Contentment::Log;
 use Contentment::MIMETypes;
@@ -103,7 +104,7 @@ sub _find_plugins {
 			# Use the installed init settings, if already installed. This allows
 			# the user to change the way the plugin operates after installation.
 			eval {
-				my $stored_init = Contentment::Setting->instance->{"Contentment::Plugin::$init->{name}"};
+				my $stored_init = Contentment->context->settings->{"Contentment::Plugin::$init->{name}"};
 				if ($stored_init && $stored_init->{version} eq $init->{version}) {
 					Contentment::Log->debug("Using stored init for plugin %s %s", [$init->{name},$init->{version}]);
 					$init = $stored_init;
@@ -294,8 +295,10 @@ sub _load_plugins {
 sub _install_plugins {
     my $plugins = shift;
 
+    my $ctx = Contentment->context;
+
 	# Get ready to figure out what's installed and not
-	my $settings = Contentment::Setting->instance;
+	my $settings = Contentment->context->settings;
 	my $installed = $settings->{'Contentment::installed'};
 
 	# Check each plugin to see if it is installed. If not, install it.
@@ -310,7 +313,7 @@ sub _install_plugins {
 		# Run the handler.
 		my $plugin = $$plugins{$iter->name};
 		eval {
-			$iter->call($plugin);
+			$iter->call($ctx, $plugin);
 		};
 
 		# Check for errors
@@ -331,8 +334,10 @@ sub _install_plugins {
 sub _upgrade_plugins {
     my $plugins = shift;
 
+    my $ctx = Contentment->context;
+
 	# Get ready to figure out what's installed and not
-	my $settings = Contentment::Setting->instance;
+	my $settings = Contentment->context->settings;
 	my $installed = $settings->{'Contentment::installed'};
 
 	# Now check for upgrades.
@@ -345,7 +350,8 @@ sub _upgrade_plugins {
 		next if $installed->{$iter->name} == $plugin->{version};
 
 		# Run the handler.
-		$iter->call($settings->{'Contentment::Plugin::'.$iter->name}, $plugin);
+		$iter->call(
+            $ctx, $settings->{'Contentment::Plugin::'.$iter->name}, $plugin);
 
 		# Note that it's now installed and record the version.
 		Contentment::Log->info("Upgraded plugin %s from %s to %s",[$iter->name,$installed->{$iter->name},$plugin->{version}]);
@@ -365,6 +371,9 @@ Perform the initialization tasks for Contentment. Including running all hooks re
 =cut
 
 sub begin {
+    # Setup the context
+    Contentment->context(Contentment::Context->new);
+
 	# Plugins Phase #1: Find the plugins.
     my %plugins = _find_plugins();
 
@@ -382,7 +391,7 @@ sub begin {
 
 	# Now that all is installed, initialize all the begin handlers
 	Contentment::Log->debug("Calling hook Contentment::begin");
-	Contentment::Hooks->call('Contentment::begin');
+	Contentment::Hooks->call('Contentment::begin', Contentment->context);
 }
 
 sub load_plugin {
@@ -414,7 +423,7 @@ sub load_plugin {
 	}
 	for my $use (@uses) {
 		Contentment::Log->debug("%s: use %s", [$plugin_dir,$use]);
-		eval "use $use";
+		eval q(#line ).__LINE__.qq( Contentment\nuse $use);
 		die qq(Couldn't use "$use": $@) if $@;
 	}
 
@@ -481,9 +490,11 @@ See L<Contentment::Request> and L<Contentment::Response> for more information.
 =cut
 
 sub handle_cgi {
-	Contentment::Request->begin_cgi;
-	Contentment::Response->handle_cgi;
-	Contentment::Request->end_cgi;
+    my $ctx = Contentment->context('clone');
+	Contentment::Request->begin_cgi($ctx);
+	Contentment::Response->handle_cgi($ctx);
+	Contentment::Request->end_cgi($ctx);
+    Contentment->context('clear');
 }
 
 =item Contentment-E<gt>handle_fast_cgi
@@ -497,13 +508,17 @@ See L<Contentment::Request> and L<Contentment::Response> for more information.
 sub handle_fast_cgi {
     # Loop through each FastCGI connection we get. Other than this loop,
     # everything else is just like CGI!
-    while (Contentment::Request->begin_fast_cgi) {
+    my $ctx = Contentment->context('clone');
+    while (Contentment::Request->begin_fast_cgi($ctx)) {
         # Handle the request using regular CGI logic
-        Contentment::Response->handle_cgi;
+        Contentment::Response->handle_cgi($ctx);
 
         # Finish up using the regular CGI logic
-        Contentment::Request->end_fast_cgi;
+        Contentment::Request->end_fast_cgi($ctx);
+
+        $ctx = Contentment->context('clone');
     }
+    Contentment->context('clear');
 }
 
 =item Contentment-E<gt>handle_lwp
@@ -521,10 +536,41 @@ Performs final shutdown of the Contentment system. This calls the "L<Contentment
 =cut
 
 sub end {
-	Contentment::Hooks->call('Contentment::end');
+	Contentment::Hooks->call('Contentment::end', Contentment->context);
 }
 
 =back
+
+=item $context = Contentment-E<gt>context
+
+This retrieves the current context for this process. This should return a value other than C<undef> for most of the execution of the Contentment process. However, what features are available will depend upon the current state of the process.
+
+Prior to the "Contentment::begin" hook, most of the plugins may not have been installed or initialized, so the functionality available will be very limited. Even during the "Contentment::begin" hook, many handlers are still initializing the context, so some application level functionality may not yet be available.
+
+Information regarding the request will not be available until the "Contentment::Request::begin" hook is called and goes away after the "Contentment::Request::end" hook is called.
+
+Similarly, information regarding the response will not be available until the "Contentment::Response::begin" hook is called and goes away after the "Contentment::Response::end" hook is called.
+
+You may need to check individual plugin documentation to know when their respective context methods will be available and valid.
+
+See L<Contentment::Manual::LifeCycle> for additional details on the life-cycle of the Contentment application.
+
+=cut
+
+my ($ctx, $req_ctx);
+sub context {
+    my $class   = shift;
+    my $new_ctx = shift;
+
+    if (defined $new_ctx) {
+          $new_ctx eq 'clone' ? ($req_ctx = $ctx->clone)
+        : $new_ctx eq 'clear' ? (undef $req_ctx)
+        :                       ($ctx = $new_ctx);
+    }
+
+    return defined $req_ctx ? $req_ctx
+         :                    $ctx;
+}
 
 =head2 HOOKS
 
@@ -534,15 +580,27 @@ sub end {
 
 This is a named hook. The name is used to determine which plugin configuration to pass the install handler. It should match the "name" setting in F<init.yml> for the plugin.
 
-These handlers are passed a single argument, but no special input, and should not output anything. The special argument is the data loaded from F<init.yml>.
+These handlers are passed two arguments, but no input, and should not output anything. The first argument is the Contentment context object. The second argument is the data loaded from F<init.yml>. If the second argument's data is modified, those modifications will be permanently saved.
+
+=item Contentment::upgrade
+
+This is a named hook. The name is used to determine which plugin configuration to pass to the upgrade handler. It should match the "name" setting in F<init.yml> for the plugin.
+
+These handlers are passed three arguments, but no input, and should not ouput anything. The first argument is the Contentment context object. The second argument is the plugin settings currently in use for the plugin (as loaded during the last install or upgrade and since modified). The third argument is the data loaded from F<init.yml> for the plugin. 
+
+B<IMPORTANT:> After the upgrade handler is run, the data stored in the third argument will overwrite the data stored in the second. Therefore, any important setting changes the user makes, must be explicitly transferred by the plugin.
+
+=item Contentment::remove
+
+This hook is currently not called by the system, but will be used in the future to uninstall plugins. The plugin installation/upgrade system is too primitive for this hook to be of much use, as of this writing.
 
 =item Contentment::begin
 
-These handlers are passed no arguments, no special input, and should not output anything.
+These handlers are passed a single argument, which is the context for Contentment. Otherwise, it receives no special input, and should not output anything.
 
 =item Contentment::end
 
-These handlers are passed no arguments, no special input, and should not output anything.
+These handlers are passed a single argument, which is the context for Contentment. Otherwise, it receives no special input, and should not output anything.
 
 =back
 

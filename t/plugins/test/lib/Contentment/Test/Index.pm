@@ -7,7 +7,7 @@ our $VERSION = '0.02';
 
 use base qw( Class::Singleton );
 
-use Contentment::Index qw( $SEARCH $LIST_TERMS );
+use Contentment::Catalog qw( $SEARCH $LIST_TERMS );
 
 sub name { "Contentment::Test::Index" }
 

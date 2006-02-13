@@ -3,7 +3,7 @@ package Contentment::Security::Manager;
 use strict;
 use warnings;
 
-our $VERSION = 0.07;
+our $VERSION = '0.09';
 
 use Contentment::Hooks;
 use Contentment::Security::Principal;
@@ -57,13 +57,21 @@ Any authenticated principal will always have at least two roles: "everybody" and
 sub _new_instance {
     my $class = shift;
 
+    # These calls are not symmetrical on purpose. Contentment::Session::begin
+    # is the sooonest we can load the information, but we can't wait for
+    # Contentment::Session:end because it's then too late to return our own
+    # cookie. 
+    #
+    # Dropping information back into the session and creating the cookie could
+    # be separated into to handlers to allow the symmetry to return.
+
     Contentment::Hooks->register(
         hook => 'Contentment::Session::begin',
         code => \&Contentment::Security::Manager::begin,
     );
 
     Contentment::Hooks->register(
-        hook => 'Contentment::Session::end',
+        hook => 'Contentment::Response::end',
         code => \&Contentment::Security::Manager::end,
     );
 
@@ -73,12 +81,12 @@ sub _new_instance {
 # XXX The result of this method should probably be cached since this is pretty
 # costly.
 sub get_principal {
-    my $self = shift;
+    my $self    = shift;
+    my $context = Contentment->context;
+    my $session = $context->session;
 
     # Find the principal, if possible
-    my $principal 
-        = Contentment::Session->instance
-            ->{'Contentment::Security::Manager::principal'};
+    my $principal = $session->{'Contentment::Security::Manager::principal'};
 
     # If no principal, create an anonymous one
     unless ($principal) {
@@ -89,9 +97,7 @@ sub get_principal {
         );
 
         # Store the principal in the session
-        Contentment::Session->instance
-            ->{'Contentment::Security::Manager::principal'}
-                = $principal;
+        $session->{'Contentment::Security::Manager::principal'} = $principal;
     } 
     
     # Refresh roles and permissions
@@ -195,6 +201,9 @@ sub login {
     my $username = shift;
     my $password = shift;
 
+    my $context  = Contentment->context;
+    my $session  = $context->session;
+
     my ($profile) = Contentment::Security::Profile::Persistent->search({
         username => $username,
         password => $password,
@@ -222,16 +231,13 @@ sub login {
         $principal->update_permissions;
 
         # Save it to the session so we remember the login
-        Contentment::Session->instance
-            ->{'Contentment::Security::Manager::principal'}
-                = $principal;
+        $session->{'Contentment::Security::Manager::principal'} = $principal;
 
         # Finally, check to make sure they may login.
-        my $may_login = Contentment::Security->has_permission(
+        my $may_login = Contentment->context->security->has_permission(
             'Contentment::Security::Manager::login');
         unless ($may_login) {
-            delete Contentment::Session->instance
-                ->{'Contentment::Security::Manager::principal'};
+            delete $session->{'Contentment::Security::Manager::principal'};
             Contentment::Log->info(
                 'LOGIN FAILED by %s: does not have "login" permission',
                 [$username]
@@ -262,6 +268,8 @@ This method replaces the principal currently stored in the session with an anony
 sub logout {
     my $self = shift;
 
+    my $context = Contentment->context;
+
     # Make sure to save the old princpal's state first
     my $old_principal = $self->get_principal;
     if ($old_principal->type eq 'authenticated') {
@@ -284,7 +292,7 @@ sub logout {
 
     # Save the anonymous principal to the session to overwrite any old login
     # information
-    Contentment::Session->instance
+    $context->session
         ->{'Contentment::Security::Manager::principal'}
             = $principal;
 }
@@ -309,13 +317,13 @@ sub _save_anonymous_profile {
 
         # Save the data into a cookie
         # XXX The expiration on this cookie should be configurable.
-        my $q = Contentment::Request->cgi;
+        my $q = Contentment->context->cgi;
         my $cookie = $q->cookie(
             -name    => 'ANONPROFILE',
-            -domain  => Contentment::Site->current_site->base_url->host,
+            -domain  => Contentment->context->current_site->base_url->host,
             -value   => \@fields,
             -expires => '+30d');
-        push @{ Contentment::Response->header->{'-cookie'} }, $cookie;
+        push @{ Contentment->context->response->header->{'-cookie'} }, $cookie;
     }
 }
 
@@ -324,7 +332,7 @@ sub _load_anonymous_profile {
     my $principal = shift;
 
     # Check to see if there is a special anonymous profile cookie
-    my $q = Contentment::Request->cgi;
+    my $q = Contentment->context->cgi;
     my @profile = $q->cookie('ANONPROFILE');
 
     # If so, load that sucker up
@@ -361,7 +369,8 @@ This hook handler is for the "Contentment::Session::begin" hook. The handler loa
 
 # XXX Is this really necessary?
 sub begin {
-    my $principal = Contentment::Security->get_principal;
+    my $context = shift;
+    my $principal = $context->security->get_principal;
 
     Contentment::Log->debug('Running Contentment::Security::Manager::begin.');
     
@@ -380,8 +389,8 @@ sub begin {
 
     # Load their anonymous profile if they have one
     else {
-        Contentment::Security::Manager->instance->_load_anonymous_profile(
-            Contentment::Security->get_principal,
+        $context->security_manager->_load_anonymous_profile(
+            $context->security->get_principal,
         );
     }
 }
@@ -393,7 +402,8 @@ This hook handler is for the "Contentment::Session::end" hook. The handler saves
 =cut
 
 sub end {
-    my $principal = Contentment::Security->get_principal;
+    my $context = shift;
+    my $principal = $context->security->get_principal;
 
     Contentment::Log->debug('Running Contentment::Security::Manager::end');
 
@@ -409,7 +419,7 @@ sub end {
 
     # Save their anonymous profile if they had one
     else {
-        Contentment::Security::Manager->instance->_save_anonymous_profile(
+        $context->security_manager->_save_anonymous_profile(
             $principal,
         );
     }
@@ -442,7 +452,7 @@ This is the password of the user that is logging in.
 =cut
 
 sub process_login_form {
-    my $self       = Contentment::Security::Manager->instance;
+    my $self       = Contentment->context->security_mamanger;
     my $submission = shift;
     my $results    = $submission->results;
 

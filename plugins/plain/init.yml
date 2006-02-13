@@ -1,6 +1,6 @@
 name: Plain
 description: A generator for plain files (binary or text).
-version: 0.12
+version: 0.13
 
 depends_on:
  - Log

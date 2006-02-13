@@ -3,7 +3,7 @@ package Contentment::Template::Plugin::Theme;
 use strict;
 use warnings;
 
-our $VERSION = '0.08';
+our $VERSION = '0.11';
 
 use base qw/ Contentment::Theme Template::Plugin /;
 
@@ -16,11 +16,11 @@ sub theme {
     my $master = shift;
     my $args   = shift || {};
 
-    use Data::Dumper;
-    print STDERR Dumper($master, $args);
+#    use Data::Dumper;
+#    print STDERR Dumper($master, $args);
 
     capture_out {
-        Contentment::Theme->theme($master, $args);
+        Contentment->context->theme($master, $args);
     };
 
     my $fh = IO::NestedCapture->get_last_out;

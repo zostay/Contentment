@@ -3,7 +3,7 @@ package Contentment::Template;
 use strict;
 use warnings;
 
-our $VERSION = '0.06';
+our $VERSION = '0.11';
 
 use Contentment::Template::Provider;
 use Template;
@@ -62,7 +62,7 @@ The last two bit sthere are always set and cannot be changed. This may change in
 
 sub template_configuration {
 	# Base the configuration on Contentment::Plugins::Template->configuration
-	my $conf = Contentment::Setting->instance->{'Contentment::Plugin::Template'}{'configuration'};
+	my $conf = Contentment->context->settings->{'Contentment::Plugin::Template'}{'configuration'};
 	my %conf = %{ $conf || {} };
 	my $iter;
 

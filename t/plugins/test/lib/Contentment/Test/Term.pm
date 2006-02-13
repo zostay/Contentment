@@ -40,7 +40,7 @@ sub generators {
         return scalar($name =~ /^$self->{letter}/i);
     };
 
-    my $vfs = Contentment::VFS->instance;
+    my $vfs = Contentment->context->vfs;
     my @files = $vfs->find($wanted, '/');
     return map { my $g = $_->generator; defined $g ? $g : () } @files;
 }

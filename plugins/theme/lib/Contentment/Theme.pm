@@ -3,7 +3,7 @@ package Contentment::Theme;
 use strict;
 use warnings;
 
-our $VERSION = 0.08;
+our $VERSION = '0.10';
 
 use Contentment::Log;
 use Contentment::Response;
@@ -17,13 +17,13 @@ Contentment::Theme - Contentment plugin for adding themes to content
 
 =head1 SYNOPSIS
 
-  Contentment::Theme->theme('master', \%arguments);
+  $context->theme('master', \%arguments);
 
 =head1 DESCRIPTION
 
 The theme plugin provides a simple theming system. Basically, the L</"SYNOPSIS"> says it all. To take some data and theme that data, simply call:
 
-  Contentment::Theme->theme('master', \%arguments);
+  $context->theme('master', \%arguments);
 
 The "master" is the name of the master template to apply to the arguments. The arguments will be passed to the theme in the way that arguments are normally passed to the filetype of the master template.
 
@@ -51,11 +51,13 @@ Inside of each theme directory are directories for each destination file type th
 
 Since the typical final file type uses the MIME-type "text/html", the theme directory for HTML files is usually a nested directory, F<text/html>. Once inside the file type directory, the theme master is used to render the theme. The theme master can be anything. By default the top-level or page theme is called F<top>. Thus, altogether, the path to a theme master is:
 
-=head2 METHODS
+=head2 CONTEXT
+
+This class adds the following methods to the context:
 
 =over
 
-=item Contentment::Theme->theme($master, \%args)
+=item $context->theme($master, \%args)
 
 This applies the requested theme master, C<$master>, using the current file type stored in C<Contentment::Response->top_kind> and the theme set in the "default_theme" key of the "Contentment::Plugin::Theme" setting.
 
@@ -71,10 +73,11 @@ or using a Template Toolkit template:
 
 =cut
 
-sub theme {
-    my $class  = shift;
-    my $master = shift;
-    my $args   = shift || {};
+sub Contentment::Context::theme {
+    my $context = shift;
+    my $class   = __PACKAGE__;
+    my $master  = shift;
+    my $args    = shift || {};
 
     # Master must be given
     if (!defined($master)) {
@@ -84,7 +87,7 @@ sub theme {
     }
 
     # Lookup the theme to use, make sure we fallback on "default"
-    my $settings = Contentment::Setting->instance;
+    my $settings = $context->settings;
     my @themes
         = ($settings->{'Contentment::Plugin::Theme'}{'default_theme'})
             || ();
@@ -94,10 +97,10 @@ sub theme {
     THEME:
     for my $theme (@themes) {
         # See if there's a theme for this kind
-        my $kind       = Contentment::Response->top_kind || '';
+        my $kind       = Contentment->context->response->top_kind || '';
         my $theme_dir  = "themes/$theme/";
         my $theme_path = "/$theme_dir$kind/$master";
-        my $gen = Contentment::Response->resolve($theme_path);
+        my $gen = Contentment->context->response->resolve($theme_path);
 
         # Did the resolver find nothing or experience an error?
         if ($gen->get_property('error')) {
@@ -128,19 +131,35 @@ sub theme {
 
 =over
 
+=item Contentment::Theme::upgrade
+
+This handler is for the "Contentment::upgrade" hook and is responsible for making sure any changes to "default_theme" or "default_template" are transferred during upgrades.
+
+=cut
+
+sub upgrade {
+    my $context      = shift;
+    my $old_settings = shift;
+    my $new_settings = shift;
+
+    $new_settings->{default_theme}    = $old_settings->{default_theme};
+    $new_settings->{default_template} = $old_settings->{default_template};
+}
+
 =item Contentment::Theme::apply_theme
 
-Handles the "Contentment::Response::end" hook by attempting to wrap the generated output with a theme, or leaving the output as is if there is no matching theme handler.
+Handles the "Contentment::Response::filter" hook by attempting to wrap the generated output with a theme, or leaving the output as is if there is no matching theme handler.
 
 =cut
 
 sub apply_theme {
+    my $context = shift;
     # Lookup the template to use
-    my $settings = Contentment::Setting->instance;
+    my $settings = $context->settings;
     my $template
         = $settings->{'Contentment::Plugin::Theme'}{'default_template'}
             || 'top';
-    Contentment::Theme->theme($template);
+    $context->theme($template);
 }
 
 =item Contentment::Theme::begin
@@ -150,10 +169,12 @@ Handles the "Contentment::begin" hook. When run, it notifies the VFS to add the 
 =cut
 
 sub begin {
+    my $context = shift;
+
 	Contentment::Log->debug("Calling hook handler Contentment::Theme::begin");
-	my $vfs = Contentment::VFS->instance;
-	my $setting = Contentment::Setting->instance;
-	my $plugin_data = $setting->{'Contentment::Plugin::Theme'};
+	my $vfs = $context->vfs;
+	my $settings = $context->settings;
+	my $plugin_data = $settings->{'Contentment::Plugin::Theme'};
 	my $docs = File::Spec->catdir($plugin_data->{plugin_dir}, 'docs');
 	$vfs->add_layer(-1, [ 'Real', 'root' => $docs ]);
 }

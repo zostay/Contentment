@@ -4,13 +4,13 @@
 =end meta
 =cut
 
-Contentment::Security->check_permission(
+$context->security->check_permission(
     'Contentment::Security::Manager::manage_roles');
 
 my $self = shift;
 my %args = @_;
 
-my $form = Contentment::Form->define({
+my $form = $context->form->define({
     name     => 'Contentment::Security::Role::edit_form',
     action   => 'Contentment::Security::Role::process_edit_form',
     activate => 1,
@@ -41,7 +41,7 @@ my $form = Contentment::Form->define({
 });
 
 if ($form->submission->is_finished) {
-    Contentment::Response->redirect('admin/roles/index.html')->generate;
+    $context->response->redirect('admin/roles/index.html')->generate;
 }
 
 elsif (my $id = $args{id} || $form->submission->results->{id}) {

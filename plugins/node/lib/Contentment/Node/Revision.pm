@@ -3,7 +3,7 @@ package Contentment::Node::Revision;
 use strict;
 use warnings;
 
-our $VERSION = 0.04;
+our $VERSION = '0.06';
 
 use base 'Oryx::Class';
 
@@ -147,7 +147,7 @@ sub update {
     my $self = shift;
 
     $self->updated_on(now);
-    $self->updated_by(Contentment::Security->get_principal->username);
+    $self->updated_by(Contentment->context->security->get_principal->username);
 
     return $self->SUPER::update;
 }

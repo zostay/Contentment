@@ -3,7 +3,7 @@ package Contentment::MIMETypes;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.011_033';
 
 use base qw( MIME::Types Class::Singleton );
 
@@ -37,6 +37,23 @@ sub _new_instance {
     my $self = $class->new;
     Contentment::Hooks->call('Contentment::MIMETypes::register', $self);
 }
+
+=head2 CONTEXT
+
+This class adds the following context method:
+
+=over
+
+=item $mime_types = $context->mime_types
+
+=cut
+
+sub Contentment::Context::mime_types {
+    my $ctx = shift;
+    return Contentment::MIMETypes->instance;
+}
+
+=back
 
 =head2 HOOKS
 

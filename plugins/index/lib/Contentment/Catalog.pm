@@ -1,9 +1,9 @@
-package Contentment::Index;
+package Contentment::Catalog;
 
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 use base qw( Class::Singleton Exporter );
 
@@ -53,12 +53,12 @@ our %EXPORT_TAGS = (
 
 =head1 NAME
 
-Contentment::Index - Provides categorization and indexing features
+Contentment::Catalog - Provides categorization and indexing features
 
 =head1 SYNOPSIS
 
   # Get a list of the available indexes
-  my @indexes = Contentment::Index->indexes;
+  my @indexes = $context->catalog->indexes;
 
   for my $index (@indexes) {
 
@@ -88,17 +88,17 @@ Instead of trying codify how you content should be classified, this system merel
 
 If you just want to use the system and you really don't care how the guts work, skip to the next section, L</"INDEXES">. 
 
-Any implementation of a categorization system starts with an indexer. The index basically tells L<Contentment::Index> what indexes are available. See L<Contentment::Index::Indexer> for details on implementing one.
+Any implementation of a categorization system starts with an indexer. The index basically tells L<Contentment::Catalog> what indexes are available. See L<Contentment::Indexer> for details on implementing one.
 
 =head2 INDEXES
 
-By using the C<indexes()> or C<index()> method of L<Contentment::Index>, you fetch all available indexes or a single named index, respectively. The purpose of the index is to describe a set of terms. The way terms are described depends on the type of index.
+By using the C<indexes()> or C<index()> method of L<Contentment::Catalog>, you fetch all available indexes or a single named index, respectively. The purpose of the index is to describe a set of terms. The way terms are described depends on the type of index.
 
 =head2 TERMS
 
 A term is a textual string name, which may have synonyms or other properties. It may have subterms. Primarily, a term will refer to zero or more generators.
 
-Please see L<Contentment::Index::Term> for the methods a term provides.
+Please see L<Contentment::Term> for the methods a term provides.
 
 =head2 METHODS
 
@@ -106,38 +106,37 @@ Please see L<Contentment::Index::Term> for the methods a term provides.
 
 =cut
 
-sub instance {
-    my $proto = shift;
-    my $class = ref $proto || $proto;
-    $class->SUPER::instance(@_);
+sub new {
+    my $class = shift;
+    return bless {}, $class;
 }
 
-=index Contentment::Index->register_index($indexer)
+=index $catalog->register_indexer($indexer)
 
-Register the indexer plugin, C<$indexer>. The object given must conform to the interface documented in L<Contentment::Index::Indexer>.
+Register the indexer plugin, C<$indexer>. The object given must conform to the interface documented in L<Contentment::Indexer>.
 
 =cut
 
-sub register_index {
-    my $self = shift->instance;
+sub register_indexer {
+    my $self = shift;
     push @{ $self->{indexers} }, shift;
 }
 
-=item @indexes = Contentment::Index->indexes
+=item @indexes = $catalog->indexes
 
-=item @indexes = Contentment::Index->indexes(@features)
+=item @indexes = $catalog->indexes(@features)
 
 Retrieves all indexes known to the system and returns it in C<@indexes> (which might be empty if none are registered).
 
 If the optional C<@features> argument is passed, only indexes having I<all> of the features specified will be returned:
 
   # Fetch all the indexes that are reversible and have subterms
-  my @revsub_indexes = Contentment::Index->indexes($REVERSIBLE | $SUBTERMS);
+  my @revsub_indexes = $context->catalog->indexes($REVERSIBLE | $SUBTERMS);
 
 =cut
 
 sub indexes {
-    my $self     = shift->instance;
+    my $self     = shift;
     my $features = shift;
 
     my @indexes;
@@ -154,7 +153,7 @@ sub indexes {
     }
 }
 
-=item $index = Contentment::Index->index($name)
+=item $named_index = $catalog->index($name)
 
 Search for an index by name.
 
@@ -166,7 +165,7 @@ sub index {
     return $index;
 }
 
-=item @terms = Contentment::Index-E<gt>search_terms(@strings)
+=item @terms = $catalog-E<gt>search_terms(@strings)
 
 Given a set of strings, this method should return an array of terms that match any of the given strings.
 
@@ -186,7 +185,7 @@ sub search_terms {
     return @terms;
 }
 
-=item @generators = Contentment::Index-E<gt>search(@strings)
+=item @generators = $catalog-E<gt>search(@strings)
 
 Given a set of strings, this method should return an array of generators linked to terms matched by any of the given strings.
 
@@ -208,13 +207,36 @@ sub search {
 
 =back
 
+=head2 CONTEXT
+
+=over
+
+=item $catalog = $context-E<gt>catalog
+
+Returns an instance of the Contentment catalog object.
+
+=cut
+
+sub Contentment::Context::catalog {
+    my $self = shift;
+    return defined $self->{catalog} ? $self->{catalog} :
+        Contentment::Exception->throw(message => "Catalog is not available.");
+}
+
+=back
+
 =head2 HOOKS
 
 =over
 
-=item Contentment::Index::begin
+=item Contentment::Catalog::begin
 
-The hook runs when the plugin is first initialized. The handlers are passed no arguments. It is intended that plugins with indexers can use this hook to call C<register_index()>.
+The hook runs when the plugin is first initialized. The handlers are passed the context as the single argument. It is intended that plugins with indexers can use this hook to call C<register_indexer()>:
+
+  sub my_index_registrar {
+      my $ctx = shift;
+      $ctx->catalog->register_indexer(Contentment::MyPlugin::Indexer->instance);
+  }
 
 =back
 
@@ -222,14 +244,16 @@ The hook runs when the plugin is first initialized. The handlers are passed no a
 
 =over
 
-=item Contentment::Index::begin
+=item Contentment::Catalog::begin
 
-This handler runs via the "Contentment::begin" hook and calls the "Contentment::Index::begin" hook.
+This handler runs via the "Contentment::begin" hook and calls the "Contentment::Catalog::begin" hook. It also configures the context object.
 
 =cut
 
 sub begin {
-    Contentment::Hooks->call("Contentment::Index::begin");
+    my $context = shift;
+    $context->{catalog} = Contentment::Catalog->new;
+    Contentment::Hooks->call("Contentment::Catalog::begin", $context);
 }
 
 =back
